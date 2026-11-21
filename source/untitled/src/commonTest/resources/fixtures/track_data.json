@@ -1,0 +1,25 @@
+{
+  "track": {
+    "id": "trck_Fake0000_43435cc5-2eae-45cf-96d0-cc5fd4c28c2e",
+    "title": "Kanye West – Never Abandon Your Family (Yedit)",
+    "access_type": "public",
+    "downloadable": false,
+    "slug": "WJw8irtvzDf939v5mbbbb",
+    "audio_url": "https://sb.untitled.stream/storage/v1/object/private-audio/00000000-0000-4000-8000-000000000001/90fbbd11-9c1c-4af7-9e87-66ed88daf401.wav",
+    "audio_fallback_url": "https://sb.untitled.stream/storage/v1/object/private-transcoded-audio/00000000-0000-4000-8000-000000000001/90fbbd11-9c1c-4af7-9e87-66ed88daf401.mp3",
+    "duration": 258.22,
+    "upload_state": "success",
+    "track_audio_id": "audio_Fake0000_6b4013ef-254b-4c4e-810c-4759482c9cbc",
+    "version_title": "Kanye West – Never Abandon Your Family (Yedit)",
+    "file_type": "wav",
+    "codec": "pcm_s16le",
+    "container": "wav",
+    "file_size_bytes": 49680856,
+    "username": "fake_uploader",
+    "user_required_to_listen": false,
+    "password_protected": false,
+    "transcoding_state": "transcoded",
+    "ai_generated": false
+  },
+  "openedFromDirectLink": true
+}
