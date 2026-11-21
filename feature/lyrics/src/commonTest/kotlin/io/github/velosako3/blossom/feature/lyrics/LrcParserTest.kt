@@ -1,0 +1,53 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+package io.github.velosako3.blossom.feature.lyrics
+
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNull
+
+class LrcParserTest {
+    @Test fun lineSynced() {
+        val l = assertIs<Lyrics.LineSynced>(LrcParser.parse("[00:12.50]Hello\n[00:15.00]World", "p", null))
+        assertEquals(listOf(12_500L, 15_000L), l.lines.map { it.startMs })
+        assertEquals(15_000, l.lines[0].endMs)
+        assertEquals("Hello", l.lines[0].text)
+    }
+
+    @Test fun threeDigitFractions() {
+        val l = assertIs<Lyrics.LineSynced>(LrcParser.parse("[01:02.345]x", "p", null))
+        assertEquals(62_345, l.lines[0].startMs)
+    }
+
+    @Test fun repeatedStamps() {
+        val l = assertIs<Lyrics.LineSynced>(LrcParser.parse("[00:12.00][00:45.00]Chorus", "p", null))
+        assertEquals(listOf(12_000L, 45_000L), l.lines.map { it.startMs })
+        assertEquals(listOf("Chorus", "Chorus"), l.lines.map { it.text })
+    }
+
+    @Test fun offsetShiftsEarlier() {
+        val l = assertIs<Lyrics.LineSynced>(LrcParser.parse("[offset:+500]\n[00:10.00]A", "p", null))
+        assertEquals(9_500, l.lines[0].startMs)
+    }
+
+    @Test fun metadataIgnoredAndLastLineEnds() {
+        val l = assertIs<Lyrics.LineSynced>(LrcParser.parse("[ar:Someone]\n[ti:Title]\n[00:01.00]Only", "p", null))
+        assertEquals(1, l.lines.size)
+        assertEquals(6_000, l.lines[0].endMs)
+        assertEquals(200_000, assertIs<Lyrics.LineSynced>(LrcParser.parse("[00:01.00]Only", "p", 200_000)).lines[0].endMs)
+    }
+
+    @Test fun enhancedWords() {
+        val l = assertIs<Lyrics.WordSynced>(LrcParser.parse("[00:01.00]<00:01.00>Hel<00:01.40>lo", "p", null))
+        val words = l.lines[0].words
+        assertEquals(2, words.size)
+        assertEquals(1_000L to 1_400L, words[0].startMs to words[0].endMs)
+        assertEquals("Hello", l.lines[0].text)
+    }
+
+    @Test fun plainAndBlank() {
+        assertIs<Lyrics.Plain>(LrcParser.parse("Just words\nno stamps", "p", null))
+        assertNull(LrcParser.parse("", "p", null))
+        assertNull(LrcParser.parse("   \n ", "p", null))
+    }
+}
