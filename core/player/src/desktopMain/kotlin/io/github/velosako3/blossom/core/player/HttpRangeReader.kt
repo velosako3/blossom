@@ -41,11 +41,18 @@ class HttpRangeReader(
                 closeChunk()
                 if (!openChunk()) return if (lastStatus in 200..299 || lastStatus == 416) 0 else -1
             }
-            val n = body!!.read(buffer, 0, minOf(length.toLong(), chunkEnd - position + 1).toInt())
+            val n = try {
+                body!!.read(buffer, 0, minOf(length.toLong(), chunkEnd - position + 1).toInt())
+            } catch (e: java.io.IOException) {
+                // Timeout after a long pause, a dropped connection, a truncated body: report an error so the player
+                // re-resolves at this position instead of libVLC treating it as the end of the song.
+                closeChunk(); lastStatus = null; return -1
+            }
             if (n > 0) { position += n; return n }
+            val truncated = position <= chunkEnd
             closeChunk()
             if (total != null && position >= total!!) return 0
-            if (n < 0 && position <= chunkEnd) return -1
+            if (truncated) { lastStatus = null; return -1 }
         }
     }
 

@@ -15,6 +15,10 @@ import io.github.velosako3.blossom.core.designsystem.components.rememberArtworkP
 import io.github.velosako3.blossom.shell.ShellState
 import androidx.compose.ui.Modifier
 import io.github.velosako3.blossom.core.designsystem.background.BlossomBackground
+import io.github.velosako3.blossom.feature.nowplaying.PlaybackErrorBanner
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import io.github.velosako3.blossom.core.designsystem.color.ArtworkPalette
 import io.github.velosako3.blossom.core.designsystem.glass.GlassQuality
 import io.github.velosako3.blossom.core.designsystem.glass.glassBackdropSource
@@ -55,6 +59,7 @@ fun App(
             Column(Modifier.fillMaxSize()) {
                 titleBar?.invoke()
                 BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+                    graph?.let { PlaybackErrorBanner(it.player, Modifier.align(androidx.compose.ui.Alignment.TopCenter).padding(top = 48.dp).zIndex(1f)) }
                     when (WindowLayout.from(maxWidth.value)) {
                         WindowLayout.COMPACT -> CompactShell(navigator, slots)
                         WindowLayout.MEDIUM -> MediumShell(navigator, slots)

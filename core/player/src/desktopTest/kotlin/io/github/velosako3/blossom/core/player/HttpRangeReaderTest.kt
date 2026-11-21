@@ -24,6 +24,12 @@ class HttpRangeReaderTest {
             ex.sendResponseHeaders(206, (end - start + 1).toLong())
             ex.responseBody.use { it.write(body, start, end - start + 1) }
         }
+        // Promises 1000 bytes, sends 10, then hangs up.
+        createContext("/short") { ex ->
+            ex.responseHeaders.add("Content-Range", "bytes 0-999/1000")
+            ex.sendResponseHeaders(206, 1000)
+            ex.responseBody.write(ByteArray(10)); ex.responseBody.flush(); ex.close()
+        }
         createContext("/gone") { ex -> ex.sendResponseHeaders(403, -1); ex.close() }
         start()
     }
@@ -50,6 +56,16 @@ class HttpRangeReaderTest {
         r.read(ByteArray(1000), 1000)
         r.seek(250_000)
         assertContentEquals(body.copyOfRange(250_000, body.size), r.readAll())
+    }
+
+    @Test fun truncatedBodyIsAnErrorNotAnEndlessRetry() {
+        val r = HttpRangeReader(StreamInfo(url("/short"), emptyMap(), "audio/webm", null, null))
+        val buf = ByteArray(100)
+        var total = 0
+        var calls = 0
+        while (calls++ < 50) { val n = r.read(buf, buf.size); if (n <= 0) { assertEquals(-1, n); break }; total += n }
+        assertTrue(calls < 50, "reader kept reconnecting")
+        assertTrue(total <= 1000)
     }
 
     @Test fun refusalIsReported() {

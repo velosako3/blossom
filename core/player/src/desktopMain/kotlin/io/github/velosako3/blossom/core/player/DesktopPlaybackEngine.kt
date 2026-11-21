@@ -25,6 +25,8 @@ class DesktopPlaybackEngine(
     @Volatile private var reader: HttpRangeReader? = null
     @Volatile override var mediaId: Long = 0
         private set
+    /** The id of the media libVLC is actually reporting on; switches in `mediaChanged`, in order with its events. */
+    @Volatile private var eventsId: Long = 0
     /** libVLC calls into this through JNA; it must stay strongly reachable while it plays. */
     @Volatile private var media: ReaderMedia? = null
     private val _events = MutableSharedFlow<EngineEvent>(extraBufferCapacity = 64)
@@ -44,15 +46,16 @@ class DesktopPlaybackEngine(
     init {
         mediaPlayer.events().addMediaPlayerEventListener(object : MediaPlayerEventAdapter() {
             override fun timeChanged(mediaPlayer: MediaPlayer, newTime: Long) {
-                _events.tryEmit(EngineEvent.Position(newTime, mediaPlayer.status().length().coerceAtLeast(0), mediaId))
+                _events.tryEmit(EngineEvent.Position(newTime, mediaPlayer.status().length().coerceAtLeast(0), eventsId))
             }
             override fun buffering(mediaPlayer: MediaPlayer, newCache: Float) {
-                _events.tryEmit(EngineEvent.Buffering(newCache < 100f, mediaId))
+                _events.tryEmit(EngineEvent.Buffering(newCache < 100f, eventsId))
             }
-            override fun playing(mediaPlayer: MediaPlayer) { _events.tryEmit(EngineEvent.Buffering(false, mediaId)) }
-            override fun finished(mediaPlayer: MediaPlayer) { _events.tryEmit(EngineEvent.Ended(mediaId)) }
+            override fun playing(mediaPlayer: MediaPlayer) { _events.tryEmit(EngineEvent.Buffering(false, eventsId)) }
+            override fun mediaChanged(mediaPlayer: MediaPlayer, media: uk.co.caprica.vlcj.media.MediaRef) { eventsId = mediaId }
+            override fun finished(mediaPlayer: MediaPlayer) { _events.tryEmit(EngineEvent.Ended(eventsId)) }
             override fun error(mediaPlayer: MediaPlayer) {
-                _events.tryEmit(EngineEvent.Error(reader?.lastStatus?.takeIf { it >= 400 }, null, mediaId))
+                _events.tryEmit(EngineEvent.Error(reader?.lastStatus?.takeIf { it >= 400 }, null, eventsId))
             }
         })
     }
@@ -60,6 +63,7 @@ class DesktopPlaybackEngine(
     override suspend fun load(input: MediaInput, startPositionMs: Long) {
         val options = if (startPositionMs > 0) arrayOf(":start-time=${startPositionMs / 1000.0}") else emptyArray()
         mediaId++
+        reader?.close()
         when (input) {
             // libVLC's own HTTP client fails its second (seek) connection inside the JVM, so remote bytes come from
             // our ranged OkHttp reader through vlcj callback media; libVLC never opens a socket.
@@ -84,6 +88,7 @@ class DesktopPlaybackEngine(
     override fun release() {
         mediaPlayer.release()
         factory.release()
+        reader?.close()
     }
 }
 

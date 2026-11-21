@@ -45,7 +45,14 @@ class DefaultBlossomPlayer(
     private var lastPositionMs = 0L
 
     init {
-        scope.launch { engine.events.collect { event -> mutex.withLock { onEvent(event) } } }
+        scope.launch {
+            engine.events.collect { event ->
+                mutex.withLock {
+                    // One bad event (an engine call that throws) must not stop the player from hearing the rest.
+                    try { onEvent(event) } catch (e: CancellationException) { throw e } catch (_: Exception) { }
+                }
+            }
+        }
     }
 
     override suspend fun setQueue(tracks: List<Track>, startIndex: Int, startPositionMs: Long) = mutex.withLock {
@@ -109,6 +116,8 @@ class DefaultBlossomPlayer(
         if (event.mediaId != 0L && event.mediaId != engine.mediaId) return
         when (event) {
             is EngineEvent.Position -> {
+                // Playing again after a recovery: the next expiry starts a fresh count ("2 consecutive failures").
+                if (event.positionMs > 0) reResolves = 0
                 lastPositionMs = event.positionMs
                 _state.update { it.copy(positionMs = event.positionMs, durationMs = event.durationMs.takeIf { d -> d > 0 } ?: it.durationMs) }
             }
@@ -128,7 +137,8 @@ class DefaultBlossomPlayer(
         }
         _state.update { it.copy(error = PlaybackError.StreamFailed(track.id, event.cause?.message ?: event.httpStatus?.let { s -> "HTTP $s" })) }
         reResolves = 0
-        advance(userInitiated = false, keepError = true)
+        // userInitiated: even with repeat ONE a dead stream moves on instead of retrying forever.
+        advance(userInitiated = true, keepError = true)
     }
 
     private suspend fun advance(userInitiated: Boolean, keepError: Boolean = false) {
@@ -175,6 +185,7 @@ class DefaultBlossomPlayer(
             if (queue.next(userInitiated = true) !is QueueMove.Moved || queue.currentIndex == 0 && queue.repeat == RepeatMode.OFF) break
         }
         wantPlaying = false
+        engine.pause()
         _state.update { it.copy(isPlaying = false) }
         publish()
     }

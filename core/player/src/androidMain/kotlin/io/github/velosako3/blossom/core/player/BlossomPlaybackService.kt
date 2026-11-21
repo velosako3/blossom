@@ -44,8 +44,9 @@ class BlossomPlaybackService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
-        val engine = PlayerHolder.engine ?: return
-        val player = PlayerHolder.player ?: return
+        val engine = PlayerHolder.engine
+        val player = PlayerHolder.player
+        if (engine == null || player == null) { stopSelf(); return }
         audioManager = getSystemService(AudioManager::class.java)
         val forwarding = object : ForwardingPlayer(engine.exoPlayer) {
             override fun getAvailableCommands(): Player.Commands = super.getAvailableCommands().buildUpon()
@@ -65,7 +66,7 @@ class BlossomPlaybackService : MediaSessionService() {
         val filter = IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
         if (android.os.Build.VERSION.SDK_INT >= 33) registerReceiver(noisy, filter, Context.RECEIVER_NOT_EXPORTED) else registerReceiver(noisy, filter)
         scope.launch {
-            player.state.map { it.isPlaying }.distinctUntilChanged().collect { playing -> if (playing) requestFocus() }
+            player.state.map { it.isPlaying }.distinctUntilChanged().collect { playing -> if (playing) { focusPolicy.onUserPlay(); requestFocus() } }
         }
     }
 

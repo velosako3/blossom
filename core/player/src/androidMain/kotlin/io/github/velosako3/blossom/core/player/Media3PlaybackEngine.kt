@@ -24,6 +24,7 @@ import io.github.velosako3.blossom.core.model.Track
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -68,21 +69,25 @@ class Media3PlaybackEngine(
     private var metadata: MediaMetadata = MediaMetadata.EMPTY
     @Volatile override var mediaId: Long = 0
         private set
+    /** Switches on the item transition, so callbacks still queued for the old item keep the old id. */
+    @Volatile private var eventsId: Long = 0
 
     init {
         exoPlayer.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
                 when (state) {
-                    Player.STATE_BUFFERING -> _events.tryEmit(EngineEvent.Buffering(true, mediaId))
-                    Player.STATE_READY -> _events.tryEmit(EngineEvent.Buffering(false, mediaId))
-                    Player.STATE_ENDED -> _events.tryEmit(EngineEvent.Ended(mediaId))
+                    Player.STATE_BUFFERING -> _events.tryEmit(EngineEvent.Buffering(true, eventsId))
+                    Player.STATE_READY -> _events.tryEmit(EngineEvent.Buffering(false, eventsId))
+                    Player.STATE_ENDED -> _events.tryEmit(EngineEvent.Ended(eventsId))
                 }
             }
+
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) { eventsId = mediaId }
 
             override fun onPlayerError(error: PlaybackException) {
                 val status = generateSequence<Throwable>(error) { it.cause }
                     .filterIsInstance<HttpDataSource.InvalidResponseCodeException>().firstOrNull()?.responseCode
-                _events.tryEmit(EngineEvent.Error(status, error, mediaId))
+                _events.tryEmit(EngineEvent.Error(status, error, eventsId))
             }
         })
         scope.launch {
@@ -121,7 +126,7 @@ class Media3PlaybackEngine(
     override fun pause() = onMain { exoPlayer.pause() }
     override fun seekTo(ms: Long) = onMain { exoPlayer.seekTo(ms) }
     override fun setVolume(v: Float) = onMain { exoPlayer.volume = v }
-    override fun release() = onMain { exoPlayer.release() }
+    override fun release() = onMain { scope.cancel(); exoPlayer.release() }
 
     private fun onMain(block: () -> Unit) {
         if (Looper.myLooper() == Looper.getMainLooper()) block() else main.post(block)

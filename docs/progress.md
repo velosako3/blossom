@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestones 0–1 done; Milestone 2 tasks 2.1–2.6 done. Next: Milestone 2 wrap-up (check, review, push).
+Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Task 3.1 done. Next: Task 3.2 (library commands and convergent projector).
 
 Hands-on testing rule: the owner is using this desktop, so never inject keyboard/mouse input or capture the screen.
 Desktop end-to-end checks run off-screen with the real graph: `./gradlew :composeApp:desktopTest -PliveTests=true -Proborazzi.test.record=true --tests "*DesktopEndToEnd*"`. `./gradlew :composeApp:run -Pblossom.debugPlay="query"` plays a search result at startup, for `playerctl` checks. Kill stray app instances by PID (`ps … | grep 'blossom\.MainKt'`), never with a `pkill -f` pattern that matches your own shell.
@@ -43,6 +43,9 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - Desktop `NetworkMonitor` checks for an up interface plus a DNS answer every 15 s (no request to any server); `-Dblossom.forceOffline=true` pins it offline for testing.
 
 ## Deviations from plan
+- Milestone 2 review (5 bugs, 11 risks, 1 question) fixed with RED→GREEN tests where it's logic: dead stream with repeat ONE now skips; removing the last current track pauses the engine; recovered expiries reset the re-resolve count; `HttpRangeReader` turns timeouts/truncated bodies into errors (re-resolve at position) instead of end-of-song or endless reconnects; engine events are tagged per media at the engine's own media switch (`mediaChanged` / `onMediaItemTransition`); seeking right with unknown duration no longer restarts; a user play during transient focus loss cancels auto-resume; readers and the Media3 polling scope are released; the service stops itself if started without a player; preference writes moved off the UI thread; a glass banner announces skipped songs (`PlaybackErrorBanner`).
+- Ruling: stream resolution stays under the player mutex, so a pause or seek pressed during a resolve waits for it (bounded by the HTTP timeouts). Moving it out needs cancellation of superseded loads; cost if wrong: a control lags on very slow networks.
+- Deferred to the tasks that build them: Ctrl+L and the like button (Task 3.3, Liked Songs), and the player menu's "Add to playlist" (3.3), "Save offline" (5.x) and "Sleep timer" (9.3). Each joins the menu through `PlayerMenuAction` when its task lands.
 - `OpEnvelope` carries `seq` (the originating device's operation counter): `since(device, seq)`, sync manifests and peer gossip all need it for operations from other devices too (shared interface updated in the plan).
 - Fractional index: appends and prepends step one base-62 digit (≈1 char per 60 end-inserts); middle inserts bisect. HLCs are stored as `Hlc.encode()` strings that sort in HLC order.
 - Task 2.4 evidence (emulator, Android 16 / API 36, headless AVD `blossom`): search → play gives `dumpsys media_session` → `state=PLAYING`, `description=One More Time (Radio Edit), Daft Punk`; MediaStyle notification present (`category=transport`, `FOREGROUND_SERVICE`); `KEYCODE_MEDIA_PAUSE`/`NEXT` act on blossom's queue; lock-screen controls show artwork and title, and tapping pause → `PAUSED`, next → the next queued song. Screenshots `docs/screenshots/m2/android_*.png`. The AVD shipped with no keyguard, so `locksettings set-disabled false` was used to show the lock screen.

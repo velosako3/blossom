@@ -26,6 +26,13 @@ class AudioFocusPolicyTest {
         assertEquals(FocusAction.Unduck, p.onFocusChange(FocusChange.GAIN, wasPlaying = false))
     }
 
+    @Test fun userPlayDuringLossCancelsAutoResume() {
+        val p = AudioFocusPolicy()
+        p.onFocusChange(FocusChange.LOSS_TRANSIENT, wasPlaying = true)
+        p.onUserPlay()
+        assertEquals(FocusAction.Unduck, p.onFocusChange(FocusChange.GAIN, wasPlaying = false))
+    }
+
     @Test fun gainAfterDuckUnducks() {
         val p = AudioFocusPolicy()
         p.onFocusChange(FocusChange.LOSS_TRANSIENT_CAN_DUCK, wasPlaying = true)

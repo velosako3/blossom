@@ -14,6 +14,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import io.github.velosako3.blossom.core.player.RepeatMode
 
 class FakeEngine : PlaybackEngine {
     val loads = mutableListOf<Pair<MediaInput, Long>>()
@@ -93,6 +94,43 @@ class DefaultBlossomPlayerTest {
         runCurrent()
         assertEquals(1, p.state.value.currentIndex)
         assertEquals(0, p.state.value.positionMs)
+    }
+
+    @Test fun repeatOneDeadStreamStillSkips() = runTest {
+        val engine = FakeEngine()
+        val p = player(engine)
+        p.setQueue(tracks(3), 0)
+        p.setRepeat(RepeatMode.ONE)
+        p.play()
+        runCurrent()
+        repeat(3) { engine.events.emit(EngineEvent.Error(403, null)); runCurrent() }
+        assertEquals(1, p.state.value.currentIndex)
+    }
+
+    @Test fun removingLastCurrentTrackStopsEngine() = runTest {
+        val engine = FakeEngine()
+        val p = player(engine)
+        p.setQueue(tracks(1), 0)
+        p.play()
+        runCurrent()
+        p.removeFromQueue(0)
+        runCurrent()
+        assertEquals(false, engine.playing)
+        assertEquals(false, p.state.value.isPlaying)
+    }
+
+    @Test fun recoveredExpiriesDoNotAccumulate() = runTest {
+        val engine = FakeEngine()
+        val p = player(engine)
+        p.setQueue(tracks(3), 0)
+        p.play()
+        runCurrent()
+        repeat(4) {
+            engine.events.emit(EngineEvent.Error(403, null)); runCurrent()
+            engine.events.emit(EngineEvent.Position(10_000L * (it + 1), 200_000)); runCurrent()
+        }
+        assertEquals(0, p.state.value.currentIndex)
+        assertEquals(null, p.state.value.error)
     }
 
     @Test fun offlineSkipsUnsavedTracks() = runTest {

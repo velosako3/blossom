@@ -43,7 +43,7 @@ class KeyboardShortcuts(
         when (e.key) {
             Key.Spacebar -> if (state.isPlaying) player.pause() else player.play()
             Key.DirectionLeft -> player.seekTo((state.positionMs - SEEK_STEP_MS).coerceAtLeast(0))
-            Key.DirectionRight -> player.seekTo((state.positionMs + SEEK_STEP_MS).coerceAtMost(state.durationMs.coerceAtLeast(0)))
+            Key.DirectionRight -> player.seekTo((state.positionMs + SEEK_STEP_MS).let { if (state.durationMs > 0) it.coerceAtMost(state.durationMs) else it })
             Key.Escape -> when {
                 navigator.current == Destination.NowPlaying -> navigator.back()
                 shell.rightPanel != null -> shell.rightPanel = null

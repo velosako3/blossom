@@ -18,6 +18,9 @@ sealed interface FocusAction {
 class AudioFocusPolicy {
     private var resumeOnGain = false
 
+    /** The user started playback themselves: a later focus gain must not resume on its own. */
+    fun onUserPlay() { resumeOnGain = false }
+
     fun onFocusChange(change: FocusChange, wasPlaying: Boolean): FocusAction = when (change) {
         FocusChange.LOSS_TRANSIENT_CAN_DUCK -> FocusAction.Duck(0.2f)
         FocusChange.LOSS_TRANSIENT -> { resumeOnGain = wasPlaying; FocusAction.Pause(resumeOnGain = wasPlaying) }
