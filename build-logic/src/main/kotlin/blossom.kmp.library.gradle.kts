@@ -35,6 +35,8 @@ kotlin {
             implementation(lib("kotlin-test"))
             implementation(lib("kotlinx-coroutines-test"))
         }
+        // Shared test fixtures live in src/commonTest/resources and are read from the desktop test classpath.
+        getByName("desktopTest").resources.srcDir("src/commonTest/resources")
     }
 }
 

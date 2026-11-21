@@ -16,9 +16,18 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // InnerTubeX, QuackJS and NewPipe Extractor are published only on JitPack.
+        maven("https://jitpack.io") {
+            content {
+                includeGroup("com.github.MetrolistGroup.innertubex")
+                includeGroup("com.github.MetrolistGroup.quackjs")
+                includeGroup("com.github.TeamNewPipe")
+                includeGroupByRegex("com\\.github\\.TeamNewPipe.*")
+            }
+        }
     }
 }
 
 include(":composeApp", ":androidApp")
-include(":core:designsystem", ":core:model")
-include(":source:api")
+include(":core:designsystem", ":core:model", ":core:platform")
+include(":source:api", ":source:youtubemusic")

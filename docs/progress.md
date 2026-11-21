@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestones 0–1 done (wrap-up: `./gradlew check` green, reviewer gaps fixed, `dev` pushed). Task 2.1 done. Next: Task 2.2 (YouTube Music source).
+Milestones 0–1 done (wrap-up: `./gradlew check` green, reviewer gaps fixed, `dev` pushed). Tasks 2.1–2.2 done. Next: Task 2.3 (player core).
 
 Toolchain: JDK 21 (Temurin), Gradle 9.9.2 wrapper, Android SDK in `~/Android/Sdk`
 (platform 37, build-tools 37.0.0, emulator, system image android-36 google_apis x86_64,
@@ -31,6 +31,14 @@ AVD `blossom`). `/dev/kvm` is usable and passwordless sudo works. Display: Wayla
 - Desktop window capture for evidence uses `xwd -id <window>` (installed `x11-apps/xwd`, `x11-misc/xdotool`), so screenshots contain only blossom's window, never the rest of the owner's screen.
 
 - Milestone 1 review: fixed the reviewer's findings (Reduce motion now drives every animation through `motionSpec`/`blossomSpring`, `ThemeMode` System/Light/Dark resolves in `App`, Android follows the system "Remove animations" switch until the in-app setting exists). The Settings toggles for theme, Reduce motion and "Use system title bar" are built with the settings screen in Task 9.7; until then the values are parameters with the spec's defaults (dark, motion on, custom title bar).
+
+- Kotlin compiles `commonMain` against the JDK when the only targets are Android and desktop JVM, so JVM-only libraries (OkHttp, NewPipe, InnerTubeX's JVM artifact) live in `commonMain` and BitChord's `jvmSharedMain` code ports without an extra source set.
+- InnerTubeX v0.12.0 (newest tag; same Kotlin 2.4.21/Ktor 3.6 as blossom) instead of BitChord's pinned v0.7.0; NewPipe Extractor v0.27.1. Both from JitPack, limited by a repository content filter.
+- `YouTubeSource` (plain YouTube uploads) searches through NewPipe's YouTube search extractor and plays through the same `YouTubeStreams` pipeline.
+- `selectAudioFormat` picks among NewPipe's progressive formats; InnerTubeX does its own selection from the quality hint (LOW/AUTO/HIGH).
+- Desktop `SecureStore` uses java-keyring (Windows Credential Manager / Linux Secret Service) with a 0600 properties fallback; Android encrypts with a Keystore AES-GCM key.
+- YouTube Music sign-in: `YtmSource` reads the cookie from `SecureStore` (`ytm.cookie`) like BitChord; the web-view login screen that captures it is built with the settings screens (Task 9.7).
+- Live test (Task 2.2): `./gradlew :source:youtubemusic:desktopTest -PliveTests=true --tests "*YtmLiveTest*"` → `live search: 20 songs, first = One More Time – Daft Punk`, `live stream: audio/webm; codecs="opus" 157 kbps, expires 2026-11-21T22:43:42Z`.
 
 ## Deviations from plan
 - `ImportedTrack` gained `album`, `sourceKey` and `unplayableReason` (shared interfaces updated in the plan), per the reuse audit.
