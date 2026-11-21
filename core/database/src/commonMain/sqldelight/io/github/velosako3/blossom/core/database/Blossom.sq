@@ -1,0 +1,147 @@
+-- blossom library database. Everything synced is a projection of op_log; device-only state is marked.
+
+CREATE TABLE op_log (
+    op_id TEXT NOT NULL PRIMARY KEY,
+    device_id TEXT NOT NULL,
+    seq INTEGER NOT NULL,
+    hlc_wall INTEGER NOT NULL,
+    hlc_counter INTEGER NOT NULL,
+    payload TEXT NOT NULL
+);
+CREATE INDEX op_log_device_seq ON op_log(device_id, seq);
+
+CREATE TABLE track (
+    id TEXT NOT NULL PRIMARY KEY,
+    json TEXT NOT NULL
+);
+
+-- hlc columns hold Hlc.encode() strings, which sort in HLC order.
+CREATE TABLE playlist (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    name_hlc TEXT NOT NULL,
+    description TEXT,
+    description_hlc TEXT NOT NULL,
+    origin_json TEXT,
+    created_hlc TEXT NOT NULL,
+    deleted_hlc TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE playlist_entry (
+    playlist_id TEXT NOT NULL,
+    entry_id TEXT NOT NULL,
+    track_json TEXT,
+    status TEXT NOT NULL,
+    source_title TEXT NOT NULL,
+    source_artist TEXT NOT NULL,
+    position TEXT NOT NULL,
+    position_hlc TEXT NOT NULL,
+    track_hlc TEXT NOT NULL,
+    added_hlc TEXT NOT NULL,
+    removed_hlc TEXT,
+    added_at INTEGER NOT NULL,
+    match_confidence REAL,
+    PRIMARY KEY (playlist_id, entry_id)
+);
+
+CREATE TABLE liked_track (
+    track_id TEXT NOT NULL PRIMARY KEY,
+    track_json TEXT NOT NULL,
+    liked INTEGER NOT NULL,
+    hlc TEXT NOT NULL,
+    liked_at INTEGER NOT NULL
+);
+
+CREATE TABLE play_event (
+    id TEXT NOT NULL PRIMARY KEY,
+    track_id TEXT NOT NULL,
+    track_json TEXT NOT NULL,
+    started_at INTEGER NOT NULL,
+    played_ms INTEGER NOT NULL,
+    counted INTEGER NOT NULL,
+    device_id TEXT NOT NULL
+);
+CREATE INDEX play_event_started ON play_event(started_at);
+
+-- This device only.
+CREATE TABLE local_file (
+    track_id TEXT NOT NULL PRIMARY KEY,
+    path TEXT NOT NULL,
+    mtime INTEGER NOT NULL,
+    size INTEGER NOT NULL
+);
+
+CREATE TABLE lyrics_cache (
+    track_id TEXT NOT NULL PRIMARY KEY,
+    json TEXT,
+    fetched_at INTEGER NOT NULL
+);
+
+CREATE TABLE import_job (
+    id TEXT NOT NULL PRIMARY KEY,
+    url TEXT NOT NULL,
+    service TEXT NOT NULL,
+    target_json TEXT NOT NULL,
+    playlist_id TEXT,
+    state TEXT NOT NULL,
+    total INTEGER,
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE import_job_item (
+    job_id TEXT NOT NULL,
+    idx INTEGER NOT NULL,
+    imported_json TEXT NOT NULL,
+    result_json TEXT,
+    written INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (job_id, idx)
+);
+
+-- This device only.
+CREATE TABLE offline_item (
+    track_id TEXT NOT NULL PRIMARY KEY,
+    track_json TEXT NOT NULL,
+    state TEXT NOT NULL,
+    bytes INTEGER NOT NULL DEFAULT 0,
+    downloaded INTEGER NOT NULL DEFAULT 0,
+    file_name TEXT
+);
+CREATE TABLE offline_ref (
+    track_id TEXT NOT NULL,
+    ref TEXT NOT NULL,
+    PRIMARY KEY (track_id, ref)
+);
+CREATE TABLE offline_playlist (
+    playlist_id TEXT NOT NULL PRIMARY KEY
+);
+
+CREATE TABLE sync_peer (
+    device_id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    cert_sha256 TEXT NOT NULL,
+    last_seen INTEGER
+);
+
+CREATE TABLE setting (
+    key TEXT NOT NULL PRIMARY KEY,
+    json_value TEXT NOT NULL,
+    hlc TEXT NOT NULL
+);
+
+-- op_log
+insertOp:
+INSERT OR IGNORE INTO op_log VALUES (?, ?, ?, ?, ?, ?);
+
+maxSeq:
+SELECT max(seq) AS seq FROM op_log WHERE device_id = ?;
+
+opsSince:
+SELECT * FROM op_log WHERE device_id = ? AND seq > ? ORDER BY seq;
+
+allOps:
+SELECT * FROM op_log;
+
+knownDevices:
+SELECT device_id, max(seq) AS last_seq FROM op_log GROUP BY device_id;
