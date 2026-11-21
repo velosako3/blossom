@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.core.designsystem.background
 
+import io.github.velosako3.blossom.core.designsystem.theme.motionSpec
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -39,7 +40,7 @@ private const val CROSSFADE_MS = 600
 fun BlossomBackground(palette: ArtworkPalette, modifier: Modifier = Modifier) {
     val dark = LocalBlossomColors.current.isDark
     val reduceMotion = LocalReduceMotion.current
-    val fade = tween<Color>(CROSSFADE_MS)
+    val fade = motionSpec(tween<Color>(CROSSFADE_MS))
     val dominant by animateColorAsState(palette.dominant, fade)
     val vibrant by animateColorAsState(palette.vibrant, fade)
     val muted by animateColorAsState(palette.muted, fade)

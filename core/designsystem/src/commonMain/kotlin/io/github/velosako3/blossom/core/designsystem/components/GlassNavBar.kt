@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.core.designsystem.components
 
+import io.github.velosako3.blossom.core.designsystem.theme.blossomSpring
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -63,8 +64,9 @@ private fun NavCell(item: GlassNavItem, selected: Boolean, onClick: () -> Unit, 
     val interaction = remember { MutableInteractionSource() }
     val lens by animateColorAsState(
         if (selected) (if (colors.isDark) Color.White.copy(alpha = 0.16f) else Color.Black.copy(alpha = 0.07f)) else Color.Transparent,
+        blossomSpring(),
     )
-    val tint by animateColorAsState(if (selected) colors.accent else colors.onSurfaceVariant)
+    val tint by animateColorAsState(if (selected) colors.accent else colors.onSurfaceVariant, blossomSpring())
     Column(
         modifier
             .testTag(GLASS_NAV_ITEM_TAG)

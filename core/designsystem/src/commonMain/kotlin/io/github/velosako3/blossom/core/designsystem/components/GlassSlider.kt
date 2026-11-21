@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.core.designsystem.components
 
+import io.github.velosako3.blossom.core.designsystem.theme.blossomSpring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.focusable
@@ -56,7 +57,7 @@ fun GlassSlider(
     var dragging by remember { mutableStateOf(false) }
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
-    val thumb by animateDpAsState(if (dragging || focused) 18.dp else 12.dp)
+    val thumb by animateDpAsState(if (dragging || focused) 18.dp else 12.dp, blossomSpring())
     val change by rememberUpdatedState(onValueChange)
     val finished by rememberUpdatedState(onValueChangeFinished)
     fun emit(f: Float) = change(valueRange.start + f.coerceIn(0f, 1f) * span)

@@ -2,6 +2,7 @@
 package io.github.velosako3.blossom.shell
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.layout.Arrangement
@@ -34,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import io.github.velosako3.blossom.composeApp.resources.Res
 import io.github.velosako3.blossom.composeApp.resources.app_name
@@ -48,6 +50,7 @@ import io.github.velosako3.blossom.core.designsystem.components.GlassSidebar
 import io.github.velosako3.blossom.core.designsystem.components.GlassSidebarItem
 import io.github.velosako3.blossom.core.designsystem.glass.GlassSurface
 import io.github.velosako3.blossom.core.designsystem.theme.BlossomTheme
+import io.github.velosako3.blossom.core.designsystem.theme.motionSpec
 import io.github.velosako3.blossom.navigation.BlossomNavHost
 import io.github.velosako3.blossom.navigation.Navigator
 import org.jetbrains.compose.resources.stringResource
@@ -95,7 +98,7 @@ fun ExpandedShell(navigator: Navigator, slots: ShellSlots, modifier: Modifier = 
                 }
             }
             BlossomNavHost(navigator, Modifier.weight(1f).fillMaxHeight(), screen = slots.screen)
-            AnimatedVisibility(panel != null, enter = expandHorizontally(), exit = shrinkHorizontally()) {
+            AnimatedVisibility(panel != null, enter = expandHorizontally(motionSpec(spring<IntSize>())), exit = shrinkHorizontally(motionSpec(spring<IntSize>()))) {
                 GlassSurface(Modifier.width(360.dp).fillMaxHeight()) {
                     Column(Modifier.padding(16.dp)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

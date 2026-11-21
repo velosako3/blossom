@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.core.designsystem.components
 
+import io.github.velosako3.blossom.core.designsystem.theme.blossomSpring
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.hoverable
@@ -68,6 +69,7 @@ fun GlassSidebarItem(
             hovered -> if (colors.isDark) Color.White.copy(alpha = 0.07f) else Color.Black.copy(alpha = 0.04f)
             else -> Color.Transparent
         },
+        blossomSpring(),
     )
     val tint = if (selected) colors.accent else colors.onSurface
     Row(

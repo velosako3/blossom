@@ -15,6 +15,8 @@ import io.github.velosako3.blossom.core.designsystem.color.ArtworkPalette
 import io.github.velosako3.blossom.core.designsystem.glass.GlassQuality
 import io.github.velosako3.blossom.core.designsystem.glass.glassBackdropSource
 import io.github.velosako3.blossom.core.designsystem.theme.BlossomTheme
+import io.github.velosako3.blossom.core.designsystem.theme.ThemeMode
+import io.github.velosako3.blossom.core.designsystem.theme.resolveDarkTheme
 import io.github.velosako3.blossom.navigation.Navigator
 import io.github.velosako3.blossom.navigation.WindowLayout
 import io.github.velosako3.blossom.shell.CompactShell
@@ -29,13 +31,14 @@ import io.github.velosako3.blossom.shell.ShellSlots
 @Composable
 fun App(
     navigator: Navigator = remember { Navigator() },
-    darkTheme: Boolean = true,
+    themeMode: ThemeMode = ThemeMode.DARK,
     palette: ArtworkPalette = ArtworkPalette.Default,
     reduceMotion: Boolean = false,
     glassQuality: GlassQuality? = null,
     slots: ShellSlots = remember { ShellSlots() },
     titleBar: (@Composable () -> Unit)? = null,
 ) {
+    val darkTheme = resolveDarkTheme(themeMode, isSystemInDarkTheme())
     BlossomTheme(darkTheme = darkTheme, palette = palette, glassQuality = glassQuality, reduceMotion = reduceMotion) {
         Box(Modifier.fillMaxSize()) {
             BlossomBackground(palette, Modifier.fillMaxSize().glassBackdropSource())
@@ -52,7 +55,3 @@ fun App(
         }
     }
 }
-
-/** System theme helper for the platform entry points. */
-@Composable
-fun systemDark(): Boolean = isSystemInDarkTheme()

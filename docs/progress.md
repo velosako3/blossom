@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestones 0 done; Milestone 1 tasks 1.1–1.5 done. Next: Milestone 1 wrap-up (check, review, push).
+Milestones 0–1 done (wrap-up: `./gradlew check` green, reviewer gaps fixed, `dev` pushed). Task 2.1 done. Next: Task 2.2 (YouTube Music source).
 
 Toolchain: JDK 21 (Temurin), Gradle 9.9.2 wrapper, Android SDK in `~/Android/Sdk`
 (platform 37, build-tools 37.0.0, emulator, system image android-36 google_apis x86_64,
@@ -30,9 +30,12 @@ AVD `blossom`). `/dev/kvm` is usable and passwordless sudo works. Display: Wayla
 - Navigation is a plain observable back stack (`Navigator`), not a navigation library: blossom's hierarchy is flat (5 top-level destinations, detail screens pushed on top).
 - Desktop window capture for evidence uses `xwd -id <window>` (installed `x11-apps/xwd`, `x11-misc/xdotool`), so screenshots contain only blossom's window, never the rest of the owner's screen.
 
+- Milestone 1 review: fixed the reviewer's findings (Reduce motion now drives every animation through `motionSpec`/`blossomSpring`, `ThemeMode` System/Light/Dark resolves in `App`, Android follows the system "Remove animations" switch until the in-app setting exists). The Settings toggles for theme, Reduce motion and "Use system title bar" are built with the settings screen in Task 9.7; until then the values are parameters with the spec's defaults (dark, motion on, custom title bar).
+
 ## Deviations from plan
 - `ImportedTrack` gained `album`, `sourceKey` and `unplayableReason` (shared interfaces updated in the plan), per the reuse audit.
 - **Separate `androidApp` module.** AGP 9 no longer allows `com.android.application` in a Kotlin Multiplatform module. `composeApp` is now a KMP library (shared UI, desktop `Main.kt`), and `androidApp` holds `MainActivity`, the manifest and the APK. Every plan command `:composeApp:assembleDebug` / `assembleRelease` becomes `:androidApp:assembleDebug` / `assembleRelease`. KMP Android unit tests are `androidHostTest` (AGP 9 naming).
 - **No remote `main` branch.** `github.com/velosako3/blossom` has no commits, so `dev` starts from an empty history and the `dev → main` PR can't be opened until `main` exists (see open questions). Pushing to `main` is not allowed for this run.
 
 ## Open questions for owner
+- **Create a `main` branch on GitHub** so the `dev → main` pull request can be opened. The repository had no commits when this run started, and this run may not push to `main`. One way: `git push origin <first commit of dev>:refs/heads/main` (the first commit only adds the plan). Until then, milestone summaries are kept in `docs/milestones.md`.
