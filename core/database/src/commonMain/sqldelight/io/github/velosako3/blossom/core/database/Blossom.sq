@@ -240,3 +240,10 @@ UPDATE setting SET json_value = :value, hlc = :hlc WHERE key = :key AND hlc < :h
 
 settingValue:
 SELECT json_value FROM setting WHERE key = ? AND hlc != '';
+
+-- lyrics cache (json NULL = none found)
+lyricsFor:
+SELECT * FROM lyrics_cache WHERE track_id = ?;
+
+putLyrics:
+INSERT OR REPLACE INTO lyrics_cache(track_id, json, fetched_at) VALUES (?, ?, ?);

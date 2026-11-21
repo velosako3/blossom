@@ -12,6 +12,11 @@ kotlin {
             implementation(projects.core.database)
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.okhttp)
+            implementation(libs.okhttp)
+            implementation(libs.jsoup)
+        }
+        getByName("desktopMain").dependencies {
+            implementation(libs.jaudiotagger)
         }
     }
 }
