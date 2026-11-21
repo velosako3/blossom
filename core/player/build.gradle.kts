@@ -9,5 +9,11 @@ kotlin {
             api(projects.source.api)
             api(projects.core.platform)
         }
+        androidMain.dependencies {
+            api(libs.media3.exoplayer)
+            api(libs.media3.session)
+            implementation(libs.media3.datasource.okhttp)
+            implementation(libs.okhttp)
+        }
     }
 }

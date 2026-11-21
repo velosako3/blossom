@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestones 0–1 done (wrap-up: `./gradlew check` green, reviewer gaps fixed, `dev` pushed). Tasks 2.1–2.3 done. Next: Task 2.4 (Android Media3 engine).
+Milestones 0–1 done (wrap-up: `./gradlew check` green, reviewer gaps fixed, `dev` pushed). Tasks 2.1–2.3 done; 2.4 done except the emulator lock-screen check (needs the play UI from 2.6). Next: Task 2.5 (desktop engine).
 
 Toolchain: JDK 21 (Temurin), Gradle 9.9.2 wrapper, Android SDK in `~/Android/Sdk`
 (platform 37, build-tools 37.0.0, emulator, system image android-36 google_apis x86_64,
@@ -44,6 +44,9 @@ AVD `blossom`). `/dev/kvm` is usable and passwordless sudo works. Display: Wayla
 - Desktop `NetworkMonitor` checks for an up interface plus a DNS answer every 15 s (no request to any server); `-Dblossom.forceOffline=true` pins it offline for testing.
 
 ## Deviations from plan
+- `AudioFocusPolicy` is a small class, not an `object`: "GAIN resumes only after a transient loss" needs to remember the previous loss.
+- `PlaybackEngine` gained a default no-op `onTrackChanged(track)` so the engines can publish now-playing metadata to the notification/lock screen (Android) and MPRIS/SMTC (desktop); `DefaultBlossomPlayer` calls it before every load.
+- Android audio focus is requested by `BlossomPlaybackService` through `AudioFocusPolicy` (ExoPlayer's own focus handling is off) so focus changes and "headphones unplugged" go through blossom's player state; the session's next/previous/play/pause are forwarded to blossom's queue.
 - `ImportedTrack` gained `album`, `sourceKey` and `unplayableReason` (shared interfaces updated in the plan), per the reuse audit.
 - **Separate `androidApp` module.** AGP 9 no longer allows `com.android.application` in a Kotlin Multiplatform module. `composeApp` is now a KMP library (shared UI, desktop `Main.kt`), and `androidApp` holds `MainActivity`, the manifest and the APK. Every plan command `:composeApp:assembleDebug` / `assembleRelease` becomes `:androidApp:assembleDebug` / `assembleRelease`. KMP Android unit tests are `androidHostTest` (AGP 9 naming).
 - **No remote `main` branch.** `github.com/velosako3/blossom` has no commits, so `dev` starts from an empty history and the `dev → main` PR can't be opened until `main` exists (see open questions). Pushing to `main` is not allowed for this run.

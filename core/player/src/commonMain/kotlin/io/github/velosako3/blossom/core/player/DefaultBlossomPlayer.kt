@@ -160,6 +160,7 @@ class DefaultBlossomPlayer(
                 lastPositionMs = startMs
                 _state.update { it.copy(positionMs = startMs, durationMs = track.durationMs) }
                 publish()
+                engine.onTrackChanged(track)
                 engine.load(input, startMs)
                 if (wantPlaying) engine.play()
                 return

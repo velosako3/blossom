@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.core.player
 
+import io.github.velosako3.blossom.core.model.Track
 import io.github.velosako3.blossom.core.model.TrackId
 import io.github.velosako3.blossom.source.api.StreamInfo
 import kotlinx.coroutines.flow.Flow
@@ -30,4 +31,6 @@ interface PlaybackEngine {
     fun seekTo(ms: Long)
     fun setVolume(v: Float)
     fun release()
+    /** The track about to be loaded, for system media controls (notification, lock screen, MPRIS, SMTC). */
+    fun onTrackChanged(track: Track?) {}
 }
