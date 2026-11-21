@@ -17,7 +17,9 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 
 import io.github.velosako3.blossom.core.designsystem.color.ArtworkPalette
+import dev.chrisbanes.haze.HazeState
 import io.github.velosako3.blossom.core.designsystem.glass.FrameBudgetMonitor
+import io.github.velosako3.blossom.core.designsystem.glass.LocalGlassBackdrop
 import io.github.velosako3.blossom.core.designsystem.glass.GlassCapabilities
 import io.github.velosako3.blossom.core.designsystem.glass.GlassPreference
 import io.github.velosako3.blossom.core.designsystem.glass.GlassQuality
@@ -60,6 +62,7 @@ fun BlossomTheme(
             }
         }
     }
+    val backdrop = remember { HazeState() }
     val quality = glassQuality ?: resolveGlassQuality(GlassCapabilities.maxSupported(), glassPreference, monitorCap)
     val colors = if (darkTheme) BlossomColors.Dark else BlossomColors.Light
     val scheme = if (darkTheme) {
@@ -82,6 +85,7 @@ fun BlossomTheme(
             LocalReduceMotion provides reduceMotion,
             LocalGlassTint provides colors.surface,
             LocalArtworkPalette provides palette,
+            LocalGlassBackdrop provides backdrop,
             LocalContentColor provides colors.onSurface,
             content = content,
         )

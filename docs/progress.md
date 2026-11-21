@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestone 0 done. Tasks 1.1–1.3 done. Next: Task 1.4 (GlassSurface + components).
+Milestone 0 done. Tasks 1.1–1.4 done. Next: Task 1.5 (app shell).
 
 Toolchain: JDK 21 (Temurin), Gradle 9.9.2 wrapper, Android SDK in `~/Android/Sdk`
 (platform 37, build-tools 37.0.0, emulator, system image android-36 google_apis x86_64,
@@ -21,6 +21,11 @@ AVD `blossom`). `/dev/kvm` is usable and passwordless sudo works. Display: Wayla
 - Stats/Wrapped written new: BitChord's stats code is Android-only and its rules differ from the spec.
 
 - untitled.stream gate: **(a) works without sign-in.** Sample links 1 and 2 load metadata, sign audio URLs and stream plain MP3 with no account and no DRM (see `docs/research/untitled.md`). The sign-in flow of Task 6.5 is therefore not built; private links (`302 → /login`) show "This untitled link is private or was removed".
+
+- Glass rendering: FULL uses Haze 2.1's `haze-glass` (refraction shader: AGSL on Android 13+, SkSL on desktop) tuned to the spec (24 dp blur, 6 dp edge band, small chromatic fringe); REDUCED uses `haze-blur` (24 dp, no refraction); OFF is an 88% tint. blossom draws the rim, grain and shadow itself. No hand-written shader actuals are needed, so `GlassShaders.kt` holds the shared grain tile and rim brush instead.
+- Glass tint doubles as the text scrim: its alpha is `max(spec alpha, requiredScrimAlpha(onSurface, palette.dominant, tint))`, so text on glass always meets 4.5:1 against the artwork colour behind it.
+- `GlassSheet` and `GlassDialog` render as in-window overlays (not separate platform windows), so their glass samples the real backdrop; Esc and scrim taps dismiss them.
+- Snapshot tests force a glass quality, which also disables the frame-budget monitor; its endless frame loop would otherwise keep the test clock busy.
 
 ## Deviations from plan
 - `ImportedTrack` gained `album`, `sourceKey` and `unplayableReason` (shared interfaces updated in the plan), per the reuse audit.

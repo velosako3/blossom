@@ -7,6 +7,8 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(libs.haze)
+            implementation(libs.haze.blur)
+            implementation(libs.haze.glass)
         }
     }
 }
