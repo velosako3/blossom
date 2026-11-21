@@ -11,7 +11,22 @@ copyright headers are kept on every copied file, and modified files carry a
 "Modified for blossom, <year>." line below that header.
 
 - BitChord — https://github.com/kushagrasinghx/BitChord — GPL-3.0
-  (details: see "Upstream code" below, filled in by the reuse audit)
+  Tag v1.9.1, commit 7f45c768a461fd7e68bf4613f71e8a767e643d4c.
+  Taken: the YouTube Music Innertube client, its parser and stream resolution
+  (source/youtubemusic); the lyrics providers and the LRC/enhanced LRC/TTML
+  parsers (feature/lyrics); Spotify public-playlist and library reading
+  (source/spotify); the Last.fm and ListenBrainz clients (feature/integrations).
 
-- Spotube — https://github.com/KRTirtho/spotube — AGPL-3.0-or-later (v6)
-  (details: see "Upstream code" below, filled in by the reuse audit)
+- Spotube — https://github.com/KRTirtho/spotube — AGPL-3.0-or-later
+  Tag v6.0.0, commit 8925b1b9351c3af2fd672db898d8d899badc1cb9.
+  Taken: the libVLC (vlcj) desktop audio engine and its VLC bundling setup
+  (core/player, composeApp packaging); the system media control service for
+  Linux MPRIS and Windows SMTC (core/player).
+
+Libraries used as dependencies (not copied), with their licenses:
+- InnerTubeX (MetrolistGroup/innertubex) — GPL-3.0
+- NewPipe Extractor (TeamNewPipe/NewPipeExtractor) — GPL-3.0
+- vlcj (caprica/vlcj) — GPL-3.0; libVLC (VideoLAN) — LGPL-2.1-or-later
+- Nucleus media-control (NucleusFramework/Nucleus) — MIT
+- The full list is generated from the dependency graph and shown in the app
+  under Settings → About → Open-source licenses.
