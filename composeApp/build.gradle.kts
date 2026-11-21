@@ -4,6 +4,7 @@ import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
     id("blossom.compose")
+    id("blossom.desktop.app")
 }
 
 val blossomVersion = providers.gradleProperty("blossom.version").get()
@@ -39,7 +40,11 @@ kotlin {
                 implementation(projects.core.designsystem)
             }
         }
+        getByName("desktopMain") {
+            kotlin.srcDir(tasks.named("generateVlcBundleLoader"))
+        }
         getByName("desktopMain").dependencies {
+            implementation(libs.vlcj)
             implementation(ComposePlugin.DesktopDependencies.currentOs)
             implementation(libs.kotlinx.coroutines.swing)
         }
@@ -50,6 +55,7 @@ compose.desktop {
     application {
         mainClass = "io.github.velosako3.blossom.MainKt"
         nativeDistributions {
+            appResourcesRootDir.set(vlcjBundler.vlcNativesDirectory)
             targetFormats(TargetFormat.Msi, TargetFormat.Deb, TargetFormat.AppImage)
             packageName = "blossom"
             packageVersion = blossomVersion.substringBefore('-')
@@ -64,3 +70,5 @@ compose.desktop {
         }
     }
 }
+
+tasks.matching { it.name == "prepareAppResources" }.configureEach { dependsOn("downloadVlcNatives") }

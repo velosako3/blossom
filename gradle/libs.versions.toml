@@ -25,6 +25,9 @@ javaKeyring = "1.0.4"
 innertubex = "v0.12.0"
 newpipe = "v0.27.1"
 jsoup = "1.24.1"
+vlcj = "4.12.1"
+nucleus = "2.5.18"
+vlcjBundler = "0.2.1"
 
 [libraries]
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
@@ -33,6 +36,7 @@ kotlin-serialization-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-ser
 android-gradle-plugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 compose-gradle-plugin = { module = "org.jetbrains.compose:compose-gradle-plugin", version.ref = "compose" }
 roborazzi-gradle-plugin = { module = "io.github.takahirom.roborazzi:roborazzi-gradle-plugin", version.ref = "roborazzi" }
+vlcj-bundler-gradle-plugin = { module = "org.spotube:vlcj-bundler-gradle-plugin", version.ref = "vlcjBundler" }
 sqldelight-gradle-plugin = { module = "app.cash.sqldelight:gradle-plugin", version.ref = "sqldelight" }
 
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -49,6 +53,8 @@ java-keyring = { module = "com.github.javakeyring:java-keyring", version.ref = "
 innertubex = { module = "com.github.MetrolistGroup.innertubex:innertubex", version.ref = "innertubex" }
 newpipe-extractor = { module = "com.github.TeamNewPipe:NewPipeExtractor", version.ref = "newpipe" }
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
+vlcj = { module = "uk.co.caprica:vlcj", version.ref = "vlcj" }
+nucleus-media-control = { module = "dev.nucleusframework:nucleus.media-control", version.ref = "nucleus" }
 
 compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose" }
 compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "compose" }

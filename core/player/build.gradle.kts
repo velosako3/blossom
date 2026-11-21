@@ -9,6 +9,11 @@ kotlin {
             api(projects.source.api)
             api(projects.core.platform)
         }
+        getByName("desktopMain").dependencies {
+            implementation(libs.vlcj)
+            implementation(libs.okhttp)
+            implementation(libs.nucleus.media.control)
+        }
         androidMain.dependencies {
             api(libs.media3.exoplayer)
             api(libs.media3.session)
