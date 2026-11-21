@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestone 0 done. Tasks 1.1–1.2 done. Next: Task 1.3 (glass quality).
+Milestone 0 done. Tasks 1.1–1.3 done. Next: Task 1.4 (GlassSurface + components).
 
 Toolchain: JDK 21 (Temurin), Gradle 9.9.2 wrapper, Android SDK in `~/Android/Sdk`
 (platform 37, build-tools 37.0.0, emulator, system image android-36 google_apis x86_64,
