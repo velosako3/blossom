@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestones 0–1 done. Tasks 2.1–2.6 done except Task 2.4 Step 4 (emulator lock-screen check). Next: that check, then the Milestone 2 wrap-up.
+Milestones 0–1 done; Milestone 2 tasks 2.1–2.6 done. Next: Milestone 2 wrap-up (check, review, push).
 
 Hands-on testing rule: the owner is using this desktop, so never inject keyboard/mouse input or capture the screen.
 Desktop end-to-end checks run off-screen with the real graph: `./gradlew :composeApp:desktopTest -PliveTests=true -Proborazzi.test.record=true --tests "*DesktopEndToEnd*"`. `./gradlew :composeApp:run -Pblossom.debugPlay="query"` plays a search result at startup, for `playerctl` checks. Kill stray app instances by PID (`ps … | grep 'blossom\.MainKt'`), never with a `pkill -f` pattern that matches your own shell.
@@ -43,6 +43,7 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - Desktop `NetworkMonitor` checks for an up interface plus a DNS answer every 15 s (no request to any server); `-Dblossom.forceOffline=true` pins it offline for testing.
 
 ## Deviations from plan
+- Task 2.4 evidence (emulator, Android 16 / API 36, headless AVD `blossom`): search → play gives `dumpsys media_session` → `state=PLAYING`, `description=One More Time (Radio Edit), Daft Punk`; MediaStyle notification present (`category=transport`, `FOREGROUND_SERVICE`); `KEYCODE_MEDIA_PAUSE`/`NEXT` act on blossom's queue; lock-screen controls show artwork and title, and tapping pause → `PAUSED`, next → the next queued song. Screenshots `docs/screenshots/m2/android_*.png`. The AVD shipped with no keyguard, so `locksettings set-disabled false` was used to show the lock screen.
 - Desktop playback feeds libVLC through vlcj **callback media** backed by `HttpRangeReader` (OkHttp, all `StreamInfo` headers, 1 MiB ranges). The bundled libVLC can't open a second HTTP connection inside the JVM ("connection error: Resource temporarily unavailable"), and WebM needs one to seek to its cues; through callbacks libVLC opens no sockets at all. `RemoteStreamProxy` from Task 2.5 was removed.
 - `AddVlcPluginsTask` (build-logic) adds what vlcj-bundler strips: `libimem_plugin` (the byte-stream access behind callback media; the Ubuntu build's `libaccess_imem_plugin` is the raw-ES one) and, on Linux, `libebml.so.5` and `libmatroska.so.7`, without which the bundled mkv demuxer can't load and YouTube's Opus/WebM streams don't play.
 - `EngineEvent`s carry a `mediaId`; `DefaultBlossomPlayer` drops events left over from the previous load (a stale position or Ended arriving after a skip).
