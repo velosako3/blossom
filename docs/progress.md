@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestone 0 done (Tasks 0.1–0.3). Next: Task 1.1 (design tokens).
+Milestone 0 done. Task 1.1 done. Next: Task 1.2 (artwork palette).
 
 Toolchain: JDK 21 (Temurin), Gradle 9.9.2 wrapper, Android SDK in `~/Android/Sdk`
 (platform 37, build-tools 37.0.0, emulator, system image android-36 google_apis x86_64,

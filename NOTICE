@@ -30,3 +30,7 @@ Libraries used as dependencies (not copied), with their licenses:
 - Nucleus media-control (NucleusFramework/Nucleus) — MIT
 - The full list is generated from the dependency graph and shown in the app
   under Settings → About → Open-source licenses.
+
+Bundled assets:
+- Inter typeface (rsms/inter v4.1) — SIL Open Font License 1.1, see
+  core/designsystem/OFL-Inter.txt
