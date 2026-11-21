@@ -66,6 +66,12 @@ class InnertubeClient(
     suspend fun searchContinuation(token: String): JsonObject =
         post("search", mapOf("ctoken" to token, "continuation" to token, "type" to "next")) { put("continuation", token) }
 
+    /** Timed caption transcript (a last-resort lyrics source). The params are a tiny protobuf: field 1 = video ID. */
+    suspend fun transcript(videoId: String): JsonObject = post("get_transcript") {
+        val bytes = byteArrayOf(10, videoId.toByteArray().size.toByte()) + videoId.toByteArray()
+        put("params", java.util.Base64.getEncoder().encodeToString(bytes))
+    }
+
     suspend fun browse(browseId: String, params: String? = null): JsonObject = post("browse") {
         put("browseId", browseId)
         params?.let { put("params", it) }

@@ -24,7 +24,7 @@ interface LyricsProvider {
 }
 
 /** Sidecar `.lrc` files and embedded lyrics tags, for local files. */
-interface LocalLyricsSource {
+fun interface LocalLyricsSource {
     suspend fun lyrics(track: Track): Lyrics?
 }
 

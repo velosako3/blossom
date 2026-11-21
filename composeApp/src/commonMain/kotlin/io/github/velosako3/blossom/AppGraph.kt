@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom
 
+import io.github.velosako3.blossom.feature.lyrics.LocalLyricsSource
+import io.github.velosako3.blossom.feature.lyrics.LyricsResolver
+import io.github.velosako3.blossom.feature.lyrics.LyricsViewModel
+import io.github.velosako3.blossom.feature.lyrics.SqlLyricsCache
+import io.github.velosako3.blossom.feature.lyrics.onlineLyricsProviders
+import io.github.velosako3.blossom.feature.lyrics.providers.YouTubeLyricsApi
+import kotlinx.coroutines.flow.map
 import io.github.velosako3.blossom.core.platform.NetworkMonitor
 import io.github.velosako3.blossom.core.platform.PreferenceStore
 import io.github.velosako3.blossom.core.player.BlossomPlayer
@@ -44,6 +51,8 @@ class AppGraph(
     val local: LocalFilesHost,
     /** Shares a link: the share sheet on Android, the clipboard on desktop. */
     val shareLink: (String) -> Unit,
+    /** Sidecar `.lrc` / embedded lyrics for local files (desktop); none on Android. */
+    localLyrics: LocalLyricsSource = LocalLyricsSource { null },
 ) {
     val search = SearchViewModel(ytm, RecentSearchStore(prefs), scope)
     val hlc = HybridLogicalClock(deviceId, Clock.System)
@@ -53,6 +62,17 @@ class AppGraph(
     val repo = SqlLibraryRepository(db)
     val library = LibraryViewModel(repo, commands, scope)
     val home by lazy { HomeViewModel(ytm, scope) }
+    val lyrics = LyricsViewModel(
+        LyricsResolver(onlineLyricsProviders(), localLyrics, SqlLyricsCache(db), Clock.System),
+        player.state.map { it.current },
+        scope,
+    )
+
+    init {
+        YouTubeLyricsApi.next = ytm.client::next
+        YouTubeLyricsApi.browse = { id, params -> ytm.client.browse(id, params) }
+        YouTubeLyricsApi.transcript = ytm.client::transcript
+    }
 }
 
 /** Platform glue for local files: the library, the folders it watches, a folder picker and (Android) permission. */

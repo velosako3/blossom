@@ -47,6 +47,7 @@ kotlin {
                 implementation(projects.feature.artist)
                 implementation(projects.feature.nowplaying)
                 implementation(projects.feature.library)
+                implementation(projects.feature.lyrics)
                 implementation(projects.core.database)
             }
         }

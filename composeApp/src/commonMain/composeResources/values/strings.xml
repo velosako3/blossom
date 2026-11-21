@@ -26,4 +26,5 @@
     <string name="dest_liked">Liked Songs</string>
     <string name="dest_local_files">Local files</string>
     <string name="menu_add_to_playlist">Add to playlist</string>
+    <string name="lyrics_close_full_screen">Close full-screen lyrics</string>
 </resources>

@@ -76,7 +76,9 @@ fun createDesktopGraph(): AppGraph {
         }
     }
     Runtime.getRuntime().addShutdownHook(Thread { runCatching { engine.release() } })
-    return AppGraph(player, fileDatabase(File(dataDir, "blossom.db")), prefs.deviceId(), ytm, prefs, network, scope, local) { link ->
-        Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(link), null)
-    }
+    return AppGraph(
+        player, fileDatabase(File(dataDir, "blossom.db")), prefs.deviceId(), ytm, prefs, network, scope, local,
+        shareLink = { link -> Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(link), null) },
+        localLyrics = io.github.velosako3.blossom.feature.lyrics.FileLocalLyricsSource(localLibrary::pathFor),
+    )
 }

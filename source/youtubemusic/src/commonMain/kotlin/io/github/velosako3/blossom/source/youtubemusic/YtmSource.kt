@@ -28,7 +28,7 @@ internal object YtmSearchParams {
 class YtmSource(
     private val secureStore: SecureStore,
     cacheDir: File,
-    private val client: InnertubeClient = InnertubeClient(cookie = { secureStore.get(COOKIE_KEY) }),
+    val client: InnertubeClient = InnertubeClient(cookie = { secureStore.get(COOKIE_KEY) }),
     private val streams: YouTubeStreams = YouTubeStreams({ secureStore.get(COOKIE_KEY) }, cacheDir),
 ) : MusicSource, YtmBrowse {
     override val kind = SourceKind.YOUTUBE_MUSIC

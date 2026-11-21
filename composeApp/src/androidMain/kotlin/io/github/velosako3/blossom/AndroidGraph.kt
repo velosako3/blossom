@@ -63,12 +63,12 @@ fun createAndroidGraph(context: Context): AppGraph {
     )
     PlayerHolder.engine = engine
     PlayerHolder.player = player
-    return AppGraph(player, androidDatabase(context), prefs.deviceId(), ytm, prefs, network, scope, local) { link ->
+    return AppGraph(player, androidDatabase(context), prefs.deviceId(), ytm, prefs, network, scope, local, shareLink = { link ->
         context.startActivity(
             Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, link), null)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
-    }
+    })
 }
 
 /** Connecting a controller starts the media session service, which then runs the notification and lock screen. */

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom
 
+import io.github.velosako3.blossom.feature.lyrics.ui.LyricsPanel
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
@@ -61,6 +62,7 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
     val share: (Track) -> Unit = { t -> t.shareUrl()?.let(graph.shareLink) }
     var addTracks by remember { mutableStateOf<List<Track>?>(null) }
     var creatingWith by remember { mutableStateOf<List<Track>?>(null) }
+    var fullScreenLyrics by remember { mutableStateOf(false) }
     val playlists by graph.library.playlists.collectAsState()
     val current = graph.player.state.collectAsState().value.current
     val liked by (current?.let { graph.repo.isLiked(it.id) } ?: flowOf(false)).collectAsState(false)
@@ -70,6 +72,7 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
     val openPlaylistLocal: (io.github.velosako3.blossom.core.model.PlaylistId) -> Unit = { navigator.navigate(Destination.Playlist(it.value)) }
     return ShellSlots(
         overlay = {
+            if (fullScreenLyrics && hasTrack) FullScreenLyrics(graph, onClose = { fullScreenLyrics = false })
             AddToPlaylistSheet(
                 visible = addTracks != null,
                 playlists = playlists.orEmpty(),
@@ -99,6 +102,7 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
             )
         },
         queuePanel = { QueueView(graph.player, Modifier.fillMaxSize()) },
+        lyricsPanel = { LyricsPanel(graph.lyrics, graph.player, Modifier.fillMaxSize(), onFullScreen = { fullScreenLyrics = true }, color = io.github.velosako3.blossom.core.designsystem.theme.BlossomTheme.colors.onSurface) },
         screen = { destination ->
             when (destination) {
                 Destination.Home -> { HomeScreen(graph.home, { t, i -> play(t, i, false) }, openAlbum, openArtist, openPlaylist); true }
@@ -134,6 +138,7 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
                         liked = liked,
                         onToggleLike = toggleLike,
                         menuActions = menu,
+                        lyrics = { m -> LyricsPanel(graph.lyrics, graph.player, m) },
                     )
                     true
                 }
