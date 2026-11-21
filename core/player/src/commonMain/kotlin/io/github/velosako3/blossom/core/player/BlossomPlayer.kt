@@ -13,6 +13,8 @@ interface BlossomPlayer {
     fun seekTo(positionMs: Long)
     fun next()
     fun previous()
+    /** Jumps to [index] in the current queue (tapping a queue row). */
+    fun skipTo(index: Int)
     fun setShuffle(enabled: Boolean)
     fun setRepeat(mode: RepeatMode)
     fun addNext(track: Track)

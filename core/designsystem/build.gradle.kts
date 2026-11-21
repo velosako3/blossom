@@ -9,6 +9,9 @@ kotlin {
             api(libs.haze)
             implementation(libs.haze.blur)
             implementation(libs.haze.glass)
+            api(libs.coil.compose)
+            implementation(libs.coil.network.ktor3)
+            implementation(libs.ktor.client.okhttp)
         }
     }
 }

@@ -28,6 +28,7 @@ jsoup = "1.24.1"
 vlcj = "4.12.1"
 nucleus = "2.5.18"
 vlcjBundler = "0.2.1"
+reorderable = "3.1.0"
 
 [libraries]
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
@@ -54,6 +55,7 @@ innertubex = { module = "com.github.MetrolistGroup.innertubex:innertubex", versi
 newpipe-extractor = { module = "com.github.TeamNewPipe:NewPipeExtractor", version.ref = "newpipe" }
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 vlcj = { module = "uk.co.caprica:vlcj", version.ref = "vlcj" }
+reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 nucleus-media-control = { module = "dev.nucleusframework:nucleus.media-control", version.ref = "nucleus" }
 
 compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose" }

@@ -8,7 +8,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.focus.FocusRequester
+import io.github.velosako3.blossom.core.designsystem.components.rememberArtworkPalette
+import io.github.velosako3.blossom.shell.ShellState
 import androidx.compose.ui.Modifier
 import io.github.velosako3.blossom.core.designsystem.background.BlossomBackground
 import io.github.velosako3.blossom.core.designsystem.color.ArtworkPalette
@@ -35,20 +39,26 @@ fun App(
     palette: ArtworkPalette = ArtworkPalette.Default,
     reduceMotion: Boolean = false,
     glassQuality: GlassQuality? = null,
-    slots: ShellSlots = remember { ShellSlots() },
+    graph: AppGraph? = null,
+    shellState: ShellState = remember { ShellState() },
+    searchFocus: FocusRequester = remember { FocusRequester() },
     titleBar: (@Composable () -> Unit)? = null,
 ) {
+    val current = graph?.player?.state?.collectAsState()?.value?.current
+    val artworkPalette = rememberArtworkPalette(current?.artworkUrl)
+    val activePalette = if (current != null) artworkPalette else palette
+    val slots = if (graph != null) appSlots(graph, navigator, searchFocus, hasTrack = current != null) else remember { ShellSlots() }
     val darkTheme = resolveDarkTheme(themeMode, isSystemInDarkTheme())
-    BlossomTheme(darkTheme = darkTheme, palette = palette, glassQuality = glassQuality, reduceMotion = reduceMotion) {
+    BlossomTheme(darkTheme = darkTheme, palette = activePalette, glassQuality = glassQuality, reduceMotion = reduceMotion) {
         Box(Modifier.fillMaxSize()) {
-            BlossomBackground(palette, Modifier.fillMaxSize().glassBackdropSource())
+            BlossomBackground(activePalette, Modifier.fillMaxSize().glassBackdropSource())
             Column(Modifier.fillMaxSize()) {
                 titleBar?.invoke()
                 BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
                     when (WindowLayout.from(maxWidth.value)) {
                         WindowLayout.COMPACT -> CompactShell(navigator, slots)
                         WindowLayout.MEDIUM -> MediumShell(navigator, slots)
-                        WindowLayout.EXPANDED -> ExpandedShell(navigator, slots)
+                        WindowLayout.EXPANDED -> ExpandedShell(navigator, slots, shell = shellState)
                     }
                 }
             }

@@ -45,6 +45,7 @@ fun Destination.titleRes(): StringResource = when (this) {
     is Destination.Album -> Res.string.dest_album
     is Destination.Artist -> Res.string.dest_artist
     is Destination.Playlist -> Res.string.dest_playlist
+    is Destination.YtPlaylist -> Res.string.dest_playlist
     is Destination.Import -> Res.string.dest_import
     Destination.NowPlaying -> Res.string.dest_now_playing
     is Destination.Wrapped -> Res.string.dest_wrapped

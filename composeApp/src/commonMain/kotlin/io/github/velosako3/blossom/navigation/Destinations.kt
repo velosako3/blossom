@@ -16,6 +16,8 @@ sealed interface Destination {
     data class Album(val id: String) : Destination
     data class Artist(val id: String) : Destination
     data class Playlist(val id: String) : Destination
+    /** A YouTube Music playlist, browsed in place (not a blossom playlist). */
+    data class YtPlaylist(val id: String) : Destination
     data class Import(val url: String? = null) : Destination
     data object NowPlaying : Destination
     /** [period] is a period key such as `week:2026-W47`, parsed by the stats feature. */

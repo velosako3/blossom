@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="np_now_playing">Now playing</string>
+    <string name="np_play">Play</string>
+    <string name="np_pause">Pause</string>
+    <string name="np_next">Next</string>
+    <string name="np_previous">Previous</string>
+    <string name="np_shuffle">Shuffle</string>
+    <string name="np_repeat">Repeat</string>
+    <string name="np_repeat_one">Repeat one</string>
+    <string name="np_like">Like</string>
+    <string name="np_unlike">Remove from Liked Songs</string>
+    <string name="np_queue">Queue</string>
+    <string name="np_lyrics">Lyrics</string>
+    <string name="np_more">More</string>
+    <string name="np_close">Close player</string>
+    <string name="np_seek">Seek</string>
+    <string name="np_volume">Volume</string>
+    <string name="np_up_next">Up next</string>
+    <string name="np_remove">Remove from queue</string>
+    <string name="np_reorder">Reorder</string>
+    <string name="np_go_album">Go to album</string>
+    <string name="np_go_artist">Go to artist</string>
+    <string name="np_share">Share link</string>
+    <string name="np_link_copied">Link copied</string>
+    <string name="np_queue_empty">Nothing queued.</string>
+    <string name="np_failed">Couldn't play %1$s. Skipped to the next song.</string>
+</resources>

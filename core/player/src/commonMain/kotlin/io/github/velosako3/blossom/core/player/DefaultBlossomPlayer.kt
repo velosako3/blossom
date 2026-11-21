@@ -83,6 +83,10 @@ class DefaultBlossomPlayer(
         }
     }
 
+    override fun skipTo(index: Int) = command {
+        if (index in queue.queue.indices) { queue.jumpTo(index); reResolves = 0; _state.update { it.copy(error = null) }; loadCurrent(0) }
+    }
+
     override fun setShuffle(enabled: Boolean) = command { queue.setShuffle(enabled); publish() }
     override fun setRepeat(mode: RepeatMode) = command { queue.repeat = mode; publish() }
     override fun addNext(track: Track) = command { queue.addNext(track); publish() }

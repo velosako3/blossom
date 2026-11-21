@@ -25,7 +25,7 @@ class SystemMediaControls(private val player: BlossomPlayer, scope: CoroutineSco
 
     init {
         if (available) {
-            MediaControlService.configure("blossom", "blossom")
+            MediaControlService.configure("org.mpris.MediaPlayer2.blossom", "blossom")
             MediaControlService.attach(::onEvent)
             scope.launch {
                 player.state.map { it.current }.distinctUntilChanged().collect { track ->

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_title">Search</string>
+    <string name="search_placeholder">Songs, albums, artists</string>
+    <string name="search_recent">Recent searches</string>
+    <string name="search_no_recent">Your recent searches show up here.</string>
+    <string name="search_tab_songs">Songs</string>
+    <string name="search_tab_albums">Albums</string>
+    <string name="search_tab_artists">Artists</string>
+    <string name="search_tab_playlists">Playlists</string>
+    <string name="search_no_results">No results for "%1$s"</string>
+    <string name="search_failed">Search didn't work. Check your connection and try again.</string>
+    <string name="search_retry">Try again</string>
+    <string name="search_clear">Clear</string>
+    <string name="search_remove_recent">Remove from recent searches</string>
+    <string name="search_artist">Artist</string>
+</resources>

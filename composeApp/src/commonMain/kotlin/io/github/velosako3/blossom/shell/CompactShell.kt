@@ -15,15 +15,23 @@ import androidx.compose.ui.unit.dp
 import io.github.velosako3.blossom.core.designsystem.components.GlassNavBar
 import io.github.velosako3.blossom.core.designsystem.components.GlassNavItem
 import io.github.velosako3.blossom.navigation.BlossomNavHost
+import io.github.velosako3.blossom.navigation.Destination
 import io.github.velosako3.blossom.navigation.Navigator
 import org.jetbrains.compose.resources.stringResource
 
 /** Phones: content full-bleed, a floating glass tab bar inset 12 dp, and the mini player above it. */
 @Composable
 fun CompactShell(navigator: Navigator, slots: ShellSlots, modifier: Modifier = Modifier) {
+    // The full player covers the whole screen, tab bar included.
+    val immersive = navigator.current == Destination.NowPlaying
     Box(modifier.fillMaxSize()) {
-        BlossomNavHost(navigator, Modifier.fillMaxSize().padding(bottom = 96.dp), showSettingsAction = true, screen = slots.screen)
-        Column(
+        BlossomNavHost(
+            navigator,
+            Modifier.fillMaxSize().padding(bottom = if (immersive) 0.dp else if (slots.miniPlayer != null) 168.dp else 96.dp),
+            showSettingsAction = true,
+            screen = slots.screen,
+        )
+        if (!immersive) Column(
             Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.navigationBars).padding(12.dp),
         ) {
             slots.miniPlayer?.let { Box(Modifier.padding(bottom = 8.dp)) { it() } }

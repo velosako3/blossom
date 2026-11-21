@@ -41,7 +41,7 @@ val expandedEntries = compactEntries +
 /** Slots the features fill in later milestones. */
 class ShellSlots(
     val miniPlayer: (@androidx.compose.runtime.Composable () -> Unit)? = null,
-    val playerBar: (@androidx.compose.runtime.Composable () -> Unit)? = null,
+    val playerBar: (@androidx.compose.runtime.Composable (ShellState) -> Unit)? = null,
     val queuePanel: (@androidx.compose.runtime.Composable () -> Unit)? = null,
     val lyricsPanel: (@androidx.compose.runtime.Composable () -> Unit)? = null,
     val sidebarPlaylists: (@androidx.compose.runtime.Composable () -> Unit)? = null,

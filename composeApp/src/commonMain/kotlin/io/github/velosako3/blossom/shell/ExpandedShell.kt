@@ -57,13 +57,19 @@ import org.jetbrains.compose.resources.stringResource
 
 enum class RightPanel { QUEUE, LYRICS }
 
+/** UI state shared between the shell and the desktop keyboard shortcuts. */
+class ShellState {
+    var rightPanel by mutableStateOf<RightPanel?>(null)
+    fun toggle(p: RightPanel) { rightPanel = if (rightPanel == p) null else p }
+}
+
 /**
  * Desktop and tablets: a 260 dp glass sidebar (navigation + playlists), the content, an optional 360 dp
  * Queue/Lyrics panel on the right, and a full-width 88 dp glass player bar along the bottom.
  */
 @Composable
-fun ExpandedShell(navigator: Navigator, slots: ShellSlots, modifier: Modifier = Modifier) {
-    var panel by remember { mutableStateOf<RightPanel?>(null) }
+fun ExpandedShell(navigator: Navigator, slots: ShellSlots, modifier: Modifier = Modifier, shell: ShellState = remember { ShellState() }) {
+    val panel = shell.rightPanel
     Column(modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             GlassSidebar(Modifier.testTag(SIDEBAR_TAG)) {
@@ -102,8 +108,8 @@ fun ExpandedShell(navigator: Navigator, slots: ShellSlots, modifier: Modifier = 
                 GlassSurface(Modifier.width(360.dp).fillMaxHeight()) {
                     Column(Modifier.padding(16.dp)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            GlassChip(panel == RightPanel.QUEUE, { panel = RightPanel.QUEUE }, stringResource(Res.string.panel_queue))
-                            GlassChip(panel == RightPanel.LYRICS, { panel = RightPanel.LYRICS }, stringResource(Res.string.panel_lyrics))
+                            GlassChip(panel == RightPanel.QUEUE, { shell.rightPanel = RightPanel.QUEUE }, stringResource(Res.string.panel_queue))
+                            GlassChip(panel == RightPanel.LYRICS, { shell.rightPanel = RightPanel.LYRICS }, stringResource(Res.string.panel_lyrics))
                         }
                         Spacer(Modifier.height(12.dp))
                         when (panel) {
@@ -115,9 +121,9 @@ fun ExpandedShell(navigator: Navigator, slots: ShellSlots, modifier: Modifier = 
                 }
             }
         }
-        slots.playerBar?.invoke() ?: PlaceholderPlayerBar(
-            onToggleQueue = { panel = if (panel == RightPanel.QUEUE) null else RightPanel.QUEUE },
-            onToggleLyrics = { panel = if (panel == RightPanel.LYRICS) null else RightPanel.LYRICS },
+        slots.playerBar?.invoke(shell) ?: PlaceholderPlayerBar(
+            onToggleQueue = { shell.toggle(RightPanel.QUEUE) },
+            onToggleLyrics = { shell.toggle(RightPanel.LYRICS) },
         )
     }
 }

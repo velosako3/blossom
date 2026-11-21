@@ -38,6 +38,14 @@ kotlin {
             kotlin.srcDir(generateBuildInfo)
             dependencies {
                 implementation(projects.core.designsystem)
+                implementation(projects.core.platform)
+                implementation(projects.core.player)
+                implementation(projects.source.youtubemusic)
+                implementation(projects.feature.home)
+                implementation(projects.feature.search)
+                implementation(projects.feature.album)
+                implementation(projects.feature.artist)
+                implementation(projects.feature.nowplaying)
             }
         }
         getByName("desktopMain") {

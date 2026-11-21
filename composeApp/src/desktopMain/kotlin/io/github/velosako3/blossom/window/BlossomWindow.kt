@@ -26,6 +26,8 @@ import java.awt.Dimension
 @Composable
 fun ApplicationScope.BlossomWindow(
     store: WindowStateStore = remember { WindowStateStore() },
+    onPreviewKeyEvent: (androidx.compose.ui.input.key.KeyEvent) -> Boolean = { false },
+    onKeyEvent: (androidx.compose.ui.input.key.KeyEvent) -> Boolean = { false },
     content: @Composable FrameWindowScope.(titleBar: (@Composable () -> Unit)?) -> Unit,
 ) {
     val saved = remember { store.load() }
@@ -53,6 +55,8 @@ fun ApplicationScope.BlossomWindow(
         state = state,
         title = BlossomBuildInfo.APP_NAME,
         undecorated = !saved.systemTitleBar,
+        onPreviewKeyEvent = onPreviewKeyEvent,
+        onKeyEvent = onKeyEvent,
     ) {
         LaunchedEffect(Unit) {
             window.minimumSize = Dimension(WindowStateStore.MIN_WIDTH, WindowStateStore.MIN_HEIGHT)
