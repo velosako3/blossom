@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestone 0 done. Tasks 1.1–1.4 done. Next: Task 1.5 (app shell).
+Milestones 0 done; Milestone 1 tasks 1.1–1.5 done. Next: Milestone 1 wrap-up (check, review, push).
 
 Toolchain: JDK 21 (Temurin), Gradle 9.9.2 wrapper, Android SDK in `~/Android/Sdk`
 (platform 37, build-tools 37.0.0, emulator, system image android-36 google_apis x86_64,
@@ -26,6 +26,9 @@ AVD `blossom`). `/dev/kvm` is usable and passwordless sudo works. Display: Wayla
 - Glass tint doubles as the text scrim: its alpha is `max(spec alpha, requiredScrimAlpha(onSurface, palette.dominant, tint))`, so text on glass always meets 4.5:1 against the artwork colour behind it.
 - `GlassSheet` and `GlassDialog` render as in-window overlays (not separate platform windows), so their glass samples the real backdrop; Esc and scrim taps dismiss them.
 - Snapshot tests force a glass quality, which also disables the frame-budget monitor; its endless frame loop would otherwise keep the test clock busy.
+
+- Navigation is a plain observable back stack (`Navigator`), not a navigation library: blossom's hierarchy is flat (5 top-level destinations, detail screens pushed on top).
+- Desktop window capture for evidence uses `xwd -id <window>` (installed `x11-apps/xwd`, `x11-misc/xdotool`), so screenshots contain only blossom's window, never the rest of the owner's screen.
 
 ## Deviations from plan
 - `ImportedTrack` gained `album`, `sourceKey` and `unplayableReason` (shared interfaces updated in the plan), per the reuse audit.

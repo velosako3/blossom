@@ -24,7 +24,7 @@ kotlin {
 
     compilerOptions {
         freeCompilerArgs.addAll("-Xexpect-actual-classes")
-        optIn.addAll("kotlin.time.ExperimentalTime")
+        optIn.addAll("kotlin.time.ExperimentalTime", "androidx.compose.ui.ExperimentalComposeUiApi")
     }
 
     sourceSets {

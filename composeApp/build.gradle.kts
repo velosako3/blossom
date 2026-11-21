@@ -35,6 +35,9 @@ kotlin {
     sourceSets {
         commonMain {
             kotlin.srcDir(generateBuildInfo)
+            dependencies {
+                implementation(projects.core.designsystem)
+            }
         }
         getByName("desktopMain").dependencies {
             implementation(ComposePlugin.DesktopDependencies.currentOs)

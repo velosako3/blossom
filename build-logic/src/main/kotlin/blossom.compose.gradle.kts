@@ -19,6 +19,7 @@ kotlin {
             implementation(lib("compose-runtime"))
             implementation(lib("compose-foundation"))
             implementation(lib("compose-ui"))
+            implementation(lib("compose-ui-backhandler"))
             implementation(lib("compose-material3"))
             implementation(lib("compose-material-icons"))
             implementation(lib("compose-components-resources"))

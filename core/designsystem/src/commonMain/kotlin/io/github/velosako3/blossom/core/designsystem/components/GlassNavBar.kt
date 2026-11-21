@@ -25,11 +25,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.velosako3.blossom.core.designsystem.glass.GlassSurface
 import io.github.velosako3.blossom.core.designsystem.theme.BlossomTheme
+
+/** Test tag on every tab cell. */
+const val GLASS_NAV_ITEM_TAG = "glassNavItem"
 
 data class GlassNavItem(val label: String, val icon: ImageVector, val selectedIcon: ImageVector = icon)
 
@@ -63,6 +67,7 @@ private fun NavCell(item: GlassNavItem, selected: Boolean, onClick: () -> Unit, 
     val tint by animateColorAsState(if (selected) colors.accent else colors.onSurfaceVariant)
     Column(
         modifier
+            .testTag(GLASS_NAV_ITEM_TAG)
             .pressScale(interaction, 0.92f)
             .clip(CircleShape)
             .background(lens)
