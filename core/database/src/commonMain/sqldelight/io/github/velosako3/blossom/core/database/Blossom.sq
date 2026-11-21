@@ -247,3 +247,61 @@ SELECT * FROM lyrics_cache WHERE track_id = ?;
 
 putLyrics:
 INSERT OR REPLACE INTO lyrics_cache(track_id, json, fetched_at) VALUES (?, ?, ?);
+
+-- offline cache
+offlineItem:
+SELECT * FROM offline_item WHERE track_id = ?;
+
+offlinePending:
+SELECT * FROM offline_item WHERE state IN ('QUEUED', 'PAUSED_NETWORK', 'PAUSED_STORAGE', 'DOWNLOADING');
+
+offlineInsert:
+INSERT OR IGNORE INTO offline_item(track_id, track_json, state) VALUES (?, ?, 'QUEUED');
+
+offlineSetState:
+UPDATE offline_item SET state = ? WHERE track_id = ?;
+
+offlineSetFile:
+UPDATE offline_item SET file_name = ?, bytes = ? WHERE track_id = ?;
+
+offlineSetProgress:
+UPDATE offline_item SET downloaded = ? WHERE track_id = ?;
+
+offlineDelete:
+DELETE FROM offline_item WHERE track_id = ?;
+
+offlineUsage:
+SELECT CAST(coalesce(sum(downloaded), 0) AS INTEGER) FROM offline_item;
+
+offlineUsageExcept:
+SELECT CAST(coalesce(sum(downloaded), 0) AS INTEGER) FROM offline_item WHERE track_id != ?;
+
+offlineAddRef:
+INSERT OR IGNORE INTO offline_ref(track_id, ref) VALUES (?, ?);
+
+offlineRemoveRef:
+DELETE FROM offline_ref WHERE track_id = ? AND ref = ?;
+
+offlineRemoveRefEverywhere:
+DELETE FROM offline_ref WHERE ref = ?;
+
+offlineTracksWithRef:
+SELECT track_id FROM offline_ref WHERE ref = ?;
+
+offlineOrphans:
+SELECT track_id FROM offline_item WHERE track_id NOT IN (SELECT track_id FROM offline_ref);
+
+offlinePlaylists:
+SELECT playlist_id FROM offline_playlist;
+
+offlineAddPlaylist:
+INSERT OR IGNORE INTO offline_playlist(playlist_id) VALUES (?);
+
+offlineRemovePlaylist:
+DELETE FROM offline_playlist WHERE playlist_id = ?;
+
+offlineClear {
+    DELETE FROM offline_item;
+    DELETE FROM offline_ref;
+    DELETE FROM offline_playlist;
+}

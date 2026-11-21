@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 done. Next: Milestone 4 wrap-up (check, review, push).
+Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 review received; its fix pass is next, then Task 5.3.
 
 Hands-on testing rule: the owner is using this desktop, so never inject keyboard/mouse input or capture the screen.
 Desktop end-to-end checks run off-screen with the real graph: `./gradlew :composeApp:desktopTest -PliveTests=true -Proborazzi.test.record=true --tests "*DesktopEndToEnd*"`. `./gradlew :composeApp:run -Pblossom.debugPlay="query"` plays a search result at startup, for `playerctl` checks. Kill stray app instances by PID (`ps … | grep 'blossom\.MainKt'`), never with a `pkill -f` pattern that matches your own shell.
@@ -43,6 +43,13 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - Desktop `NetworkMonitor` checks for an up interface plus a DNS answer every 15 s (no request to any server); `-Dblossom.forceOffline=true` pins it offline for testing.
 
 ## Deviations from plan
+- Task 5.2:
+  - `DownloadManager` takes a `resolve: suspend (Track) -> StreamInfo` lambda, not `StreamResolver`, so `core:offline` doesn't depend on `core:player` (the player will read from the offline store in 5.3).
+  - Downloads encrypt as bytes arrive (`ChunkedEncryptor`). One chunk is held back, so every chunk on disk is final, and a broken download resumes from the last whole chunk with `Range: bytes=<n>-`.
+  - A saved playlist's current entries are referenced before `savePlaylist` returns. Otherwise an immediate unsave of another playlist could garbage-collect a shared track and download it again.
+  - The Android `DownloadWorker` (WorkManager 2.10.1, data-sync foreground job) only keeps the process alive until the manager goes idle. Its network constraint follows Wi-Fi only.
+  - Storage folders (`filesDir/offline`, `<appData>/offline`) get wired in the app graph with 5.3/5.4.
+  - Tests use a temp-file database like the app: the in-memory driver shares one connection, so parallel transactions collide ("cannot start a transaction within a transaction"). `ConcurrentWritesTest` guards the file database: 200 transactions from 8 threads; it passed without changes.
 - Task 5.1 interfaces: the cipher takes `java.io.InputStream`/`OutputStream` and the reader takes a `java.io.File`, not kotlinx-io `RawSource`/`Path`. `commonMain` already compiles against the JDK and nothing else in blossom uses kotlinx-io. `KeyVault` is a common class over the existing `SecureStore`, not an expect class. `SecureStore` already uses an Android Keystore-wrapped AES key on Android, and on desktop the OS keyring with a 0600 file fallback that warns once. Added beyond the plan: each chunk's GCM associated data holds its index and whether it is the last chunk, so truncated or reordered files fail authentication (`truncationDetected`).
 - Task 4.3 frame-time check: the plan says to run the desktop app on screen for 30 s with `FrameBudgetMonitor` logging. That would open a window on the owner's desktop, and there's no virtual display (no Xvfb/Xephyr/weston), so it can't run here. Instead, `LyricsFrameTimeLiveTest` renders `LyricsView` off-screen (`ImageComposeScene`, 1440×900, word-synced, 60 Hz positions). This is CPU raster with no GPU, so it's an upper bound. p90: reduce motion 9.1 ms; full motion at REDUCED glass 11.2 ms; full motion at FULL glass 78.9 ms (per-line blur is ~67 ms of that on CPU). Ruling: lyric blur applies only at FULL glass (the plan says "not OFF"). Why: `FrameBudgetMonitor` steps down one level per slow 3 s window and then waits 10 s, so on a machine that can't afford blur the first downgrade removes it, instead of ~16 s of jank. Cost if wrong: devices that run at REDUCED glass never see the depth blur. GPU p90 is still unmeasured and needs an on-screen run by the owner (Open questions).
 - LyricsView bugs found by the real-app run (`DesktopLyricsLiveTest`):

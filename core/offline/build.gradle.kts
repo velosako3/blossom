@@ -7,6 +7,13 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(projects.core.platform)
+            api(projects.core.database)
+            api(projects.source.api)
+            implementation(libs.okhttp)
+            implementation(libs.sqldelight.coroutines)
+        }
+        androidMain.dependencies {
+            implementation(libs.androidx.work)
         }
     }
 }

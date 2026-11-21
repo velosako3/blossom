@@ -26,24 +26,13 @@ object ChunkedCipher {
     private const val VERSION: Byte = 1
 
     fun encrypt(input: InputStream, output: OutputStream, key: ByteArray) {
-        val prefix = ByteArray(4).also { SecureRandom().nextBytes(it) }
-        output.write(ByteBuffer.allocate(HEADER).put(MAGIC).put(VERSION).putInt(CHUNK).put(prefix).array())
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        val k = SecretKeySpec(key, "AES")
-        var current = readChunk(input)
-        var index = 0L
-        // One chunk of look-ahead tells us which chunk is last. An empty input still writes one (empty) last chunk.
-        while (true) {
-            val next = if (current.size == CHUNK) readChunk(input) else ByteArray(0)
-            val last = next.isEmpty()
-            cipher.init(Cipher.ENCRYPT_MODE, k, GCMParameterSpec(TAG * 8, nonce(prefix, index)))
-            cipher.updateAAD(aad(index, last))
-            output.write(cipher.doFinal(current))
-            if (last) break
-            current = next; index++
-        }
-        output.flush()
+        val enc = ChunkedEncryptor.create(output, key)
+        val buf = ByteArray(CHUNK)
+        while (true) { val n = input.read(buf); if (n < 0) break; enc.write(buf, 0, n) }
+        enc.finish()
     }
+
+    internal fun header(prefix: ByteArray): ByteArray = ByteBuffer.allocate(HEADER).put(MAGIC).put(VERSION).putInt(CHUNK).put(prefix).array()
 
     internal fun readHeader(bytes: ByteArray): ByteArray {
         if (bytes.size < HEADER || !bytes.copyOfRange(0, 4).contentEquals(MAGIC) || bytes[4] != VERSION ||
@@ -54,11 +43,54 @@ object ChunkedCipher {
 
     internal fun nonce(prefix: ByteArray, index: Long): ByteArray = ByteBuffer.allocate(12).put(prefix).putLong(index).array()
     internal fun aad(index: Long, last: Boolean): ByteArray = ByteBuffer.allocate(9).putLong(index).put(if (last) 1 else 0).array()
+}
 
-    private fun readChunk(input: InputStream): ByteArray {
-        val buf = ByteArray(CHUNK)
-        var n = 0
-        while (n < CHUNK) { val r = input.read(buf, n, CHUNK - n); if (r < 0) break; n += r }
-        return if (n == CHUNK) buf else buf.copyOf(n)
+/**
+ * Encrypts a stream as it arrives. One full chunk is held back until more data shows it isn't the last, so every
+ * chunk already on disk is final and a broken download can resume after [chunksWritten] chunks.
+ */
+class ChunkedEncryptor private constructor(
+    private val out: OutputStream,
+    key: ByteArray,
+    private val prefix: ByteArray,
+    startIndex: Long,
+) {
+    private val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+    private val key = SecretKeySpec(key, "AES")
+    private val pending = ByteArray(ChunkedCipher.CHUNK)
+    private var filled = 0
+    var chunksWritten = startIndex
+        private set
+
+    fun write(src: ByteArray, offset: Int, length: Int) {
+        var off = offset
+        var left = length
+        while (left > 0) {
+            if (filled == ChunkedCipher.CHUNK) flush(last = false)
+            val n = minOf(left, ChunkedCipher.CHUNK - filled)
+            src.copyInto(pending, filled, off, off + n)
+            filled += n; off += n; left -= n
+        }
+    }
+
+    fun finish() { flush(last = true); out.flush() }
+
+    private fun flush(last: Boolean) {
+        cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(ChunkedCipher.TAG * 8, ChunkedCipher.nonce(prefix, chunksWritten)))
+        cipher.updateAAD(ChunkedCipher.aad(chunksWritten, last))
+        out.write(cipher.doFinal(pending, 0, filled))
+        chunksWritten++; filled = 0
+    }
+
+    companion object {
+        /** A new file: writes the header first. */
+        fun create(out: OutputStream, key: ByteArray): ChunkedEncryptor {
+            val prefix = ByteArray(4).also { SecureRandom().nextBytes(it) }
+            out.write(ChunkedCipher.header(prefix))
+            return ChunkedEncryptor(out, key, prefix, 0)
+        }
+
+        /** Appends to a file whose header and first [chunks] chunks are already written. */
+        fun resume(out: OutputStream, key: ByteArray, prefix: ByteArray, chunks: Long) = ChunkedEncryptor(out, key, prefix, chunks)
     }
 }
