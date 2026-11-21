@@ -14,9 +14,13 @@ class FolderScanner(private val artworkDir: File) {
 
     init { Logger.getLogger("org.jaudiotagger").level = Level.OFF }
 
-    fun scan(folders: List<File>): List<ScannedFile> = folders.flatMap { root ->
-        root.walkTopDown().filter { it.isFile && it.extension.lowercase() in SUPPORTED_EXTENSIONS }.mapNotNull(::read).toList()
-    }.distinctBy { it.path }
+    fun scan(folders: List<File>): List<ScannedFile> {
+        val found = folders.flatMap { root ->
+            root.walkTopDown().filter { it.isFile && it.extension.lowercase() in SUPPORTED_EXTENSIONS }.mapNotNull(::read).toList()
+        }.distinctBy { it.path }
+        synchronized(this) { cache.keys.retainAll(found.mapTo(HashSet()) { it.path }) }
+        return found
+    }
 
     @Synchronized
     fun read(file: File): ScannedFile? {

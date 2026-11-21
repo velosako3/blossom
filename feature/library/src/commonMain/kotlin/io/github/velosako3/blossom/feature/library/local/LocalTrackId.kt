@@ -5,7 +5,7 @@ import io.github.velosako3.blossom.core.model.SourceKind
 import io.github.velosako3.blossom.core.model.TrackId
 import java.security.MessageDigest
 
-private fun normalize(s: String) = s.trim().replace(Regex("\\s+"), " ").lowercase()
+private fun normalize(s: String) = s.replace(Regex("[\\s\\p{Z}]+"), " ").trim().lowercase()
 
 /**
  * `local:` + SHA-1 of normalized title|artist|album. Duration is left out on purpose so the same song, tagged the

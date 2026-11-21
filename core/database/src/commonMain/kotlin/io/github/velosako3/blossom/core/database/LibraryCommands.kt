@@ -41,10 +41,15 @@ class LibraryCommands(
     private val _localOps = MutableSharedFlow<OpEnvelope>(extraBufferCapacity = 256)
     val localOps: SharedFlow<OpEnvelope> = _localOps
 
-    private suspend fun run(ops: List<Operation>): List<OpEnvelope> = withContext(Dispatchers.IO) {
-        db.transactionWithResult {
-            ops.map { opLog.appendInTransaction(it) }.also { projector.applyInTransaction(it) }
-        }.onEach { _localOps.tryEmit(it) }
+    private suspend fun run(ops: List<Operation>): List<OpEnvelope> = runComputed { ops }
+
+    /** Builds the operations from the database inside the same transaction that appends and projects them. */
+    private suspend fun runComputed(build: () -> List<Operation>): List<OpEnvelope> {
+        val envs = withContext(Dispatchers.IO) {
+            db.transactionWithResult { build().map { opLog.appendInTransaction(it) }.also { projector.applyInTransaction(it) } }
+        }
+        envs.forEach { _localOps.emit(it) } // suspends rather than dropping when listeners are slow
+        return envs
     }
 
     suspend fun createPlaylist(name: String, description: String? = null, origin: PlaylistOrigin? = null): PlaylistId {
@@ -60,19 +65,32 @@ class LibraryCommands(
     /** Adds [entries] in order, appended or before the entry now at [atIndex]. Returns the new entry IDs. */
     suspend fun addEntries(id: PlaylistId, entries: List<NewEntry>, atIndex: Int? = null): List<String> {
         if (entries.isEmpty()) return emptyList()
-        val positions = withContext(Dispatchers.IO) { db.blossomQueries.liveEntries(id.value).executeAsList().map { it.position } }
-        val index = (atIndex ?: positions.size).coerceIn(0, positions.size)
-        val keys = FractionalIndex.nBetween(positions.getOrNull(index - 1), positions.getOrNull(index), entries.size)
         val ids = entries.map { Uuid.random().toString() }
-        run(entries.mapIndexed { i, e -> Operation.EntryAdded(id, ids[i], e.track, e.status, e.sourceTitle, e.sourceArtist, keys[i], e.matchConfidence) })
+        runComputed {
+            val positions = db.blossomQueries.liveEntries(id.value).executeAsList().map { it.position }
+            val (before, after) = neighbors(positions, (atIndex ?: positions.size).coerceIn(0, positions.size))
+            val keys = FractionalIndex.nBetween(before, after, entries.size)
+            entries.mapIndexed { i, e -> Operation.EntryAdded(id, ids[i], e.track, e.status, e.sourceTitle, e.sourceArtist, keys[i], e.matchConfidence) }
+        }
         return ids
     }
 
     suspend fun moveEntry(id: PlaylistId, entryId: String, toIndex: Int) {
-        val others = withContext(Dispatchers.IO) { db.blossomQueries.liveEntries(id.value).executeAsList() }.filter { it.entry_id != entryId }
-        val i = toIndex.coerceIn(0, others.size)
-        val key = FractionalIndex.between(others.getOrNull(i - 1)?.position, others.getOrNull(i)?.position)
-        run(listOf(Operation.EntryMoved(id, entryId, key)))
+        runComputed {
+            val others = db.blossomQueries.liveEntries(id.value).executeAsList().filter { it.entry_id != entryId }.map { it.position }
+            val (before, after) = neighbors(others, toIndex.coerceIn(0, others.size))
+            listOf(Operation.EntryMoved(id, entryId, FractionalIndex.between(before, after)))
+        }
+    }
+
+    /**
+     * Keys around [index]. Concurrent inserts on two devices can leave equal keys (ordered by entry ID); the "after"
+     * neighbour skips keys equal to "before" so there is always room, at the cost of landing after the whole tie.
+     */
+    private fun neighbors(sorted: List<String>, index: Int): Pair<String?, String?> {
+        val before = sorted.getOrNull(index - 1)
+        val after = sorted.drop(index).firstOrNull { before == null || it > before }
+        return before to after
     }
 
     suspend fun removeEntry(id: PlaylistId, entryId: String) { run(listOf(Operation.EntryRemoved(id, entryId))) }
@@ -82,6 +100,11 @@ class LibraryCommands(
     }
 
     suspend fun like(track: Track) { run(listOf(Operation.TrackLiked(track))) }
+
+    /** Likes or unlikes based on the stored state, read in the same transaction (no stale UI flag). */
+    suspend fun toggleLike(track: Track) {
+        runComputed { if (db.blossomQueries.isLiked(track.id.value).executeAsOneOrNull() == 1L) listOf(Operation.TrackUnliked(track.id)) else listOf(Operation.TrackLiked(track)) }
+    }
     suspend fun unlike(trackId: TrackId) { run(listOf(Operation.TrackUnliked(trackId))) }
     suspend fun recordPlay(event: PlayEvent) { run(listOf(Operation.PlayRecorded(event))) }
     suspend fun changeSetting(key: String, jsonValue: String) { run(listOf(Operation.SettingChanged(key, jsonValue))) }

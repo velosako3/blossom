@@ -66,7 +66,8 @@ class MediaStoreLibrary(
                 val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, c.getLong(0))
                 val artist = c.getString(2)?.takeUnless { it == MediaStore.UNKNOWN_STRING }
                 val art = "content://media/external/audio/albumart/${c.getLong(4)}"
-                out += ScannedFile(localTrack(c.getString(1), artist, c.getString(3), c.getLong(5), name, art), uri.toString(), c.getLong(7), c.getLong(8))
+                val album = c.getString(3)?.takeUnless { it == MediaStore.UNKNOWN_STRING }
+                out += ScannedFile(localTrack(c.getString(1), artist, album, c.getLong(5), name, art), uri.toString(), c.getLong(7), c.getLong(8))
             }
         }
         return out
@@ -86,11 +87,18 @@ class MediaStoreLibrary(
                     val r = MediaMetadataRetriever()
                     val track = try {
                         r.setDataSource(context, uri)
-                        localTrack(
+                        val base = localTrack(
                             r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE), r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST),
                             r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM), r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0,
                             name, null,
                         )
+                        // Embedded artwork, cached once per track in the app's cache folder.
+                        val art = r.embeddedPicture?.let { bytes ->
+                            val f = java.io.File(java.io.File(context.cacheDir, "artwork").apply { mkdirs() }, base.id.sourceId + ".img")
+                            if (!f.isFile) f.writeBytes(bytes)
+                            Uri.fromFile(f).toString()
+                        }
+                        base.copy(artworkUrl = art)
                     } catch (_: Exception) { localTrack(null, null, null, 0, name, null) } finally { r.release() }
                     out += ScannedFile(track, uri.toString(), c.getLong(3), c.getLong(4))
                 }

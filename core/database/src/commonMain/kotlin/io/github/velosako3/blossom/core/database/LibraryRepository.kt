@@ -17,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import kotlin.time.Instant
 
 /** A playlist row in the library list (the "PlaylistSummary" of the plan; named apart from search results). */
@@ -42,13 +43,13 @@ class SqlLibraryRepository(private val db: BlossomDatabase) : LibraryRepository 
 
     override fun playlists(): Flow<List<LibraryPlaylistSummary>> =
         q.playlistSummaries().asFlow().mapToList(io).map { rows ->
-            rows.map { r ->
+            withContext(io) { rows.map { r ->
                 LibraryPlaylistSummary(
                     PlaylistId(r.id), r.name, r.entry_count.toInt(),
                     q.firstArtworkJson(r.id).executeAsList().mapNotNull { it?.let(::decodeTrack)?.artworkUrl },
                     r.origin_json?.let { OperationJson.decodeFromString(PlaylistOrigin.serializer(), it) },
                 )
-            }
+            } }
         }
 
     override fun playlist(id: PlaylistId): Flow<Playlist?> =

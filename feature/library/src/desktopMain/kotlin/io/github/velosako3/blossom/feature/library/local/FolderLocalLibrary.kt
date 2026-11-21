@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -45,7 +46,7 @@ class FolderLocalLibrary(
             folders.collect { roots ->
                 watchJob?.cancel()
                 val registered = kotlinx.coroutines.CompletableDeferred<Unit>()
-                watchJob = scope.launch(Dispatchers.IO) { watch(roots, registered) }
+                watchJob = scope.launch(Dispatchers.IO + kotlinx.coroutines.SupervisorJob()) { watch(roots, registered) }
                 registered.await() // watch first, then scan: nothing copied in between is missed
                 rescan()
             }
@@ -61,12 +62,13 @@ class FolderLocalLibrary(
     override fun pathFor(id: TrackId): String? = files.value?.firstOrNull { it.track.id == id }?.path?.takeIf { File(it).isFile }
 
     private suspend fun watch(roots: List<File>, registered: kotlinx.coroutines.CompletableDeferred<Unit>) {
-        val service: WatchService = FileSystems.getDefault().newWatchService()
+        var service: WatchService? = null
         try {
+            service = FileSystems.getDefault().newWatchService()
             fun register(dir: Path) = runCatching { dir.register(service, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY) }
             roots.filter { it.isDirectory }.forEach { root -> root.walkTopDown().filter { it.isDirectory }.forEach { register(it.toPath()) } }
             registered.complete(Unit)
-            while (scope.isActive) {
+            while (currentCoroutineContext().isActive) {
                 val key = service.poll(500, TimeUnit.MILLISECONDS) ?: continue
                 var changed = false
                 key.pollEvents().forEach { event ->
@@ -81,9 +83,11 @@ class FolderLocalLibrary(
                 }
             }
         } catch (_: ClosedWatchServiceException) {
+        } catch (e: java.io.IOException) {
+            // No watching (e.g. inotify limit reached): the library still works, it just won't notice changes live.
         } finally {
             registered.complete(Unit)
-            service.close()
+            service?.close()
         }
     }
 }

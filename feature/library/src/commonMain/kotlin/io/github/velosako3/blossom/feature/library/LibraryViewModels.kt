@@ -34,7 +34,7 @@ class LibraryViewModel(private val repo: LibraryRepository, private val commands
         commands.addEntries(id, tracks.map { it.asNewEntry() })
     }
 
-    fun toggleLike(track: Track, liked: Boolean) = scope.launch { if (liked) commands.unlike(track.id) else commands.like(track) }
+    fun toggleLike(track: Track) = scope.launch { commands.toggleLike(track) }
 }
 
 data class PlaylistUiState(

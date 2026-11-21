@@ -19,7 +19,7 @@ fun main() {
         val shortcuts = remember {
             KeyboardShortcuts(graph.player, navigator, shell, searchFocus) {
                 graph.player.state.value.current?.let { t ->
-                    graph.scope.launch { if (graph.repo.isLiked(t.id).first()) graph.commands.unlike(t.id) else graph.commands.like(t) }
+                    graph.library.toggleLike(t)
                 }
             }
         }

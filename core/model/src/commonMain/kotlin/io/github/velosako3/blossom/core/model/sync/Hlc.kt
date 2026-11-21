@@ -29,10 +29,10 @@ class HybridLogicalClock(private val deviceId: String, private val clock: Clock)
     fun receive(remote: Hlc): Hlc {
         val physical = clock.now().toEpochMilliseconds()
         val wall = maxOf(last.wallMs, remote.wallMs, physical)
-        val counter = when (wall) {
-            last.wallMs if wall == remote.wallMs -> maxOf(last.counter, remote.counter) + 1
-            last.wallMs -> last.counter + 1
-            remote.wallMs -> remote.counter + 1
+        val counter = when {
+            wall == last.wallMs && wall == remote.wallMs -> maxOf(last.counter, remote.counter) + 1
+            wall == last.wallMs -> last.counter + 1
+            wall == remote.wallMs -> remote.counter + 1
             else -> 0
         }
         last = Hlc(wall, counter, deviceId)

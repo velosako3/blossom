@@ -64,7 +64,7 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
     val playlists by graph.library.playlists.collectAsState()
     val current = graph.player.state.collectAsState().value.current
     val liked by (current?.let { graph.repo.isLiked(it.id) } ?: flowOf(false)).collectAsState(false)
-    val toggleLike: (Track) -> Unit = { t -> graph.library.toggleLike(t, liked && t.id == current?.id) }
+    val toggleLike: (Track) -> Unit = { t -> graph.library.toggleLike(t) }
     val addToPlaylist = stringResource(Res.string.menu_add_to_playlist)
     val menu = listOf(PlayerMenuAction(addToPlaylist) { addTracks = listOf(it) })
     val openPlaylistLocal: (io.github.velosako3.blossom.core.model.PlaylistId) -> Unit = { navigator.navigate(Destination.Playlist(it.value)) }

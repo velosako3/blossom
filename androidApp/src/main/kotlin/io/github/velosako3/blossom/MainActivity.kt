@@ -36,6 +36,13 @@ class MainActivity : ComponentActivity() {
         disconnect = connectPlaybackService(this)
     }
 
+    override fun onDestroy() {
+        // The bridge is process-wide; drop the launchers that capture this Activity.
+        AndroidLocalBridge.requestPermission = null
+        AndroidLocalBridge.pickFolder = null
+        super.onDestroy()
+    }
+
     override fun onStop() {
         disconnect?.invoke()
         disconnect = null

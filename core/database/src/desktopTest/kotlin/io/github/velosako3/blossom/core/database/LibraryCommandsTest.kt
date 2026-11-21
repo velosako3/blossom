@@ -29,6 +29,33 @@ class LibraryCommandsTest {
         assertEquals(listOf(first[0], middle[0], middle[1], first[1]), d.repo.playlist(id).first()!!.entries.map { it.entryId })
     }
 
+    @Test fun insertAndMoveAroundTiedKeysDoNotCrash() = runTest {
+        // Two devices inserted at the same spot concurrently: both entries carry the same key.
+        val d = Device("A")
+        val id = d.commands.createPlaylist("P")
+        val status = io.github.velosako3.blossom.core.model.EntryStatus.MATCHED
+        val p = io.github.velosako3.blossom.core.model.PlaylistId(id.value)
+        d.projector.applyBlocking(listOf(
+            io.github.velosako3.blossom.core.model.sync.OpEnvelope("x1", io.github.velosako3.blossom.core.model.sync.Hlc(5, 0, "B"), "B", 1, io.github.velosako3.blossom.core.model.sync.Operation.EntryAdded(p, "ea", sampleTrack(1), status, "t", "a", "V", null)),
+            io.github.velosako3.blossom.core.model.sync.OpEnvelope("x2", io.github.velosako3.blossom.core.model.sync.Hlc(5, 0, "C"), "C", 1, io.github.velosako3.blossom.core.model.sync.Operation.EntryAdded(p, "eb", sampleTrack(2), status, "t", "a", "V", null)),
+        ))
+        d.commands.addEntries(id, listOf(newEntry(3)), atIndex = 1)
+        d.commands.moveEntry(id, "eb", 0)
+        d.commands.moveEntry(id, "ea", 1)
+        val order = d.repo.playlist(id).first()!!.entries.map { it.entryId }
+        assertEquals(3, order.size)
+        assertEquals(order.toSet().size, 3)
+    }
+
+    @Test fun toggleLikeUsesStoredState() = runTest {
+        val d = Device("A")
+        val t = sampleTrack(9)
+        d.commands.toggleLike(t)
+        assertTrue(d.repo.isLiked(t.id).first())
+        d.commands.toggleLike(t)
+        assertFalse(d.repo.isLiked(t.id).first())
+    }
+
     @Test fun likeThenUnlike() = runTest {
         val d = Device("A")
         val t = sampleTrack(1)
