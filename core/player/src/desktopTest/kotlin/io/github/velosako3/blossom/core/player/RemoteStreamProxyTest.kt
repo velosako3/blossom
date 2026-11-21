@@ -47,6 +47,19 @@ class RemoteStreamProxyTest {
         assertTrue(seenUa.all { it == "blossom-test" })
     }
 
+    @Test fun seekWhileFirstReadIsOpen() {
+        val url = proxy.register(StreamInfo("http://127.0.0.1:${upstream.address.port}/media", emptyMap(), "audio/webm", null, null))
+        val first = URI(url).toURL().openConnection() as HttpURLConnection
+        first.setRequestProperty("Range", "bytes=0-")
+        val firstIn = first.inputStream
+        firstIn.readNBytes(1000)
+        val second = URI(url).toURL().openConnection() as HttpURLConnection
+        second.setRequestProperty("Range", "bytes=250000-")
+        assertEquals(206, second.responseCode)
+        assertContentEquals(body.copyOfRange(250000, body.size), second.inputStream.use { it.readBytes() })
+        firstIn.close()
+    }
+
     @Test fun upstreamRefusalIsPassedOn() {
         val url = proxy.register(StreamInfo("http://127.0.0.1:${upstream.address.port}/missing", emptyMap(), "audio/webm", null, null))
         val conn = URI(url).toURL().openConnection() as HttpURLConnection

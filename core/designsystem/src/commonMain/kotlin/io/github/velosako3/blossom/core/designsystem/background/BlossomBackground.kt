@@ -57,7 +57,9 @@ fun BlossomBackground(palette: ArtworkPalette, modifier: Modifier = Modifier) {
     }
 
     Canvas(modifier) {
-        val base = if (dark) lerp(dominant, Color.Black, 0.45f) else lerp(dominant, Color.White, 0.72f)
+        // Near-black artwork would leave a black void: lift the base towards the muted colour instead.
+        val tone = if (dominant.red + dominant.green + dominant.blue < 0.12f) lerp(muted, vibrant, 0.3f) else dominant
+        val base = if (dark) lerp(tone, Color.Black, 0.45f) else lerp(tone, Color.White, 0.72f)
         drawRect(base)
         val t = phase.value * 2f * PI.toFloat()
         val strength = if (dark) 1f else 0.7f

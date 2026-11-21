@@ -1,19 +1,10 @@
 # blossom progress
 
 ## Current position
-Milestones 0–1 done; Tasks 2.1–2.3 done; 2.4/2.5 done except hands-on checks. **Task 2.6 in progress (code written, committed as WIP, not ticked).**
-Where 2.6 stands:
-- Done: feature/home, search (SearchViewModel tests 4/4 green), album (CollectionScreen), artist, nowplaying (MiniPlayer, FullPlayer, PlayerBar, QueueView; snapshots recorded and reviewed), AppGraph + appSlots wiring, desktop/Android entry points, KeyboardShortcuts. Desktop app verified by hand: home feed with artwork, playlist paging (107 songs), search results, tapping a song sets the queue and shows "One More Time – Daft Punk" in the player bar.
-- Open bugs to fix next:
-  1. Desktop audio: after tapping a song the position stays at 0:00 (no libVLC Position events). Debug next with a fresh app instance (an older instance kept running under the same window, so the last debug run proved nothing; kill it by PID, not with `pkill -f` on a pattern that matches your own shell).
-  2. MPRIS: nucleus needs a full D-Bus name; fixed to `org.mpris.MediaPlayer2.blossom` but not yet re-verified with `playerctl -p blossom metadata`.
-  3. Ctrl+F navigates to Search but focus is requested before the screen exists; add a focus trigger counter in ShellState that SearchScreen reacts to in a LaunchedEffect.
-- Then: re-run `./gradlew :feature:search:desktopTest :feature:nowplaying:desktopTest`, tick 2.6, do the hands-on checks for 2.4 (emulator lock screen) and 2.5 (`playerctl`), Milestone 2 wrap-up.
-- xdotool on this Wayland session: run `xdotool windowactivate --sync <win>` first or typed keys go nowhere; use `mousemove --window` for clicks.
+Milestones 0–1 done. Tasks 2.1–2.6 done except Task 2.4 Step 4 (emulator lock-screen check). Next: that check, then the Milestone 2 wrap-up.
 
-Toolchain: JDK 21 (Temurin), Gradle 9.9.2 wrapper, Android SDK in `~/Android/Sdk`
-(platform 37, build-tools 37.0.0, emulator, system image android-36 google_apis x86_64,
-AVD `blossom`). `/dev/kvm` is usable and passwordless sudo works. Display: Wayland (`grim`, `ydotool`).
+Hands-on testing rule: the owner is using this desktop, so never inject keyboard/mouse input or capture the screen.
+Desktop end-to-end checks run off-screen with the real graph: `./gradlew :composeApp:desktopTest -PliveTests=true -Proborazzi.test.record=true --tests "*DesktopEndToEnd*"`. `./gradlew :composeApp:run -Pblossom.debugPlay="query"` plays a search result at startup, for `playerctl` checks. Kill stray app instances by PID (`ps … | grep 'blossom\.MainKt'`), never with a `pkill -f` pattern that matches your own shell.
 
 ## Decisions
 - Versions: Kotlin 2.4.21, Compose Multiplatform 1.12.2, AGP 9.5.2, Gradle 9.9.2, compileSdk/targetSdk 37, minSdk 26 — latest stable; Spotube v6 ships the same Kotlin/CMP pair, so they are known to work together.
@@ -52,6 +43,11 @@ AVD `blossom`). `/dev/kvm` is usable and passwordless sudo works. Display: Wayla
 - Desktop `NetworkMonitor` checks for an up interface plus a DNS answer every 15 s (no request to any server); `-Dblossom.forceOffline=true` pins it offline for testing.
 
 ## Deviations from plan
+- Desktop playback feeds libVLC through vlcj **callback media** backed by `HttpRangeReader` (OkHttp, all `StreamInfo` headers, 1 MiB ranges). The bundled libVLC can't open a second HTTP connection inside the JVM ("connection error: Resource temporarily unavailable"), and WebM needs one to seek to its cues; through callbacks libVLC opens no sockets at all. `RemoteStreamProxy` from Task 2.5 was removed.
+- `AddVlcPluginsTask` (build-logic) adds what vlcj-bundler strips: `libimem_plugin` (the byte-stream access behind callback media; the Ubuntu build's `libaccess_imem_plugin` is the raw-ES one) and, on Linux, `libebml.so.5` and `libmatroska.so.7`, without which the bundled mkv demuxer can't load and YouTube's Opus/WebM streams don't play.
+- `EngineEvent`s carry a `mediaId`; `DefaultBlossomPlayer` drops events left over from the previous load (a stale position or Ended arriving after a skip).
+- Desktop "hands-on" evidence comes from `DesktopEndToEndLiveTest` (real app graph, live network, real audio, off-screen rendering) plus `playerctl`. Injecting input into the shared desktop session reached other windows, so it's no longer used.
+- Task 2.6 evidence: `DesktopEndToEndLiveTest` → `e2e playing: One More Time – Daft Punk at 3881 ms`, `e2e after seek: 120000 ms`, `e2e next: One More Time (Radio Edit) at 2841 ms`; screenshots in `docs/screenshots/m2/`. Task 2.5: `playerctl -p blossom metadata` → `xesam:title One More Time`, `xesam:artist Daft Punk`, `mpris:length 260000000`; `playerctl position 120` / `next` / `pause` all acted on blossom.
 - Desktop media controls are one file, `media/SystemMediaControls.kt` (nucleus media-control covers MPRIS and SMTC), instead of separate `MprisService.kt` and `WindowsMediaControls.kt`. `MprisMetadataMapper` builds the MPRIS map that feeds it.
 - Desktop remote streams go through `RemoteStreamProxy` (JDK `HttpServer` on 127.0.0.1, per-session token) from Task 2.5 on: it adds every `StreamInfo` header and reads upstream in 1 MiB ranges. Task 5.3's encrypted-cache server is a separate route.
 - VLC bundling: Spotube's `org.spotube.vlcj-bundler` plugin via a `blossom.desktop.app` convention plugin, bundling on every format including .deb. On Linux it takes libVLC 3.0 from Ubuntu 24.04 packages (needs glibc ≥ 2.39). The distributable is about 200 MB.

@@ -60,6 +60,8 @@ enum class RightPanel { QUEUE, LYRICS }
 /** UI state shared between the shell and the desktop keyboard shortcuts. */
 class ShellState {
     var rightPanel by mutableStateOf<RightPanel?>(null)
+    /** Bumped by Ctrl+F; the search screen focuses its field whenever this changes. */
+    var searchFocusRequests by mutableStateOf(0)
     fun toggle(p: RightPanel) { rightPanel = if (rightPanel == p) null else p }
 }
 

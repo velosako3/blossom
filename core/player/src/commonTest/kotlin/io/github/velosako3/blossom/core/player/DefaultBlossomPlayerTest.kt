@@ -17,6 +17,8 @@ import kotlin.test.assertTrue
 
 class FakeEngine : PlaybackEngine {
     val loads = mutableListOf<Pair<MediaInput, Long>>()
+    var tagEvents = false
+    override val mediaId: Long get() = if (tagEvents) loads.size.toLong() else 0
     var playing = false
     override val events = MutableSharedFlow<EngineEvent>(extraBufferCapacity = 64)
     override suspend fun load(input: MediaInput, startPositionMs: Long) { loads += input to startPositionMs }
@@ -75,6 +77,22 @@ class DefaultBlossomPlayerTest {
         }
         assertIs<PlaybackError.StreamFailed>(p.state.value.error)
         assertEquals(1, p.state.value.currentIndex)
+    }
+
+    @Test fun staleEventsFromPreviousMediaAreIgnored() = runTest {
+        val engine = FakeEngine().apply { tagEvents = true }
+        val p = player(engine)
+        p.setQueue(tracks(3), 0)
+        p.play()
+        runCurrent()
+        val oldId = engine.mediaId
+        p.next()
+        runCurrent()
+        engine.events.emit(EngineEvent.Position(120_000, 200_000, mediaId = oldId))
+        engine.events.emit(EngineEvent.Ended(mediaId = oldId))
+        runCurrent()
+        assertEquals(1, p.state.value.currentIndex)
+        assertEquals(0, p.state.value.positionMs)
     }
 
     @Test fun offlineSkipsUnsavedTracks() = runTest {

@@ -25,6 +25,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -53,8 +55,15 @@ fun SearchScreen(
     onOpenPlaylist: (String) -> Unit,
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester = FocusRequester(),
+    /** Each new value moves keyboard focus to the search field (Ctrl+F on desktop). */
+    focusTrigger: Int = 0,
     offlineNotice: (@Composable () -> Unit)? = null,
 ) {
+    LaunchedEffect(focusTrigger) {
+        if (focusTrigger == 0) return@LaunchedEffect
+        // The screen may still be entering; retry for a few frames until the field is attached.
+        repeat(20) { if (runCatching { focusRequester.requestFocus() }.isSuccess) return@LaunchedEffect; withFrameNanos { } }
+    }
     val state by vm.state.collectAsState()
     val colors = BlossomTheme.colors
     Column(modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars)) {

@@ -25,7 +25,7 @@ import kotlinx.coroutines.launch
 
 /** Builds the shell's slots from the graph: screens per destination, mini player, player bar, queue panel. */
 @Composable
-fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester, hasTrack: Boolean): ShellSlots {
+fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester, hasTrack: Boolean, shellState: io.github.velosako3.blossom.shell.ShellState): ShellSlots {
     val scope = rememberCoroutineScope()
     val play: (List<Track>, Int, Boolean) -> Unit = { tracks, index, shuffle ->
         scope.launch {
@@ -53,7 +53,7 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
             when (destination) {
                 Destination.Home -> { HomeScreen(graph.home, { t, i -> play(t, i, false) }, openAlbum, openArtist, openPlaylist); true }
                 Destination.Search -> {
-                    SearchScreen(graph.search, { t, i -> play(t, i, false) }, openAlbum, openArtist, openPlaylist, focusRequester = searchFocus)
+                    SearchScreen(graph.search, { t, i -> play(t, i, false) }, openAlbum, openArtist, openPlaylist, focusRequester = searchFocus, focusTrigger = shellState.searchFocusRequests)
                     true
                 }
                 is Destination.Album -> {

@@ -9,3 +9,10 @@ extensions.configure<org.spotube.VlcjBundlerExtension> {
     objectName.set("VlcLoader")
     bundleVlc.set(true) // also for .deb: blossom's desktop installs are self-contained
 }
+
+val addVlcPlugins = tasks.register<AddVlcPluginsTask>("addVlcPlugins") {
+    nativesDirectory.set(project.extensions.getByType<org.spotube.VlcjBundlerExtension>().vlcNativesDirectory)
+    dependsOn("downloadVlcNatives")
+}
+tasks.matching { it.name == "downloadVlcNatives" }.configureEach { finalizedBy(addVlcPlugins) }
+tasks.matching { it.name == "prepareAppResources" }.configureEach { dependsOn(addVlcPlugins) }

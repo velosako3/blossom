@@ -66,27 +66,29 @@ class Media3PlaybackEngine(
         .build()
 
     private var metadata: MediaMetadata = MediaMetadata.EMPTY
+    @Volatile override var mediaId: Long = 0
+        private set
 
     init {
         exoPlayer.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
                 when (state) {
-                    Player.STATE_BUFFERING -> _events.tryEmit(EngineEvent.Buffering(true))
-                    Player.STATE_READY -> _events.tryEmit(EngineEvent.Buffering(false))
-                    Player.STATE_ENDED -> _events.tryEmit(EngineEvent.Ended)
+                    Player.STATE_BUFFERING -> _events.tryEmit(EngineEvent.Buffering(true, mediaId))
+                    Player.STATE_READY -> _events.tryEmit(EngineEvent.Buffering(false, mediaId))
+                    Player.STATE_ENDED -> _events.tryEmit(EngineEvent.Ended(mediaId))
                 }
             }
 
             override fun onPlayerError(error: PlaybackException) {
                 val status = generateSequence<Throwable>(error) { it.cause }
                     .filterIsInstance<HttpDataSource.InvalidResponseCodeException>().firstOrNull()?.responseCode
-                _events.tryEmit(EngineEvent.Error(status, error))
+                _events.tryEmit(EngineEvent.Error(status, error, mediaId))
             }
         })
         scope.launch {
             while (isActive) {
                 if (exoPlayer.isPlaying) {
-                    _events.tryEmit(EngineEvent.Position(exoPlayer.currentPosition, exoPlayer.duration.coerceAtLeast(0)))
+                    _events.tryEmit(EngineEvent.Position(exoPlayer.currentPosition, exoPlayer.duration.coerceAtLeast(0), mediaId))
                 }
                 delay(250)
             }
@@ -110,6 +112,7 @@ class Media3PlaybackEngine(
             is MediaInput.LocalFile -> Uri.fromFile(java.io.File(input.path)).toString()
             is MediaInput.Offline -> "$OFFLINE_SCHEME://${input.trackId.value}"
         }
+        mediaId++
         exoPlayer.setMediaItem(MediaItem.Builder().setUri(uri).setMediaMetadata(metadata).build(), startPositionMs)
         exoPlayer.prepare()
     }

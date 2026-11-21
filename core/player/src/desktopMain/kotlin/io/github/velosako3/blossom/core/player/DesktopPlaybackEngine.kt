@@ -3,13 +3,14 @@
 // composeApp/src/jvmMain/kotlin/org/spotube/spotube/core/audioplayer/AudioPlayer.jvm.kt,
 // Copyright (C) 2026 Kingkor Roy Tirtho and Spotube Contributors.
 // Modified for blossom, 2026: one item per player (blossom owns the queue), events mapped to EngineEvent,
-// remote streams routed through RemoteStreamProxy for arbitrary headers and chunked reads.
+// remote streams fed through vlcj callback media from a ranged OkHttp reader.
 package io.github.velosako3.blossom.core.player
 
 import io.github.velosako3.blossom.core.model.TrackId
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import uk.co.caprica.vlcj.factory.MediaPlayerFactory
+import uk.co.caprica.vlcj.media.callback.seekable.SeekableCallbackMedia
 import uk.co.caprica.vlcj.factory.discovery.NativeDiscovery
 import uk.co.caprica.vlcj.player.base.MediaPlayer
 import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter
@@ -20,8 +21,12 @@ import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter
  */
 class DesktopPlaybackEngine(
     private val offlineUrl: (TrackId) -> String? = { null },
-    private val proxy: RemoteStreamProxy = RemoteStreamProxy(),
 ) : PlaybackEngine {
+    @Volatile private var reader: HttpRangeReader? = null
+    @Volatile override var mediaId: Long = 0
+        private set
+    /** libVLC calls into this through JNA; it must stay strongly reachable while it plays. */
+    @Volatile private var media: ReaderMedia? = null
     private val _events = MutableSharedFlow<EngineEvent>(extraBufferCapacity = 64)
     override val events: SharedFlow<EngineEvent> = _events
 
@@ -31,31 +36,44 @@ class DesktopPlaybackEngine(
     )
     val mediaPlayer: MediaPlayer = factory.mediaPlayers().newMediaPlayer()
 
+    private val nativeLog = if (System.getProperty("blossom.vlcLog") == "true") factory.application().newLog().apply {
+        level = uk.co.caprica.vlcj.log.LogLevel.DEBUG
+        addLogListener { level, module, _, _, _, _, _, message -> System.err.println("vlc[$level/$module] $message") }
+    } else null
+
     init {
         mediaPlayer.events().addMediaPlayerEventListener(object : MediaPlayerEventAdapter() {
             override fun timeChanged(mediaPlayer: MediaPlayer, newTime: Long) {
-                _events.tryEmit(EngineEvent.Position(newTime, mediaPlayer.status().length().coerceAtLeast(0)))
+                _events.tryEmit(EngineEvent.Position(newTime, mediaPlayer.status().length().coerceAtLeast(0), mediaId))
             }
             override fun buffering(mediaPlayer: MediaPlayer, newCache: Float) {
-                _events.tryEmit(EngineEvent.Buffering(newCache < 100f))
+                _events.tryEmit(EngineEvent.Buffering(newCache < 100f, mediaId))
             }
-            override fun playing(mediaPlayer: MediaPlayer) { _events.tryEmit(EngineEvent.Buffering(false)) }
-            override fun finished(mediaPlayer: MediaPlayer) { _events.tryEmit(EngineEvent.Ended) }
+            override fun playing(mediaPlayer: MediaPlayer) { _events.tryEmit(EngineEvent.Buffering(false, mediaId)) }
+            override fun finished(mediaPlayer: MediaPlayer) { _events.tryEmit(EngineEvent.Ended(mediaId)) }
             override fun error(mediaPlayer: MediaPlayer) {
-                _events.tryEmit(EngineEvent.Error(proxy.lastUpstreamStatus?.takeIf { it >= 400 }, null))
+                _events.tryEmit(EngineEvent.Error(reader?.lastStatus?.takeIf { it >= 400 }, null, mediaId))
             }
         })
     }
 
     override suspend fun load(input: MediaInput, startPositionMs: Long) {
-        val mrl = when (input) {
-            is MediaInput.Remote -> proxy.register(input.stream)
-            is MediaInput.LocalFile -> input.path
-            is MediaInput.Offline -> offlineUrl(input.trackId)
-                ?: run { _events.tryEmit(EngineEvent.Error(null, IllegalStateException("not saved"))); return }
-        }
         val options = if (startPositionMs > 0) arrayOf(":start-time=${startPositionMs / 1000.0}") else emptyArray()
-        mediaPlayer.media().prepare(mrl, *options)
+        mediaId++
+        when (input) {
+            // libVLC's own HTTP client fails its second (seek) connection inside the JVM, so remote bytes come from
+            // our ranged OkHttp reader through vlcj callback media; libVLC never opens a socket.
+            is MediaInput.Remote -> {
+                val r = HttpRangeReader(input.stream).also { reader = it }
+                mediaPlayer.media().prepare(ReaderMedia(r).also { media = it }, *options)
+            }
+            is MediaInput.LocalFile -> { reader = null; mediaPlayer.media().prepare(input.path, *options) }
+            is MediaInput.Offline -> {
+                reader = null
+                val url = offlineUrl(input.trackId) ?: run { _events.tryEmit(EngineEvent.Error(null, IllegalStateException("not saved"))); return }
+                mediaPlayer.media().prepare(url, *options)
+            }
+        }
     }
 
     override fun play() { mediaPlayer.submit { mediaPlayer.controls().play() } }
@@ -66,6 +84,14 @@ class DesktopPlaybackEngine(
     override fun release() {
         mediaPlayer.release()
         factory.release()
-        proxy.stop()
     }
+}
+
+/** Hands [HttpRangeReader] bytes to libVLC. */
+private class ReaderMedia(private val reader: HttpRangeReader) : SeekableCallbackMedia() {
+    override fun onGetSize(): Long = reader.size()
+    override fun onOpen(): Boolean = true
+    override fun onRead(buffer: ByteArray, bufferSize: Int): Int = reader.read(buffer, bufferSize)
+    override fun onSeek(offset: Long): Boolean = reader.seek(offset)
+    override fun onClose() = reader.close()
 }

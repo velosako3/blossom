@@ -56,6 +56,7 @@ class DefaultBlossomPlayer(
     }
 
     override fun play() = command {
+        if (queue.current == null) return@command
         wantPlaying = true
         _state.update { it.copy(isPlaying = true, error = null) }
         engine.play()
@@ -104,13 +105,15 @@ class DefaultBlossomPlayer(
     }
 
     private suspend fun onEvent(event: EngineEvent) {
+        // Still queued from the media before the last load: ignore (a stale Ended would skip a song).
+        if (event.mediaId != 0L && event.mediaId != engine.mediaId) return
         when (event) {
             is EngineEvent.Position -> {
                 lastPositionMs = event.positionMs
                 _state.update { it.copy(positionMs = event.positionMs, durationMs = event.durationMs.takeIf { d -> d > 0 } ?: it.durationMs) }
             }
             is EngineEvent.Buffering -> _state.update { it.copy(isBuffering = event.buffering) }
-            EngineEvent.Ended -> advance(userInitiated = false)
+            is EngineEvent.Ended -> advance(userInitiated = false)
             is EngineEvent.Error -> onError(event)
         }
     }

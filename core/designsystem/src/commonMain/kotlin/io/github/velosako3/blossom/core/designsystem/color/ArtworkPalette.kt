@@ -66,7 +66,7 @@ suspend fun extractPalette(image: ImageBitmap): ArtworkPalette = withContext(Dis
         Bucket(c, n, if (max == 0f) 0f else (max - min) / max, max)
     }
     val dominant = buckets.maxBy { it.count }.color
-    val minShare = opaque * 0.02
+    val minShare = opaque * 0.005 // sparse but vivid colour (a rainbow on black) still counts as vibrant
     val populated = buckets.filter { it.count >= minShare }.ifEmpty { buckets }
     val vibrant = populated.maxBy { it.sat * it.value * (0.5f + 0.5f * it.count / opaque) }.color
         .let { if (it == dominant) lerp(dominant, Color.White, 0.25f) else it }

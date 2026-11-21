@@ -47,7 +47,7 @@ fun App(
     val current = graph?.player?.state?.collectAsState()?.value?.current
     val artworkPalette = rememberArtworkPalette(current?.artworkUrl)
     val activePalette = if (current != null) artworkPalette else palette
-    val slots = if (graph != null) appSlots(graph, navigator, searchFocus, hasTrack = current != null) else remember { ShellSlots() }
+    val slots = if (graph != null) appSlots(graph, navigator, searchFocus, hasTrack = current != null, shellState = shellState) else remember { ShellSlots() }
     val darkTheme = resolveDarkTheme(themeMode, isSystemInDarkTheme())
     BlossomTheme(darkTheme = darkTheme, palette = activePalette, glassQuality = glassQuality, reduceMotion = reduceMotion) {
         Box(Modifier.fillMaxSize()) {

@@ -14,17 +14,25 @@ sealed interface MediaInput {
     data class Offline(val trackId: TrackId) : MediaInput
 }
 
+/**
+ * Engine callbacks. [mediaId] says which [PlaybackEngine.load] produced the event (0 = untagged), so events still
+ * queued from the previous track can be dropped after a track change.
+ */
 sealed interface EngineEvent {
-    data class Position(val positionMs: Long, val durationMs: Long) : EngineEvent
-    data object Ended : EngineEvent
-    data class Buffering(val buffering: Boolean) : EngineEvent
+    val mediaId: Long
+
+    data class Position(val positionMs: Long, val durationMs: Long, override val mediaId: Long = 0) : EngineEvent
+    data class Ended(override val mediaId: Long = 0) : EngineEvent
+    data class Buffering(val buffering: Boolean, override val mediaId: Long = 0) : EngineEvent
     /** [httpStatus] is set when the failure was an HTTP answer (403/410 mean an expired stream URL). */
-    data class Error(val httpStatus: Int?, val cause: Throwable?) : EngineEvent
+    data class Error(val httpStatus: Int?, val cause: Throwable?, override val mediaId: Long = 0) : EngineEvent
 }
 
 /** The platform audio engine: Media3 on Android, libVLC on desktop. */
 interface PlaybackEngine {
     val events: Flow<EngineEvent>
+    /** The id tagged onto events from the most recent [load]; 0 when the engine doesn't tag. */
+    val mediaId: Long get() = 0
     suspend fun load(input: MediaInput, startPositionMs: Long)
     fun play()
     fun pause()

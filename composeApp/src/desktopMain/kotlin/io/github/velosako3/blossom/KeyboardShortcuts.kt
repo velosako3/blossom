@@ -30,7 +30,7 @@ class KeyboardShortcuts(
             Key.DirectionLeft -> player.previous()
             Key.DirectionRight -> player.next()
             Key.L -> toggleLike()
-            Key.F -> { navigator.navigate(Destination.Search); runCatching { searchFocus.requestFocus() } }
+            Key.F -> { navigator.navigate(Destination.Search); shell.searchFocusRequests++ }
             Key.Comma -> navigator.navigate(Destination.Settings)
             else -> return false
         }

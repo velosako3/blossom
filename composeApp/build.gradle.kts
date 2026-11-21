@@ -62,6 +62,10 @@ kotlin {
 compose.desktop {
     application {
         mainClass = "io.github.velosako3.blossom.MainKt"
+        // Debug-only switches forwarded to `./gradlew :composeApp:run`, e.g. -Pblossom.debugPlay="daft punk".
+        jvmArgs += listOf("blossom.debugPlay", "blossom.forceOffline", "blossom.dataDir", "blossom.vlcLog").mapNotNull { key ->
+            providers.gradleProperty(key).orNull?.let { "-D$key=$it" }
+        }
         nativeDistributions {
             appResourcesRootDir.set(vlcjBundler.vlcNativesDirectory)
             targetFormats(TargetFormat.Msi, TargetFormat.Deb, TargetFormat.AppImage)
@@ -80,3 +84,14 @@ compose.desktop {
 }
 
 tasks.matching { it.name == "prepareAppResources" }.configureEach { dependsOn("downloadVlcNatives") }
+
+// Desktop tests that start the real app graph load the bundled libVLC from the build folder.
+tasks.withType<Test>().configureEach {
+    dependsOn("addVlcPlugins")
+    val os = System.getProperty("os.name").lowercase()
+    val dir = if (os.contains("win")) "windows-x64" else "linux-x64"
+    systemProperty("compose.application.resources.dir", layout.buildDirectory.dir("vlc-natives/$dir").get().asFile.absolutePath)
+    systemProperty("blossom.dataDir", layout.buildDirectory.dir("test-data").get().asFile.absolutePath)
+    // Live end-to-end tests do real network and audio for minutes.
+    systemProperty("kotlinx.coroutines.test.default_timeout", "10m")
+}
