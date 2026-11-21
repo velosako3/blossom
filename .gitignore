@@ -1,0 +1,23 @@
+# secrets — never commit
+secrets.properties
+local.properties
+*.jks
+*.keystore
+.env*
+
+# build
+.gradle/
+build/
+.kotlin/
+*.iml
+.idea/
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+
+# agent scratch
+.superpowers/
+
+# owner's handoff prompt (saved copy lives in docs/plans/)
+blossom-claude-code-prompt.md
