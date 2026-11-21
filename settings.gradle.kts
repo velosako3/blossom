@@ -29,5 +29,5 @@ dependencyResolutionManagement {
 }
 
 include(":composeApp", ":androidApp")
-include(":core:designsystem", ":core:model", ":core:platform")
+include(":core:designsystem", ":core:model", ":core:platform", ":core:player")
 include(":source:api", ":source:youtubemusic")
