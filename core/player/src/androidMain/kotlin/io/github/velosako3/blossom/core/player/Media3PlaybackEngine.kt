@@ -114,7 +114,7 @@ class Media3PlaybackEngine(
     override suspend fun load(input: MediaInput, startPositionMs: Long) = withContext(Dispatchers.Main) {
         val uri = when (input) {
             is MediaInput.Remote -> input.stream.url.also { headers.clear(); headers[it] = input.stream.headers }
-            is MediaInput.LocalFile -> Uri.fromFile(java.io.File(input.path)).toString()
+            is MediaInput.LocalFile -> if (input.path.startsWith("content://")) input.path else Uri.fromFile(java.io.File(input.path)).toString()
             is MediaInput.Offline -> "$OFFLINE_SCHEME://${input.trackId.value}"
         }
         mediaId++

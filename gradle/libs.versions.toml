@@ -29,6 +29,7 @@ vlcj = "4.12.1"
 nucleus = "2.5.18"
 vlcjBundler = "0.2.1"
 reorderable = "3.1.0"
+jaudiotagger = "3.0.1"
 
 [libraries]
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
@@ -56,6 +57,7 @@ newpipe-extractor = { module = "com.github.TeamNewPipe:NewPipeExtractor", versio
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 vlcj = { module = "uk.co.caprica:vlcj", version.ref = "vlcj" }
 reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
+jaudiotagger = { module = "net.jthink:jaudiotagger", version.ref = "jaudiotagger" }
 nucleus-media-control = { module = "dev.nucleusframework:nucleus.media-control", version.ref = "nucleus" }
 
 compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose" }

@@ -11,6 +11,9 @@ import io.github.velosako3.blossom.feature.search.RecentSearchStore
 import io.github.velosako3.blossom.feature.search.SearchViewModel
 import io.github.velosako3.blossom.source.youtubemusic.YtmSource
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import io.github.velosako3.blossom.feature.library.local.LocalLibrary
 import io.github.velosako3.blossom.core.database.BlossomDatabase
 import io.github.velosako3.blossom.core.database.LibraryCommands
 import io.github.velosako3.blossom.core.database.LibraryProjector
@@ -38,6 +41,7 @@ class AppGraph(
     val prefs: PreferenceStore,
     val network: NetworkMonitor,
     val scope: CoroutineScope,
+    val local: LocalFilesHost,
     /** Shares a link: the share sheet on Android, the clipboard on desktop. */
     val shareLink: (String) -> Unit,
 ) {
@@ -49,6 +53,31 @@ class AppGraph(
     val repo = SqlLibraryRepository(db)
     val library = LibraryViewModel(repo, commands, scope)
     val home by lazy { HomeViewModel(ytm, scope) }
+}
+
+/** Platform glue for local files: the library, the folders it watches, a folder picker and (Android) permission. */
+class LocalFilesHost(
+    val library: LocalLibrary,
+    val folders: StateFlow<List<String>>,
+    val addFolder: () -> Unit,
+    val removeFolder: (String) -> Unit,
+    val needsPermission: StateFlow<Boolean> = MutableStateFlow(false),
+    val requestPermission: () -> Unit = {},
+) {
+    /** Streamed tracks are always "here"; local ones only when the file exists on this device. */
+    fun isAvailable(track: Track): Boolean = track.id.kind != SourceKind.LOCAL || library.pathFor(track.id) != null
+}
+
+/** Folders kept as a JSON list in preferences (device-specific, never synced). */
+fun PreferenceStore.folderList(key: String): StateFlow<List<String>> {
+    val decode = { v: String? -> v?.let { runCatching { kotlinx.serialization.json.Json.decodeFromString<List<String>>(it) }.getOrNull() }.orEmpty() }
+    val out = MutableStateFlow(decode(get(key)))
+    return out
+}
+
+fun PreferenceStore.setFolderList(key: String, folders: List<String>, flow: StateFlow<List<String>>) {
+    put(key, kotlinx.serialization.json.Json.encodeToString(folders))
+    (flow as MutableStateFlow).value = folders
 }
 
 /** The public web link for a track, for "Share link". */

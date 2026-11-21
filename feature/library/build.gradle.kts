@@ -11,5 +11,8 @@ kotlin {
             implementation(projects.core.player)
             implementation(libs.reorderable)
         }
+        getByName("desktopMain").dependencies {
+            implementation(libs.jaudiotagger)
+        }
     }
 }

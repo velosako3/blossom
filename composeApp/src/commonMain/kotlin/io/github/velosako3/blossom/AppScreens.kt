@@ -37,6 +37,7 @@ import io.github.velosako3.blossom.feature.library.AddToPlaylistSheet
 import io.github.velosako3.blossom.feature.library.CreatePlaylistDialog
 import io.github.velosako3.blossom.feature.library.LibraryScreen
 import io.github.velosako3.blossom.feature.library.LikedList
+import io.github.velosako3.blossom.feature.library.LocalFilesScreen
 import io.github.velosako3.blossom.feature.library.PlaylistArtwork
 import io.github.velosako3.blossom.feature.library.PlaylistScreen
 import io.github.velosako3.blossom.feature.library.PlaylistViewModel
@@ -140,12 +141,19 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
                     LibraryScreen(
                         graph.library, openPlaylistLocal, play, onImport = { navigator.navigate(Destination.Import()) },
                         onSettings = if (compact) ({ navigator.navigate(Destination.Settings) }) else null,
+                        localFiles = {
+                            val localTracks by graph.local.library.tracks().collectAsState(emptyList())
+                            val folders by graph.local.folders.collectAsState()
+                            val needsPermission by graph.local.needsPermission.collectAsState()
+                            LocalFilesScreen(localTracks, folders, play, { addTracks = it }, graph.local.addFolder, graph.local.removeFolder,
+                                needsPermission = needsPermission, onRequestPermission = graph.local.requestPermission)
+                        },
                     )
                     true
                 }
                 is Destination.Playlist -> {
                     val vm = remember(destination.id) { PlaylistViewModel(io.github.velosako3.blossom.core.model.PlaylistId(destination.id), graph.repo, graph.commands, graph.scope) }
-                    PlaylistScreen(vm, play, onAddToPlaylist = { addTracks = it }, onDeleted = { navigator.back() }, topBar = { ScreenTopBar("", navigator) })
+                    PlaylistScreen(vm, play, onAddToPlaylist = { addTracks = it }, onDeleted = { navigator.back() }, topBar = { ScreenTopBar("", navigator) }, isAvailable = graph.local::isAvailable)
                     true
                 }
                 Destination.Liked -> {

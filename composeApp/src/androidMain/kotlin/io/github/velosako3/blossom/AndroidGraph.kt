@@ -23,6 +23,10 @@ import androidx.media3.session.SessionToken
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
+import io.github.velosako3.blossom.feature.library.local.MediaStoreLibrary
+
 import kotlin.time.Clock
 
 /** Builds the Android object graph once per process and hands the player to the media session service. */
@@ -35,6 +39,19 @@ fun createAndroidGraph(context: Context): AppGraph {
     val streams = YouTubeStreams({ secure.get(YtmSource.COOKIE_KEY) }, context.cacheDir)
     val ytm = YtmSource(secure, context.cacheDir, streams = streams)
     val youtube = YouTubeSource(streams)
+    val trees = prefs.folderList("local.trees")
+    val permission = MutableStateFlow(!AndroidLocalBridge.hasAudioPermission(context))
+    val localLibrary = MediaStoreLibrary(context, trees, scope) { AndroidLocalBridge.hasAudioPermission(context) }
+    val local = LocalFilesHost(
+        library = localLibrary,
+        folders = trees,
+        addFolder = { AndroidLocalBridge.pickFolder?.invoke() },
+        removeFolder = { f -> prefs.setFolderList("local.trees", trees.value - f, trees) },
+        needsPermission = permission,
+        requestPermission = { AndroidLocalBridge.requestPermission?.invoke() },
+    )
+    AndroidLocalBridge.onFolderPicked = { uri -> prefs.setFolderList("local.trees", (trees.value + uri).distinct(), trees) }
+    AndroidLocalBridge.onPermissionResult = { permission.value = !it; scope.launch { localLibrary.rescan() } }
     val engine = Media3PlaybackEngine(context)
     val player = DefaultBlossomPlayer(
         engine = engine,
@@ -42,10 +59,11 @@ fun createAndroidGraph(context: Context): AppGraph {
         network = network,
         scope = scope,
         radio = { ytm.radio(it.id) },
+        localPath = localLibrary::pathFor,
     )
     PlayerHolder.engine = engine
     PlayerHolder.player = player
-    return AppGraph(player, androidDatabase(context), prefs.deviceId(), ytm, prefs, network, scope) { link ->
+    return AppGraph(player, androidDatabase(context), prefs.deviceId(), ytm, prefs, network, scope, local) { link ->
         context.startActivity(
             Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, link), null)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
@@ -57,4 +75,17 @@ fun createAndroidGraph(context: Context): AppGraph {
 fun connectPlaybackService(context: Context): () -> Unit {
     val future = MediaController.Builder(context, SessionToken(context, ComponentName(context, BlossomPlaybackService::class.java))).buildAsync()
     return { MediaController.releaseFuture(future) }
+}
+
+/** Activity-owned launchers (permission, folder picker) that the app-scoped graph can trigger. */
+object AndroidLocalBridge {
+    var requestPermission: (() -> Unit)? = null
+    var pickFolder: (() -> Unit)? = null
+    var onPermissionResult: (Boolean) -> Unit = {}
+    var onFolderPicked: (String) -> Unit = {}
+
+    fun hasAudioPermission(context: Context): Boolean {
+        val perm = if (android.os.Build.VERSION.SDK_INT >= 33) android.Manifest.permission.READ_MEDIA_AUDIO else android.Manifest.permission.READ_EXTERNAL_STORAGE
+        return context.checkSelfPermission(perm) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
 }

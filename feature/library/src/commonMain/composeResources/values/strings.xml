@@ -40,4 +40,12 @@
         <item quantity="one">%1$d song</item>
         <item quantity="other">%1$d songs</item>
     </plurals>
+    <string name="local_empty">No music files found yet.</string>
+    <string name="local_add_folder">Add folder</string>
+    <string name="local_folders">Folders</string>
+    <string name="local_remove_folder">Remove folder</string>
+    <string name="local_permission_title">Let blossom see your music</string>
+    <string name="local_permission_text">blossom needs access to audio files on this device to show and play them. Nothing leaves your device.</string>
+    <string name="local_permission_allow">Allow access</string>
+    <string name="local_add_to_playlist">Add to playlist</string>
 </resources>
