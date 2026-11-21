@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Tasks 3.1–3.2 done. Next: Task 3.3 (library UI).
+Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Tasks 3.1–3.3 done. Next: Task 3.4 (local files).
 
 Hands-on testing rule: the owner is using this desktop, so never inject keyboard/mouse input or capture the screen.
 Desktop end-to-end checks run off-screen with the real graph: `./gradlew :composeApp:desktopTest -PliveTests=true -Proborazzi.test.record=true --tests "*DesktopEndToEnd*"`. `./gradlew :composeApp:run -Pblossom.debugPlay="query"` plays a search result at startup, for `playerctl` checks. Kill stray app instances by PID (`ps … | grep 'blossom\.MainKt'`), never with a `pkill -f` pattern that matches your own shell.
@@ -43,6 +43,7 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - Desktop `NetworkMonitor` checks for an up interface plus a DNS answer every 15 s (no request to any server); `-Dblossom.forceOffline=true` pins it offline for testing.
 
 ## Deviations from plan
+- Library UI: `PlaylistViewModelTest` lives in `desktopTest` because it runs against a real in-memory SQLite database (the test checks the resulting order rather than mocking `moveEntry`). Rows support swipe-to-remove, × and the Delete key on every platform, and reorder through a drag handle (reorderable 3.1); long-press selects. The like button, Ctrl+L and the player's "Add to playlist" are wired now. Evidence: `DesktopEndToEndLiveTest` → `e2e library: liked=[One More Time (Radio Edit)] playlists=[(blossom e2e, 1)]`, screenshots `docs/screenshots/m3/`.
 - The library playlist row type is `LibraryPlaylistSummary` (the plan's `LibraryRepository.playlists(): Flow<List<PlaylistSummary>>`), to stay distinct from the search result `PlaylistSummary` in source/api.
 - Projector: every field keeps the HLC of its last write ('' = not yet written), so operations can arrive in any order (a rename before its create, a move before its add) and still converge; concurrent inserts at the same index get the same key and are ordered by entry ID. `LibraryCommands.localOps` emits each appended operation for sync scheduling and offline auto-save.
 - Milestone 2 review (5 bugs, 11 risks, 1 question) fixed with RED→GREEN tests where it's logic: dead stream with repeat ONE now skips; removing the last current track pauses the engine; recovered expiries reset the re-resolve count; `HttpRangeReader` turns timeouts/truncated bodies into errors (re-resolve at position) instead of end-of-song or endless reconnects; engine events are tagged per media at the engine's own media switch (`mediaChanged` / `onMediaItemTransition`); seeking right with unknown duration no longer restarts; a user play during transient focus loss cancels auto-resume; readers and the Media3 polling scope are released; the service stops itself if started without a player; preference writes moved off the UI thread; a glass banner announces skipped songs (`PlaybackErrorBanner`).

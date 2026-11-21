@@ -2,6 +2,7 @@
 package io.github.velosako3.blossom
 
 import io.github.velosako3.blossom.core.designsystem.components.installImageLoader
+import io.github.velosako3.blossom.core.database.fileDatabase
 import io.github.velosako3.blossom.core.model.SourceKind
 import io.github.velosako3.blossom.core.platform.DesktopNetworkMonitor
 import io.github.velosako3.blossom.core.platform.DesktopSecureStore
@@ -55,7 +56,7 @@ fun createDesktopGraph(): AppGraph {
         }
     }
     Runtime.getRuntime().addShutdownHook(Thread { runCatching { engine.release() } })
-    return AppGraph(player, ytm, prefs, network, scope) { link ->
+    return AppGraph(player, fileDatabase(File(dataDir, "blossom.db")), prefs.deviceId(), ytm, prefs, network, scope) { link ->
         Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(link), null)
     }
 }

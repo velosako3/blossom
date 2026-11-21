@@ -13,6 +13,7 @@ import io.github.takahirom.roborazzi.captureRoboImage
 import io.github.velosako3.blossom.core.designsystem.glass.GlassQuality
 import io.github.velosako3.blossom.navigation.Navigator
 import kotlin.test.Test
+import kotlinx.coroutines.flow.first
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
 
@@ -23,6 +24,7 @@ import kotlin.time.Duration.Companion.minutes
 @OptIn(ExperimentalTestApi::class)
 class DesktopEndToEndLiveTest {
     @Test fun searchPlaySeekNext() = runDesktopComposeUiTest(1440, 900, testTimeout = 5.minutes) {
+        System.getProperty("blossom.dataDir")?.let { java.io.File(it).deleteRecursively() }
         val graph = createDesktopGraph()
         val navigator = Navigator()
         setContent { App(navigator = navigator, graph = graph, glassQuality = GlassQuality.FULL, reduceMotion = true) }
@@ -61,5 +63,18 @@ class DesktopEndToEndLiveTest {
         pump(2000); shot("04_now_playing")
         graph.player.pause()
         assertTrue(graph.player.state.value.current != null)
+
+        // Library: like the song and put it in a new playlist.
+        val song = graph.player.state.value.current!!
+        kotlinx.coroutines.runBlocking { graph.commands.like(song) }
+        graph.library.createWith("blossom e2e", listOf(song))
+        waitFor(what = "playlist") { graph.library.playlists.value?.any { it.name == "blossom e2e" && it.entryCount == 1 } == true }
+        val liked = kotlinx.coroutines.runBlocking { graph.repo.liked().first() }
+        println("e2e library: liked=${liked.map { it.title }} playlists=${graph.library.playlists.value?.map { it.name to it.entryCount }}")
+        navigator.navigate(io.github.velosako3.blossom.navigation.Destination.Library)
+        pump(2000); shot("05_library")
+        val pid = graph.library.playlists.value!!.first { it.name == "blossom e2e" }.id
+        navigator.navigate(io.github.velosako3.blossom.navigation.Destination.Playlist(pid.value))
+        pump(2000); shot("06_playlist")
     }
 }

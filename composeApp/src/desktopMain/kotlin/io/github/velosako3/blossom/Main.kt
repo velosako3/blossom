@@ -7,6 +7,8 @@ import androidx.compose.ui.window.application
 import io.github.velosako3.blossom.navigation.Navigator
 import io.github.velosako3.blossom.shell.ShellState
 import io.github.velosako3.blossom.window.BlossomWindow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 fun main() {
     val graph = createDesktopGraph()
@@ -14,7 +16,13 @@ fun main() {
         val navigator = remember { Navigator() }
         val shell = remember { ShellState() }
         val searchFocus = remember { FocusRequester() }
-        val shortcuts = remember { KeyboardShortcuts(graph.player, navigator, shell, searchFocus) }
+        val shortcuts = remember {
+            KeyboardShortcuts(graph.player, navigator, shell, searchFocus) {
+                graph.player.state.value.current?.let { t ->
+                    graph.scope.launch { if (graph.repo.isLiked(t.id).first()) graph.commands.unlike(t.id) else graph.commands.like(t) }
+                }
+            }
+        }
         BlossomWindow(onPreviewKeyEvent = shortcuts::preview, onKeyEvent = shortcuts::bubble) { titleBar ->
             App(navigator = navigator, graph = graph, shellState = shell, searchFocus = searchFocus, titleBar = titleBar)
         }

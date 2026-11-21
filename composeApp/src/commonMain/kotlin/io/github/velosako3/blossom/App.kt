@@ -9,6 +9,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.focus.FocusRequester
 import io.github.velosako3.blossom.core.designsystem.components.rememberArtworkPalette
@@ -49,9 +52,10 @@ fun App(
     titleBar: (@Composable () -> Unit)? = null,
 ) {
     val current = graph?.player?.state?.collectAsState()?.value?.current
+    var compactLayout by remember { mutableStateOf(false) }
     val artworkPalette = rememberArtworkPalette(current?.artworkUrl)
     val activePalette = if (current != null) artworkPalette else palette
-    val slots = if (graph != null) appSlots(graph, navigator, searchFocus, hasTrack = current != null, shellState = shellState) else remember { ShellSlots() }
+    val slots = if (graph != null) appSlots(graph, navigator, searchFocus, hasTrack = current != null, shellState = shellState, compact = compactLayout) else remember { ShellSlots() }
     val darkTheme = resolveDarkTheme(themeMode, isSystemInDarkTheme())
     BlossomTheme(darkTheme = darkTheme, palette = activePalette, glassQuality = glassQuality, reduceMotion = reduceMotion) {
         Box(Modifier.fillMaxSize()) {
@@ -59,8 +63,11 @@ fun App(
             Column(Modifier.fillMaxSize()) {
                 titleBar?.invoke()
                 BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+                    slots.overlay.let { overlay -> Box(Modifier.fillMaxSize().zIndex(2f)) { overlay() } }
                     graph?.let { PlaybackErrorBanner(it.player, Modifier.align(androidx.compose.ui.Alignment.TopCenter).padding(top = 48.dp).zIndex(1f)) }
-                    when (WindowLayout.from(maxWidth.value)) {
+                    val layout = WindowLayout.from(maxWidth.value)
+                    compactLayout = layout == WindowLayout.COMPACT
+                    when (layout) {
                         WindowLayout.COMPACT -> CompactShell(navigator, slots)
                         WindowLayout.MEDIUM -> MediumShell(navigator, slots)
                         WindowLayout.EXPANDED -> ExpandedShell(navigator, slots, shell = shellState)

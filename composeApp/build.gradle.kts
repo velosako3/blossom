@@ -46,6 +46,8 @@ kotlin {
                 implementation(projects.feature.album)
                 implementation(projects.feature.artist)
                 implementation(projects.feature.nowplaying)
+                implementation(projects.feature.library)
+                implementation(projects.core.database)
             }
         }
         getByName("desktopMain") {

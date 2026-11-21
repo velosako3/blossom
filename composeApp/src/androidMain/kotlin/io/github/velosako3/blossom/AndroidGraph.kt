@@ -5,6 +5,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import io.github.velosako3.blossom.core.designsystem.components.installImageLoader
+import io.github.velosako3.blossom.core.database.androidDatabase
 import io.github.velosako3.blossom.core.model.SourceKind
 import io.github.velosako3.blossom.core.platform.AndroidNetworkMonitor
 import io.github.velosako3.blossom.core.platform.AndroidSecureStore
@@ -44,7 +45,7 @@ fun createAndroidGraph(context: Context): AppGraph {
     )
     PlayerHolder.engine = engine
     PlayerHolder.player = player
-    return AppGraph(player, ytm, prefs, network, scope) { link ->
+    return AppGraph(player, androidDatabase(context), prefs.deviceId(), ytm, prefs, network, scope) { link ->
         context.startActivity(
             Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, link), null)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),

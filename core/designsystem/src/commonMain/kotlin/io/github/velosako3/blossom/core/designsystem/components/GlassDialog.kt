@@ -35,6 +35,7 @@ fun GlassDialog(
     title: String,
     modifier: Modifier = Modifier,
     text: String? = null,
+    content: (@Composable () -> Unit)? = null,
     confirmButton: @Composable () -> Unit,
     dismissButton: (@Composable () -> Unit)? = null,
 ) {
@@ -52,6 +53,7 @@ fun GlassDialog(
             Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(title, style = MaterialTheme.typography.titleLarge)
                 if (text != null) Text(text, style = MaterialTheme.typography.bodyMedium, color = BlossomTheme.colors.onSurfaceVariant)
+                content?.invoke()
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
                     dismissButton?.invoke()
                     confirmButton()

@@ -46,4 +46,6 @@ class ShellSlots(
     val lyricsPanel: (@androidx.compose.runtime.Composable () -> Unit)? = null,
     val sidebarPlaylists: (@androidx.compose.runtime.Composable () -> Unit)? = null,
     val screen: @androidx.compose.runtime.Composable (Destination) -> Boolean = { false },
+    /** App-wide sheets and dialogs drawn above the shell (add to playlist, …). */
+    val overlay: @androidx.compose.runtime.Composable () -> Unit = {},
 )
