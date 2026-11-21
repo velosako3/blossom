@@ -1,0 +1,17 @@
+blossom
+Copyright (C) 2026 velosako3 and blossom contributors
+
+blossom is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version. See LICENSE.
+
+blossom reuses code from the following open-source projects. Original
+copyright headers are kept on every copied file, and modified files carry a
+"Modified for blossom, <year>." line below that header.
+
+- BitChord — https://github.com/kushagrasinghx/BitChord — GPL-3.0
+  (details: see "Upstream code" below, filled in by the reuse audit)
+
+- Spotube — https://github.com/KRTirtho/spotube — AGPL-3.0-or-later (v6)
+  (details: see "Upstream code" below, filled in by the reuse audit)
