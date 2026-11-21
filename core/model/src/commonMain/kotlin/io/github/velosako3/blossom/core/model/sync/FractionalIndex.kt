@@ -25,6 +25,21 @@ object FractionalIndex {
         }
     }
 
+    /** [n] ascending keys between [before] and [after], spread evenly so batch inserts stay short (log n growth). */
+    fun nBetween(before: String?, after: String?, n: Int): List<String> {
+        if (n <= 0) return emptyList()
+        if (after == null) {
+            // Appending: plain steps keep keys shortest.
+            val out = ArrayList<String>(n)
+            var prev = before
+            repeat(n) { prev = between(prev, null); out += prev!! }
+            return out
+        }
+        val mid = between(before, after)
+        val left = (n - 1) / 2
+        return nBetween(before, mid, left) + mid + nBetween(mid, after, n - 1 - left)
+    }
+
     /** Smallest step after [a]. */
     private fun append(a: String): String {
         val first = d(a[0])

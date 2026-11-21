@@ -145,3 +145,98 @@ SELECT * FROM op_log;
 
 knownDevices:
 SELECT device_id, max(seq) AS last_seq FROM op_log GROUP BY device_id;
+
+-- playlists (projection; '' hlc = "not written yet", sorts before any real hlc)
+ensurePlaylist:
+INSERT OR IGNORE INTO playlist(id, name, name_hlc, description, description_hlc, origin_json, created_hlc, deleted_hlc, created_at, updated_at)
+VALUES (?, '', '', NULL, '', NULL, '', NULL, 0, 0);
+
+setPlaylistCreated:
+UPDATE playlist SET created_hlc = :hlc, origin_json = :origin, created_at = :at
+WHERE id = :id AND (created_hlc = '' OR created_hlc > :hlc);
+
+setPlaylistName:
+UPDATE playlist SET name = :name, name_hlc = :hlc, updated_at = max(updated_at, :at) WHERE id = :id AND name_hlc < :hlc;
+
+setPlaylistDescription:
+UPDATE playlist SET description = :description, description_hlc = :hlc, updated_at = max(updated_at, :at) WHERE id = :id AND description_hlc < :hlc;
+
+markPlaylistDeleted:
+UPDATE playlist SET deleted_hlc = :hlc WHERE id = :id AND (deleted_hlc IS NULL OR deleted_hlc > :hlc);
+
+touchPlaylist:
+UPDATE playlist SET updated_at = max(updated_at, :at) WHERE id = :id;
+
+livePlaylists:
+SELECT * FROM playlist WHERE deleted_hlc IS NULL AND created_hlc != '' ORDER BY created_at, id;
+
+livePlaylist:
+SELECT * FROM playlist WHERE id = ? AND deleted_hlc IS NULL AND created_hlc != '';
+
+playlistSummaries:
+SELECT p.id, p.name, p.origin_json, p.created_at,
+  (SELECT count(*) FROM playlist_entry e WHERE e.playlist_id = p.id AND e.added_hlc != '' AND e.removed_hlc IS NULL) AS entry_count
+FROM playlist p WHERE p.deleted_hlc IS NULL AND p.created_hlc != '' ORDER BY p.created_at, p.id;
+
+-- entries
+ensureEntry:
+INSERT OR IGNORE INTO playlist_entry(playlist_id, entry_id, track_json, status, source_title, source_artist, position, position_hlc, track_hlc, added_hlc, removed_hlc, added_at, match_confidence)
+VALUES (?, ?, NULL, 'MATCHED', '', '', '', '', '', '', NULL, 0, NULL);
+
+setEntryAdded:
+UPDATE playlist_entry SET source_title = :title, source_artist = :artist, match_confidence = :confidence, added_at = :at, added_hlc = :hlc
+WHERE playlist_id = :playlist AND entry_id = :entry AND (added_hlc = '' OR added_hlc > :hlc);
+
+setEntryPosition:
+UPDATE playlist_entry SET position = :position, position_hlc = :hlc WHERE playlist_id = :playlist AND entry_id = :entry AND position_hlc < :hlc;
+
+setEntryTrack:
+UPDATE playlist_entry SET track_json = :track, status = :status, track_hlc = :hlc WHERE playlist_id = :playlist AND entry_id = :entry AND track_hlc < :hlc;
+
+markEntryRemoved:
+UPDATE playlist_entry SET removed_hlc = :hlc WHERE playlist_id = :playlist AND entry_id = :entry AND (removed_hlc IS NULL OR removed_hlc > :hlc);
+
+liveEntries:
+SELECT * FROM playlist_entry WHERE playlist_id = ? AND added_hlc != '' AND removed_hlc IS NULL ORDER BY position, entry_id;
+
+firstArtworkJson:
+SELECT track_json FROM playlist_entry WHERE playlist_id = ? AND added_hlc != '' AND removed_hlc IS NULL AND track_json IS NOT NULL ORDER BY position, entry_id LIMIT 4;
+
+-- likes
+ensureLike:
+INSERT OR IGNORE INTO liked_track(track_id, track_json, liked, hlc, liked_at) VALUES (?, ?, 0, '', 0);
+
+setLiked:
+UPDATE liked_track SET liked = :liked, hlc = :hlc, liked_at = :at WHERE track_id = :id AND hlc < :hlc;
+
+setLikeTrack:
+UPDATE liked_track SET track_json = :json WHERE track_id = :id;
+
+likedTracks:
+SELECT * FROM liked_track WHERE liked = 1 ORDER BY liked_at DESC, track_id;
+
+isLiked:
+SELECT liked FROM liked_track WHERE track_id = ?;
+
+-- plays (union by id)
+insertPlay:
+INSERT OR IGNORE INTO play_event VALUES (?, ?, ?, ?, ?, ?, ?);
+
+allPlayIds:
+SELECT id FROM play_event;
+
+playsBetween:
+SELECT * FROM play_event WHERE started_at >= ? AND started_at < ? ORDER BY started_at;
+
+firstCountedPlays:
+SELECT track_json, min(started_at) AS first_at FROM play_event WHERE counted = 1 GROUP BY track_id;
+
+-- settings
+ensureSetting:
+INSERT OR IGNORE INTO setting(key, json_value, hlc) VALUES (?, '', '');
+
+setSetting:
+UPDATE setting SET json_value = :value, hlc = :hlc WHERE key = :key AND hlc < :hlc;
+
+settingValue:
+SELECT json_value FROM setting WHERE key = ? AND hlc != '';

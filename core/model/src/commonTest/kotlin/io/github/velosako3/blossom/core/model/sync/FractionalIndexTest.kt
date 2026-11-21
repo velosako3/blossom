@@ -34,6 +34,12 @@ class FractionalIndexTest {
         assertTrue(keys.maxOf { it.length } < 100, "longest ${keys.maxOf { it.length }}")
     }
 
+    @Test fun batchBetweenIsOrderedAndShort() {
+        val keys = FractionalIndex.nBetween("A", "B", 5000)
+        assertTrue((listOf("A") + keys + "B").zipWithNext().all { (a, b) -> a < b })
+        assertTrue(keys.maxOf { it.length } < 20, "longest ${keys.maxOf { it.length }}")
+    }
+
     @Test fun appendsStayShort() {
         var last = FractionalIndex.between(null, null)
         repeat(500) { val next = FractionalIndex.between(last, null); assertTrue(last < next); last = next }
