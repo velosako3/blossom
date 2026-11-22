@@ -75,6 +75,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Build
         run: ./gradlew :composeApp:packageReleaseMsi :composeApp:createReleaseDistributable --console=plain
+      - name: Self-check
+        shell: bash
+        run: composeApp/build/compose/binaries/main-release/app/blossom/blossom.exe --self-check
       - name: Name and checksum
         shell: bash
         run: |
@@ -114,6 +117,10 @@ jobs:
           cp composeApp/icons/blossom.png "$APPDIR/blossom.png"
           VER=$(grep '^blossom.version=' gradle.properties | cut -d= -f2)
           ARCH=x86_64 ./appimagetool --appimage-extract-and-run "$APPDIR" "blossom-$VER-linux-x86_64.AppImage"
+      - name: Self-check
+        run: |
+          VER=$(grep '^blossom.version=' gradle.properties | cut -d= -f2)
+          APPIMAGE_EXTRACT_AND_RUN=1 "./blossom-$VER-linux-x86_64.AppImage" --self-check
       - name: Name and checksum
         run: |
           VER=$(grep '^blossom.version=' gradle.properties | cut -d= -f2)

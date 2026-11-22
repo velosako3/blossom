@@ -10,7 +10,8 @@ import io.github.velosako3.blossom.window.BlossomWindow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-fun main() {
+fun main(args: Array<String>) {
+    if ("--self-check" in args) selfCheck()
     val graph = createDesktopGraph()
     application {
         val navigator = remember { Navigator() }

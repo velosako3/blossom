@@ -125,6 +125,12 @@ compose.desktop {
             appResourcesRootDir.set(vlcjBundler.vlcNativesDirectory)
             targetFormats(TargetFormat.Msi, TargetFormat.Deb, TargetFormat.AppImage)
             packageName = "blossom"
+            // From `./gradlew :composeApp:suggestRuntimeModules`, plus service providers it can't see: EC crypto
+            // (HTTPS key exchange, LAN pairing), extra charsets and locale data. `blossom --self-check` guards this list.
+            modules(
+                "java.instrument", "java.management", "java.net.http", "java.sql", "jdk.dynalink", "jdk.httpserver",
+                "jdk.security.auth", "jdk.unsupported", "jdk.crypto.ec", "jdk.charsets", "jdk.localedata",
+            )
             packageVersion = blossomVersion.substringBefore('-')
             description = "blossom music player"
             vendor = "blossom"

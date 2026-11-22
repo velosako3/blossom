@@ -355,6 +355,8 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - **Separate `androidApp` module.** AGP 9 no longer allows `com.android.application` in a Kotlin Multiplatform module. `composeApp` is now a KMP library (shared UI, desktop `Main.kt`), and `androidApp` holds `MainActivity`, the manifest and the APK. Every plan command `:composeApp:assembleDebug` / `assembleRelease` becomes `:androidApp:assembleDebug` / `assembleRelease`. KMP Android unit tests are `androidHostTest` (AGP 9 naming).
 - **No remote `main` branch.** `github.com/velosako3/blossom` has no commits, so `dev` starts from an empty history and the `dev → main` PR can't be opened until `main` exists (see open questions). Pushing to `main` is not allowed for this run.
 
+- 2026-11-22: the first installers crashed on launch (`NoClassDefFoundError: java/sql/DriverManager`): the bundled Java runtime only had Compose's default modules, and every earlier desktop check ran on the full JDK. Fixed with an explicit `modules(...)` list in `composeApp/build.gradle.kts`, plus `blossom --self-check` (starts the app graph in a temp folder and checks JDBC, EC crypto, AES-GCM and ECDHE TLS without opening a window), which the installer workflow now runs on the Linux AppImage and the Windows app.
+
 ## Open questions for owner
 - **Before sharing any installer, make the repository public:** the AGPL requires that anyone who receives blossom can get its source.
 - `main` was created from the first commit (owner's request, 2026-11-22) and the `dev → main` pull request is open with the milestone summaries as comments. Reviewing and merging it is the owner's call.
