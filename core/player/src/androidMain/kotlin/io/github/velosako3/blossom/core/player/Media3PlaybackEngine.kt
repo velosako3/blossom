@@ -51,7 +51,9 @@ class Media3PlaybackEngine(
     override val events: SharedFlow<EngineEvent> = _events
 
     private val http = OkHttpDataSource.Factory(OkHttpClient())
-    private val upstream = DefaultDataSource.Factory(context, ResolvingDataSource.Factory(http) { spec ->
+    // googlevideo paces one open-ended read to about playback speed (~15 kB/s); bounded 1 MiB ranges arrive at line
+    // rate, so the player can start at once and build a buffer (BitChord's ChunkedDataSource).
+    private val upstream = DefaultDataSource.Factory(context, ResolvingDataSource.Factory(ChunkedDataSource.Factory(http, 1024L * 1024)) { spec ->
         headers[spec.uri.toString()]?.let { spec.withAdditionalHeaders(it) } ?: spec
     })
     private val factory = DataSource.Factory {
@@ -64,6 +66,15 @@ class Media3PlaybackEngine(
         .setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(), false)
         .setHandleAudioBecomingNoisy(false) // handled by BlossomPlaybackService through AudioFocusPolicy
         .setWakeMode(C.WAKE_MODE_NETWORK)
+        // BitChord's buffering: start after half a second of audio, resume after two, and read far ahead (up to
+        // 15 min / 8 MiB) while the network is good, so a weak spot later doesn't stall the song.
+        .setLoadControl(
+            androidx.media3.exoplayer.DefaultLoadControl.Builder()
+                .setBufferDurationsMs(androidx.media3.exoplayer.DefaultLoadControl.DEFAULT_MIN_BUFFER_MS, 15 * 60 * 1000, 500, 2_000)
+                .setTargetBufferBytes(8 * 1024 * 1024)
+                .setBackBuffer(30_000, true)
+                .build(),
+        )
         .build()
 
     private var metadata: MediaMetadata = MediaMetadata.EMPTY
