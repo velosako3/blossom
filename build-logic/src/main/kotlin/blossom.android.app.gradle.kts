@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // The Android application module (AGP 9 keeps it separate from the KMP modules).
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
@@ -17,6 +19,10 @@ android {
         targetSdk = ver("android-targetSdk").toInt()
         versionName = providers.gradleProperty("blossom.version").get()
         versionCode = versionName!!.split('.', '-').take(3).fold(0) { acc, s -> acc * 1000 + (s.toIntOrNull() ?: 0) }
+        // Dropbox's sign-in redirect scheme (db-<app key>); "db-none" when no key is configured.
+        val secrets = Properties().apply { rootProject.file("secrets.properties").takeIf { it.isFile }?.reader()?.use(::load) }
+        val dropboxKey = (secrets.getProperty("DROPBOX_APP_KEY") ?: System.getenv("DROPBOX_APP_KEY")).orEmpty().trim()
+        manifestPlaceholders["dropboxScheme"] = if (dropboxKey.isEmpty()) "db-none" else "db-$dropboxKey"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

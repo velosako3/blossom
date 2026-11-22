@@ -5,5 +5,6 @@ plugins {
 
 dependencies {
     implementation(projects.composeApp)
+    implementation(projects.feature.sync)
     implementation(libs.androidx.activity.compose)
 }

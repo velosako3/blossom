@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–6 done (M6 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–7 done (M7 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Tasks 8.1–8.2 done. Next: Task 8.3 (sync backends).
+Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–6 done (M6 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–7 done (M7 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Tasks 8.1–8.3 done. Next: Task 8.4 (LAN pairing).
 
 Hands-on testing rule: the owner is using this desktop, so never inject keyboard/mouse input or capture the screen.
 Desktop end-to-end checks run off-screen with the real graph: `./gradlew :composeApp:desktopTest -PliveTests=true -Proborazzi.test.record=true --tests "*DesktopEndToEnd*"`. `./gradlew :composeApp:run -Pblossom.debugPlay="query"` plays a search result at startup, for `playerctl` checks. Kill stray app instances by PID (`ps … | grep 'blossom\.MainKt'`), never with a `pkill -f` pattern that matches your own shell.
@@ -43,6 +43,14 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - Desktop `NetworkMonitor` checks for an up interface plus a DNS answer every 15 s (no request to any server); `-Dblossom.forceOffline=true` pins it offline for testing.
 
 ## Deviations from plan
+- Task 8.3:
+  - Backends use OkHttp and are tested with MockWebServer (the plan said Ktor); blossom's HTTP is OkHttp everywhere.
+  - WebDAV listing walks collections with `Depth: 1` (many servers refuse `infinity`).
+  - Drive keeps every file in the hidden app-data folder, named by its full sync path (app-data has no folders).
+  - OAuth: PKCE for both providers, refresh once on 401, and tokens in `SecureStore` (`oauth.<backend>`). Desktop catches the redirect on 127.0.0.1: any port for Google, exactly `http://127.0.0.1:53682/dropbox` for Dropbox. Android uses the system browser (the plan said Custom Tabs, which needs one more library) and Dropbox's `db-<key>://1/connect`, wired through the manifest placeholder `dropboxScheme`.
+  - The Android SAF folder backend can't replace files atomically: it writes a hidden temp document, deletes the old one and renames.
+  - Client IDs come from `secrets.properties` (or CI environment variables) into a generated `BlossomSecrets` under `build/`, never committed; an empty one hides that option. `GOOGLE_OAUTH_ANDROID_CLIENT_ID` is empty, so Drive is desktop-only for now.
+  - The live Drive and Dropbox checks aren't run: they need someone to sign in to an account in a browser, and blossom never signs in to the owner's accounts (Open questions).
 - Milestone 7 review fixes:
   - Desktop Share no longer calls `invokeAndWait` from the event thread (it threw, and the error was swallowed).
   - Moving past the last Wrapped card keeps its progress full (`lastCardStaysFullAfterNext`).
@@ -217,6 +225,7 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - **No remote `main` branch.** `github.com/velosako3/blossom` has no commits, so `dev` starts from an empty history and the `dev → main` PR can't be opened until `main` exists (see open questions). Pushing to `main` is not allowed for this run.
 
 ## Open questions for owner
+- Sync backends: Google Drive (desktop) and Dropbox sign-in are built and tested against mocked endpoints, but haven't been run against the real services. That needs signing in with an account, which I don't do with yours. To check: Settings → Sync → Google Drive / Dropbox → sign in on two devices. For Drive on Android, create an Android OAuth client in Google Cloud Console (package `io.github.velosako3.blossom` plus the release key's SHA-1) and put its ID in `GOOGLE_OAUTH_ANDROID_CLIENT_ID`.
 - The desktop packaging plugin `vlcj-bundler` (from Spotube) downloads the base libVLC packages over plain HTTP without checksums. blossom's own extra-plugin task now verifies its downloads; vendoring and hardening the bundler (HTTPS + SHA256) would close the rest. Should blossom fork it?
 - Lyrics frame time on real hardware: run `./gradlew :composeApp:run`, play a word-synced song with the lyrics panel open for 30 s, and check whether the glass quality stays FULL (it drops automatically if p90 > 20 ms). Off-screen CPU numbers are in Deviations.
 - **Create a `main` branch on GitHub** so the `dev → main` pull request can be opened. The repository had no commits when this run started, and this run may not push to `main`. One way: `git push origin <first commit of dev>:refs/heads/main` (the first commit only adds the plan). Until then, milestone summaries are kept in `docs/milestones.md`.

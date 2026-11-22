@@ -39,6 +39,9 @@ class MainActivity : ComponentActivity() {
 
     /** "Share to blossom" (text with a link in it) or an opened link (Spotify, YouTube, SoundCloud, untitled). */
     private fun sharedLink(intent: android.content.Intent?): String? = when (intent?.action) {
+        // A sign-in redirect (Dropbox) finishes the sign-in, not an import.
+        android.content.Intent.ACTION_VIEW if intent.data?.scheme?.startsWith("db-") == true ->
+            { io.github.velosako3.blossom.feature.sync.backends.AndroidOAuth.complete(intent.data!!); null }
         android.content.Intent.ACTION_SEND -> intent.getStringExtra(android.content.Intent.EXTRA_TEXT)
             ?.let { text -> Regex("https?://\\S+").find(text)?.value ?: text.trim().takeIf { it.startsWith("spotify:") } }
         android.content.Intent.ACTION_VIEW -> intent.dataString
