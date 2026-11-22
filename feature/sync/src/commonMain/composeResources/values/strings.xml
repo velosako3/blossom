@@ -35,10 +35,10 @@
     <string name="sync_days_ago">%1$d days ago</string>
     <string name="pair_title">Pair a device</string>
     <string name="pair_show_hint">On your phone, open blossom → Settings → Sync → Pair a device → Scan, and point it at this code.</string>
-    <string name="pair_words_hint">Another computer? Enter these six words there:</string>
+    <string name="pair_words_hint">Another computer? Enter these eight words there:</string>
     <string name="pair_scan">Scan a code</string>
-    <string name="pair_enter">Enter six words</string>
-    <string name="pair_enter_hint">Six words or a pairing link</string>
+    <string name="pair_enter">Enter a code</string>
+    <string name="pair_enter_hint">Eight words or a pairing link</string>
     <string name="pair_connect">Pair</string>
     <string name="pair_waiting">Waiting for the other device…</string>
     <string name="pair_done">Paired with %1$s</string>

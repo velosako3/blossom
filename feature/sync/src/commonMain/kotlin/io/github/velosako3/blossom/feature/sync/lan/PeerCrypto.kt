@@ -60,12 +60,15 @@ internal class FrameChannel(socket: Socket) : AutoCloseable {
     private val output = DataOutputStream(socket.getOutputStream().buffered())
     private val socket = socket
     private var key: SecretKeySpec? = null
+    /** Before authentication only small frames are read, so a stranger can't make this side allocate much. */
+    private var maxFrame = PRE_AUTH_FRAME
     private var sendDir: Byte = 0
     private var sent = 0L
     private var received = 0L
 
     fun encrypt(sessionKey: ByteArray, isClient: Boolean) {
         key = SecretKeySpec(sessionKey, "AES"); sendDir = if (isClient) 1 else 2
+        maxFrame = MAX_FRAME
     }
 
     private fun nonce(dir: Byte, counter: Long) = ByteBuffer.allocate(12).put(dir).put(0).put(0).put(0).putLong(counter).array()
@@ -79,7 +82,7 @@ internal class FrameChannel(socket: Socket) : AutoCloseable {
 
     fun receive(): ByteArray {
         val size = input.readInt()
-        if (size < 0 || size > MAX_FRAME) throw IOException("frame too large")
+        if (size < 0 || size > maxFrame) throw IOException("frame too large")
         val payload = ByteArray(size).also(input::readFully)
         val k = key ?: return payload
         val recvDir: Byte = if (sendDir == 1.toByte()) 2 else 1
@@ -92,5 +95,8 @@ internal class FrameChannel(socket: Socket) : AutoCloseable {
 
     override fun close() = socket.close()
 
-    private companion object { const val MAX_FRAME = 64 * 1024 * 1024 }
+    private companion object {
+        const val PRE_AUTH_FRAME = 16 * 1024
+        const val MAX_FRAME = 64 * 1024 * 1024
+    }
 }

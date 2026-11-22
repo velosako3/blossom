@@ -14,6 +14,8 @@ class PairingPayloadTest {
         assertEquals(p, PairingPayload.parse(qr))
     }
 
+    @Test fun qrSecretIsLong() = assertEquals(32, PairingPayload(deviceId = "a", deviceName = "a", hosts = listOf("h"), port = 1, secret = PairingPayload.newSecret()).secretBytes().size)
+
     @Test fun garbageIsNull() {
         assertNull(PairingPayload.parse("hello"))
         assertNull(PairingPayload.parse("blossom://pair?d=!!!"))
@@ -21,15 +23,16 @@ class PairingPayloadTest {
         assertNull(PairingPayload.parse("https://example.com/?d=x"))
     }
 
-    @Test fun sixWordCode() {
+    @Test fun eightWordCode() {
         val secret = PairCode.newSecret()
+        assertEquals(8, secret.size) // 64 bits: far beyond offline guessing
         val words = PairCode.encode("192.168.1.20", secret)
-        assertEquals(6, words.size)
+        assertEquals(8, words.size)
         val back = PairCode.decode(words.joinToString(" ").uppercase())!!
         assertEquals("192.168.1.20", back.host)
         assertEquals(secret.toList(), back.secret.toList())
         assertNull(PairCode.decode("only three words"))
-        assertNull(PairCode.decode("zzzz zzzz zzzz zzzz zzzz zzzz"))
+        assertNull(PairCode.decode("zzzz zzzz zzzz zzzz zzzz zzzz zzzz zzzz"))
         assertEquals(4096, PairCode.words.toSet().size)
     }
 }

@@ -3,7 +3,9 @@ package io.github.velosako3.blossom.feature.sync.backends
 
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.awt.Desktop
 import java.net.InetSocketAddress
 import java.net.URI
@@ -20,7 +22,8 @@ object DesktopOAuth {
     const val DROPBOX_PORT = 53682
     const val DROPBOX_PATH = "/dropbox"
 
-    suspend fun signIn(client: OAuthClient, port: Int = 0, path: String = "/"): OAuthTokens {
+    /** Off the UI thread; a timeout (5 min) or a declined sign-in throws [SignInRequired]. */
+    suspend fun signIn(client: OAuthClient, port: Int = 0, path: String = "/"): OAuthTokens = withContext(Dispatchers.IO) {
         val server = HttpServer.create(InetSocketAddress("127.0.0.1", port), 0)
         val result = CompletableDeferred<Map<String, String>>()
         server.createContext(path) { ex ->
@@ -38,10 +41,10 @@ object DesktopOAuth {
             val pkce = Pkce.generate()
             val state = UUID.randomUUID().toString()
             Desktop.getDesktop().browse(URI(client.authorizeUrl(pkce, redirect, state)))
-            val query = withTimeout(5.minutes) { result.await() }
+            val query = withTimeoutOrNull(5.minutes) { result.await() } ?: throw SignInRequired()
             if (query["state"] != state) throw SignInRequired()
             val code = query["code"] ?: throw SignInRequired() // the user declined
-            return client.exchange(code, pkce, redirect)
+            client.exchange(code, pkce, redirect)
         } finally {
             server.stop(0)
         }

@@ -31,10 +31,11 @@ class PeerClient(private val sync: PeerSync) {
             val theirPub = b64(reply.str("pub"))
             val serverId = reply.str("deviceId")
             val transcript = PeerCrypto.sha256(sync.deviceId.toByteArray(), mine.public.encoded, serverId.toByteArray(), theirPub)
-            // The server proves it knows the secret before we prove we do.
-            if (!PeerCrypto.equal(b64(reply.str("mac")), PeerCrypto.hmac(secret, "S".toByteArray(), transcript))) throw PairingRejected("wrong pairing code")
+            // This side proves it knows the secret first; the server answers with its own proof only if it matched.
             ch.send(sync.encode(buildJsonObject { put("mac", e64(PeerCrypto.hmac(secret, "C".toByteArray(), transcript))) }))
-            if (sync.decode(ch.receive()).type() != "ok") throw PairingRejected("the other device refused")
+            val done = sync.decode(ch.receive())
+            if (done.type() != "ok") throw PairingRejected("wrong pairing code")
+            if (!PeerCrypto.equal(b64(done.str("mac")), PeerCrypto.hmac(secret, "S".toByteArray(), transcript))) throw PairingRejected("the other device couldn't prove the code")
             sync.trust(serverId, reply.str("deviceName"), PeerCrypto.hkdf(PeerCrypto.agree(mine, theirPub), transcript, "blossom-peer-key"))
             sync.addresses[serverId] = host to payload.port
             Paired(serverId, reply.str("deviceName"), host, payload.port)

@@ -128,7 +128,7 @@ private fun desktopSyncSetup(secure: io.github.velosako3.blossom.core.platform.S
         secure = secure,
         defaultName = runCatching { java.net.InetAddress.getLocalHost().hostName }.getOrNull()?.takeIf { it.isNotBlank() && it != "localhost" } ?: System.getProperty("os.name"),
         kinds = kinds,
-        connect = { c ->
+        connect = { c, interactive ->
             when (c.kind) {
                 io.github.velosako3.blossom.feature.sync.ui.BackendKind.FOLDER -> io.github.velosako3.blossom.feature.sync.backends.LocalFolderBackend(File(c.location))
                 io.github.velosako3.blossom.feature.sync.ui.BackendKind.WEBDAV ->
@@ -136,17 +136,22 @@ private fun desktopSyncSetup(secure: io.github.velosako3.blossom.core.platform.S
                 io.github.velosako3.blossom.feature.sync.ui.BackendKind.GOOGLE_DRIVE -> {
                     val o = io.github.velosako3.blossom.feature.sync.backends.OAuthClient(
                         io.github.velosako3.blossom.feature.sync.backends.OAuthConfig.googleDrive(googleId, BlossomSecrets.GOOGLE_OAUTH_DESKTOP_CLIENT_SECRET), secure, "gdrive")
-                    if (o.tokens() == null) io.github.velosako3.blossom.feature.sync.backends.DesktopOAuth.signIn(o)
-                    io.github.velosako3.blossom.feature.sync.backends.GoogleDriveBackend(o)
+                    // Signed out: only a fresh choice (interactive) opens the browser.
+                    if (o.tokens() == null && !interactive) null else {
+                        if (o.tokens() == null) io.github.velosako3.blossom.feature.sync.backends.DesktopOAuth.signIn(o)
+                        io.github.velosako3.blossom.feature.sync.backends.GoogleDriveBackend(o)
+                    }
                 }
                 io.github.velosako3.blossom.feature.sync.ui.BackendKind.DROPBOX -> {
                     val o = io.github.velosako3.blossom.feature.sync.backends.OAuthClient(
                         io.github.velosako3.blossom.feature.sync.backends.OAuthConfig.dropbox(dropboxKey), secure, "dropbox")
-                    if (o.tokens() == null) {
-                        io.github.velosako3.blossom.feature.sync.backends.DesktopOAuth.signIn(o,
-                            io.github.velosako3.blossom.feature.sync.backends.DesktopOAuth.DROPBOX_PORT, io.github.velosako3.blossom.feature.sync.backends.DesktopOAuth.DROPBOX_PATH)
+                    if (o.tokens() == null && !interactive) null else {
+                        if (o.tokens() == null) {
+                            io.github.velosako3.blossom.feature.sync.backends.DesktopOAuth.signIn(o,
+                                io.github.velosako3.blossom.feature.sync.backends.DesktopOAuth.DROPBOX_PORT, io.github.velosako3.blossom.feature.sync.backends.DesktopOAuth.DROPBOX_PATH)
+                        }
+                        io.github.velosako3.blossom.feature.sync.backends.DropboxBackend(o)
                     }
-                    io.github.velosako3.blossom.feature.sync.backends.DropboxBackend(o)
                 }
             }
         },

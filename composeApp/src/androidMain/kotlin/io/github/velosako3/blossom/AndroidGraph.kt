@@ -118,7 +118,7 @@ private fun androidSyncSetup(context: Context, secure: io.github.velosako3.bloss
         secure = secure,
         defaultName = name,
         kinds = kinds,
-        connect = { c ->
+        connect = { c, interactive ->
             when (c.kind) {
                 io.github.velosako3.blossom.feature.sync.ui.BackendKind.FOLDER ->
                     io.github.velosako3.blossom.feature.sync.backends.SafFolderBackend(context, android.net.Uri.parse(c.location))
@@ -127,10 +127,13 @@ private fun androidSyncSetup(context: Context, secure: io.github.velosako3.bloss
                 io.github.velosako3.blossom.feature.sync.ui.BackendKind.DROPBOX -> {
                     val o = io.github.velosako3.blossom.feature.sync.backends.OAuthClient(
                         io.github.velosako3.blossom.feature.sync.backends.OAuthConfig.dropbox(dropboxKey), secure, "dropbox")
-                    if (o.tokens() == null) {
-                        io.github.velosako3.blossom.feature.sync.backends.AndroidOAuth.signIn(context, o, io.github.velosako3.blossom.feature.sync.backends.AndroidOAuth.dropboxRedirect(dropboxKey))
+                    // Signed out: only a fresh choice (interactive) opens the browser.
+                    if (o.tokens() == null && !interactive) null else {
+                        if (o.tokens() == null) {
+                            io.github.velosako3.blossom.feature.sync.backends.AndroidOAuth.signIn(context, o, io.github.velosako3.blossom.feature.sync.backends.AndroidOAuth.dropboxRedirect(dropboxKey))
+                        }
+                        io.github.velosako3.blossom.feature.sync.backends.DropboxBackend(o)
                     }
-                    io.github.velosako3.blossom.feature.sync.backends.DropboxBackend(o)
                 }
                 io.github.velosako3.blossom.feature.sync.ui.BackendKind.GOOGLE_DRIVE -> null
             }

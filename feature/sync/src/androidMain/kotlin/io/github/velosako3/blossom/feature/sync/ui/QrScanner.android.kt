@@ -58,7 +58,15 @@ actual fun QrScanner(onCode: (String) -> Unit, modifier: Modifier) {
     val executor = remember { Executors.newSingleThreadExecutor() }
     var done by remember { mutableStateOf(false) }
     val reader = remember { MultiFormatReader().apply { setHints(mapOf(DecodeHintType.POSSIBLE_FORMATS to listOf(BarcodeFormat.QR_CODE))) } }
-    DisposableEffect(Unit) { onDispose { executor.shutdown() } }
+    // What's bound, so leaving the screen turns the camera off (it's bound to the activity, which outlives the screen).
+    val bound = remember { arrayOfNulls<Any>(3) } // provider, preview, analysis
+    DisposableEffect(Unit) {
+        onDispose {
+            val provider = bound[0] as? ProcessCameraProvider
+            runCatching { provider?.unbind(bound[1] as? Preview, bound[2] as? ImageAnalysis) }
+            executor.shutdown()
+        }
+    }
     AndroidView(
         factory = { ctx ->
             PreviewView(ctx).also { view ->
@@ -82,6 +90,7 @@ actual fun QrScanner(onCode: (String) -> Unit, modifier: Modifier) {
                     }
                     provider.unbindAll()
                     provider.bindToLifecycle(owner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
+                    bound[0] = provider; bound[1] = preview; bound[2] = analysis
                 }, ContextCompat.getMainExecutor(ctx))
             }
         },

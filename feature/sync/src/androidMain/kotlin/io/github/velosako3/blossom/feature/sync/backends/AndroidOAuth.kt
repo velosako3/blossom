@@ -5,7 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 import kotlin.time.Duration.Companion.minutes
 
@@ -24,7 +24,7 @@ object AndroidOAuth {
         val p = Pending(UUID.randomUUID().toString(), CompletableDeferred())
         pending = p
         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(client.authorizeUrl(pkce, redirectUri, p.state))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        val uri = withTimeout(10.minutes) { p.result.await() }
+        val uri = withTimeoutOrNull(10.minutes) { p.result.await() } ?: throw SignInRequired()
         if (uri.getQueryParameter("state") != p.state) throw SignInRequired()
         val code = uri.getQueryParameter("code") ?: throw SignInRequired()
         return client.exchange(code, pkce, redirectUri)

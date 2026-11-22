@@ -43,7 +43,7 @@ class TwoInstanceSyncTest {
         val log = SqlOpLog(db, id, HybridLogicalClock(id, Clock.System))
         val projector = LibraryProjector(db)
         val commands = LibraryCommands(log, projector, db)
-        val controller = SyncController(db, log, projector, prefs, InMemorySecureStore(), id, name, scope, connect = { c -> LocalFolderBackend(File(c.location)) })
+        val controller = SyncController(db, log, projector, prefs, InMemorySecureStore(), id, name, scope, connect = { c, _ -> LocalFolderBackend(File(c.location)) })
         val vm = SyncViewModel(controller, scope)
         val liked get() = db.blossomQueries.likedTracks().executeAsList().map { it.track_id }.toSet()
         init { instances += this }

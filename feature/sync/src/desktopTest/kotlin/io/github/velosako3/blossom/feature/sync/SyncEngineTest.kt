@@ -103,6 +103,28 @@ class SyncEngineTest {
         assertEquals(snapshot(a.db), snapshot(c.db)); assertEquals(snapshot(b.db), snapshot(c.db))
     }
 
+    @Test fun anUnreadableSegmentIsFetchedAgainLater(): Unit = runBlocking {
+        val backend = InMemoryBackend()
+        val b = Peer("B", backend)
+        val bEngine = SyncEngine(backend, b.log, b.projector, b.db, "B", "Device B", segmentMaxBytes = 600)
+        repeat(12) { b.commands.toggleLike(track(it)) }
+        bEngine.syncOnce()
+        assertTrue(backend.files.keys.count { it.startsWith("blossom/v1/devices/B/ops-") } >= 3)
+        var failFirst = true
+        val flaky = object : SyncBackend by backend {
+            override suspend fun read(path: String): ByteArray {
+                if (path == SyncLayout.segment("B", 0) && failFirst) { failFirst = false; throw java.io.IOException("429 Too Many Requests") }
+                return backend.read(path)
+            }
+        }
+        val a = Peer("A", backend)
+        val aEngine = SyncEngine(flaky, a.log, a.projector, a.db, "A", "Device A")
+        val first = aEngine.syncOnce()
+        assertTrue(first.errors.isNotEmpty())
+        aEngine.syncOnce()
+        assertEquals(12, a.db.blossomQueries.likedTracks().executeAsList().size)
+    }
+
     @Test fun corruptLineIsSkippedAndReported(): Unit = runBlocking {
         val backend = InMemoryBackend()
         val a = Peer("A", backend); val b = Peer("B", backend)

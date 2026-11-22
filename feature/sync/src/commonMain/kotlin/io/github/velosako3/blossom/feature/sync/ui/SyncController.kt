@@ -31,8 +31,8 @@ data class BackendConfig(val kind: BackendKind, val location: String = "", val u
 
 /**
  * This device's sync setup (device preferences, never synced): the backend, the device name and the engine built
- * from them. [connect] turns a config into a backend; it runs the platform's sign-in when one is needed and returns
- * null when it can't (signed out, option unavailable).
+ * from them. [connect] turns a config into a backend. Only when `interactive` (the user just chose it) may it open
+ * a sign-in page; otherwise it returns null when signed out, so background syncs never pop up a browser.
  */
 class SyncController(
     private val db: BlossomDatabase,
@@ -43,7 +43,7 @@ class SyncController(
     val deviceId: String,
     private val defaultName: String,
     val scope: CoroutineScope,
-    private val connect: suspend (BackendConfig) -> io.github.velosako3.blossom.feature.sync.SyncBackend?,
+    private val connect: suspend (BackendConfig, interactive: Boolean) -> io.github.velosako3.blossom.feature.sync.SyncBackend?,
     /** mDNS for the LAN, started with the server; none in tests. */
     private val discovery: (() -> PeerDiscovery)? = null,
 ) {
@@ -68,11 +68,18 @@ class SyncController(
         engine = null // rebuilt with the new name on the next sync
     }
 
-    /** Remembers [config] (and a WebDAV [password], in the secure store); the next sync connects to it. */
-    suspend fun choose(config: BackendConfig, password: String? = null) = lock.withLock {
-        if (password != null) secure.put(PASSWORD, password)
-        prefs.put(BACKEND, json.encodeToString(BackendConfig.serializer(), config))
-        engine = null
+    /**
+     * Connects to [config], signing in if needed, and only then remembers it (with a WebDAV [password]; blank keeps
+     * the stored one). Throws when it can't connect (sign-in declined or timed out); the previous choice stays.
+     * Sign-in runs outside the lock, so other syncs aren't held up while the browser is open.
+     */
+    suspend fun choose(config: BackendConfig, password: String? = null) {
+        if (!password.isNullOrEmpty()) secure.put(PASSWORD, password)
+        val backend = connect(config, true) ?: throw IllegalStateException("couldn't connect to the sync service")
+        lock.withLock {
+            prefs.put(BACKEND, json.encodeToString(BackendConfig.serializer(), config))
+            engine = SyncEngine(backend, opLog, projector, db, deviceId, deviceName())
+        }
     }
 
     /** The WebDAV password, for [connect]. */
@@ -82,7 +89,7 @@ class SyncController(
 
     /** The engine for the chosen backend; null when there's none or it can't connect. */
     suspend fun engine(): SyncEngine? = lock.withLock {
-        engine ?: config()?.let { c -> connect(c)?.let { SyncEngine(it, opLog, projector, db, deviceId, deviceName()) } }?.also { engine = it }
+        engine ?: config()?.let { c -> connect(c, false)?.let { SyncEngine(it, opLog, projector, db, deviceId, deviceName()) } }?.also { engine = it }
     }
 
     suspend fun syncNow(): SyncReport? = engine()?.syncOnce()
@@ -103,16 +110,17 @@ class SyncController(
         if (kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { peers.peerRows() }.isNotEmpty()) startLan()
     }
 
-    /** Opens a pairing window: this device's QR payload, and six words when it listens on the fixed port. */
+    /** Opens a pairing window: this device's QR payload, and eight words when it listens on the fixed port. */
     fun startPairing(): PairUi {
         val server = startLan()
-        val secret = PairCode.newSecret()
-        server.openPairing(secret)
+        val qrSecret = PairingPayload.newSecret()
+        val wordSecret = PairCode.newSecret()
         val hosts = lanAddresses()
-        val payload = PairingPayload(deviceId = deviceId, deviceName = deviceName(), hosts = hosts.ifEmpty { listOf("127.0.0.1") }, port = server.port,
-            secret = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(secret))
         val ipv4 = hosts.firstOrNull { it.count { c -> c == '.' } == 3 }
-        return PairUi(payload, if (server.port == PairCode.PORT && ipv4 != null) PairCode.encode(ipv4, secret) else null)
+        val words = if (server.port == PairCode.PORT && ipv4 != null) PairCode.encode(ipv4, wordSecret) else null
+        server.openPairingBytes(listOfNotNull(java.util.Base64.getUrlDecoder().decode(qrSecret), wordSecret.takeIf { words != null }))
+        val payload = PairingPayload(deviceId = deviceId, deviceName = deviceName(), hosts = hosts.ifEmpty { listOf("127.0.0.1") }, port = server.port, secret = qrSecret)
+        return PairUi(payload, words)
     }
 
     fun stopPairing() { server?.closePairing() }

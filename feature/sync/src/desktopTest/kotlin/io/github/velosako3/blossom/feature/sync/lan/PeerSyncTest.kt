@@ -27,7 +27,7 @@ import kotlin.time.Clock
 
 private fun track(n: Int) = Track(TrackId.of(SourceKind.YOUTUBE_MUSIC, "v$n"), "Song $n", listOf(ArtistRef(null, "A")), null, 180_000, null)
 
-private class Node(val id: String, scope: CoroutineScope) {
+private class Node(val id: String, scope: CoroutineScope, preAuthMs: Long = 20_000) {
     val db: BlossomDatabase = inMemoryDatabase()
     val log = SqlOpLog(db, id, HybridLogicalClock(id, Clock.System))
     val projector = LibraryProjector(db)
@@ -35,7 +35,7 @@ private class Node(val id: String, scope: CoroutineScope) {
     val repo = SqlLibraryRepository(db)
     val secure = InMemorySecureStore()
     val sync = PeerSync(db, log, projector, secure, id, "Device $id")
-    val server = PeerServer(sync, scope, port = 0).also { it.start() }
+    val server = PeerServer(sync, scope, port = 0, preAuthTimeoutMs = preAuthMs).also { it.start() }
     val liked get() = db.blossomQueries.likedTracks().executeAsList().map { it.track_id }.sorted()
 }
 
@@ -59,6 +59,55 @@ class PeerSyncTest {
         assertEquals(listOf("B"), a.db.blossomQueries.allPeers().executeAsList().map { it.device_id })
         // The pairing secret is single-use.
         assertFailsWith<PairingRejected> { PeerClient(Node("C", scope).sync).pair(good) }
+    }
+
+    @Test fun triesRunOut(): Unit = runBlocking {
+        val a = Node("A", scope); val b = Node("B", scope)
+        val good = pairing(a)
+        repeat(3) { assertFailsWith<PairingRejected> { PeerClient(b.sync).pair(good.copy(secret = PairingPayload.newSecret())) } }
+        // Attempts abandoned before proving anything count too (a stalled guesser can't keep the window open).
+        repeat(2) {
+            java.net.Socket("127.0.0.1", a.server.port).use { s ->
+                val pub = java.security.KeyPairGenerator.getInstance("EC").apply { initialize(java.security.spec.ECGenParameterSpec("secp256r1")) }.generateKeyPair().public.encoded
+                val hello = "{\"type\":\"pair\",\"deviceId\":\"X\",\"deviceName\":\"X\",\"pub\":\"${java.util.Base64.getEncoder().encodeToString(pub)}\"}".toByteArray()
+                java.io.DataOutputStream(s.getOutputStream()).apply { writeInt(hello.size); write(hello); flush() }
+                java.io.DataInputStream(s.getInputStream()).let { i -> i.readFully(ByteArray(i.readInt())) }
+            }
+        }
+        assertFailsWith<PairingRejected> { PeerClient(b.sync).pair(good) }
+    }
+
+    /** The server must not answer with anything keyed by the secret before the client proves it (no offline guessing). */
+    @Test fun serverRevealsNothingKeyedFirst(): Unit = runBlocking {
+        val a = Node("A", scope)
+        pairing(a)
+        java.net.Socket("127.0.0.1", a.server.port).use { s ->
+            val out = java.io.DataOutputStream(s.getOutputStream()); val input = java.io.DataInputStream(s.getInputStream())
+            val pub = java.security.KeyPairGenerator.getInstance("EC").apply { initialize(java.security.spec.ECGenParameterSpec("secp256r1")) }.generateKeyPair().public.encoded
+            val hello = "{\"type\":\"pair\",\"deviceId\":\"X\",\"deviceName\":\"X\",\"pub\":\"${java.util.Base64.getEncoder().encodeToString(pub)}\"}".toByteArray()
+            out.writeInt(hello.size); out.write(hello); out.flush()
+            val reply = String(ByteArray(input.readInt()).also(input::readFully))
+            assertTrue("\"pub\"" in reply && "mac" !in reply, reply)
+        }
+    }
+
+    @Test fun preAuthLimits(): Unit = runBlocking {
+        val a = Node("A", scope, preAuthMs = 500)
+        // A huge first frame is refused without allocating it.
+        java.net.Socket("127.0.0.1", a.server.port).use { s ->
+            java.io.DataOutputStream(s.getOutputStream()).apply { writeInt(50 * 1024 * 1024); flush() }
+            s.soTimeout = 5_000
+            assertEquals(-1, s.getInputStream().read())
+        }
+        // A silent connection is cut.
+        java.net.Socket("127.0.0.1", a.server.port).use { s ->
+            s.soTimeout = 5_000
+            val t0 = System.currentTimeMillis()
+            assertEquals(-1, s.getInputStream().read())
+            assertTrue(System.currentTimeMillis() - t0 < 4_000)
+        }
+        // And the server still pairs afterwards.
+        PeerClient(Node("B", scope).sync).pair(pairing(a))
     }
 
     @Test fun anImpostorIsRejected(): Unit = runBlocking {

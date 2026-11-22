@@ -65,13 +65,13 @@ class SyncScreensTest {
         setContent {
             Themed {
                 PairDeviceScreen(
-                    PairUi(payload = payload, words = listOf("bada", "fehi", "jolo", "mipu", "sava", "zezo")),
+                    PairUi(payload = payload, words = listOf("bada", "fehi", "jolo", "mipu", "sava", "zezo", "rito", "gane")),
                     canScan = false, onScanned = {}, onWords = {},
                 )
             }
         }
         waitForIdle()
         onRoot().captureRoboImage("src/desktopTest/snapshots/sync_pair.png")
-        onNodeWithText("bada fehi jolo mipu sava zezo").assertExists()
+        onNodeWithText("bada fehi jolo mipu sava zezo rito gane").assertExists()
     }
 }

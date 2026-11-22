@@ -40,7 +40,15 @@ class SyncViewModel(private val controller: SyncController, private val scope: C
 
     fun choose(config: BackendConfig, password: String? = null) {
         scope.launch {
-            controller.choose(config, password)
+            _state.update { it.copy(syncing = true, error = null) }
+            try {
+                controller.choose(config, password)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.update { it.copy(syncing = false, error = e.message ?: e::class.simpleName) }
+                return@launch
+            }
             _state.update { it.copy(backend = config) }
             syncNowInternal()
         }
@@ -62,7 +70,7 @@ class SyncViewModel(private val controller: SyncController, private val scope: C
             val report = controller.syncNow()
             if (report != null) cloudDevices = report.devicesSeen
             report?.errors?.firstOrNull()
-                ?: if (report == null && controller.config() != null) "Couldn't connect to the sync service" else null
+                ?: if (report == null && controller.config() != null) "signed out: choose the service again to sign in" else null
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

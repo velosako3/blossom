@@ -66,11 +66,21 @@ class SqlOpLog(
         db.transactionWithResult { insertRemoteInTransaction(ops) }
     }
 
-    fun insertRemoteInTransaction(ops: List<OpEnvelope>): List<OpEnvelope> = ops.filter { env ->
-        val inserted = insert(env) > 0
-        if (inserted) clock.receive(env.hlc)
-        inserted
-    }
+    /**
+     * Stores other devices' operations. Per device, only the unbroken run after what's already here is kept: the
+     * per-device high-water mark (`max(seq)`) is what sync asks for next, so storing past a gap (an unreadable segment,
+     * an operation type from a newer app) would skip the missing ones forever. Operations claiming to be this device's
+     * own are dropped: only this device writes its history.
+     */
+    fun insertRemoteInTransaction(ops: List<OpEnvelope>): List<OpEnvelope> =
+        ops.filter { it.deviceId != deviceId }.groupBy { it.deviceId }.flatMap { (device, mine) ->
+            var next = (q.maxSeq(device).executeAsOne().seq ?: 0L) + 1
+            mine.sortedBy { it.seq }.distinctBy { it.seq }.filter { it.seq >= next }.takeWhile { op -> (op.seq == next).also { if (it) next++ } }
+        }.filter { env ->
+            val inserted = insert(env) > 0
+            if (inserted) clock.receive(env.hlc)
+            inserted
+        }
 
     private fun insert(env: OpEnvelope): Long =
         q.insertOp(env.opId, env.deviceId, env.seq, env.hlc.wallMs, env.hlc.counter.toLong(), OperationJson.encodeToString(Operation.serializer(), env.op)).value

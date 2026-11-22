@@ -13,6 +13,7 @@ class SyncSetup(
     val defaultName: String,
     /** Backends offered here; one without a configured client ID is left out. */
     val kinds: List<BackendKind>,
-    val connect: suspend (BackendConfig) -> SyncBackend?,
+    /** Builds the backend; may open a sign-in page only when `interactive` (the user just chose it). */
+    val connect: suspend (BackendConfig, interactive: Boolean) -> SyncBackend?,
     val discovery: (() -> PeerDiscovery)? = null,
 )

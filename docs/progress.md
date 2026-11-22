@@ -1,12 +1,22 @@
 # blossom progress
 
 ## Current position
-Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–6 done (M6 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–7 done (M7 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Tasks 8.1–8.5 done; the Milestone 8 review is running. Tasks 9.1–9.2 done. Next: fix the Milestone 8 review findings, then Task 9.3 (sleep timer).
+Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–6 done (M6 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–7 done (M7 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Tasks 8.1–8.5 done; the Milestone 8 review is running. Milestone 8 is wrapped up and its review fixed. Tasks 9.1–9.2 done. Next: Task 9.3 (sleep timer).
 
 Hands-on testing rule: the owner is using this desktop, so never inject keyboard/mouse input or capture the screen.
 Desktop end-to-end checks run off-screen with the real graph: `./gradlew :composeApp:desktopTest -PliveTests=true -Proborazzi.test.record=true --tests "*DesktopEndToEnd*"`. `./gradlew :composeApp:run -Pblossom.debugPlay="query"` plays a search result at startup, for `playerctl` checks. Kill stray app instances by PID (`ps … | grep 'blossom\.MainKt'`), never with a `pkill -f` pattern that matches your own shell.
 
 ## Decisions
+- Milestone 8 review rulings:
+  - Ruling: typed pairing codes are 8 words (64-bit secret), not 6. Why: 40 bits could be brute-forced offline by anyone watching a pairing. If wrong: one extra line to type.
+  - Ruling: pairing stays HMAC-over-ECDH with the client proving first, not a PAKE (CPace/SPAKE2). Why: the JDK has no PAKE, and with a 32-byte QR secret or a 64-bit typed one, offline guessing is out of reach. If wrong: a LAN attacker who intercepts a typed-code pairing could still try to guess the secret offline.
+  - Ruling: a device stops reading another device's log at the first missing operation, including a newer app's unknown operation type. Why: the per-device high-water mark would otherwise skip the gap forever. If wrong: after a newer app writes a new operation type, older devices stop receiving that device's changes until they update.
+  - Deferred minors:
+    - Android `resolveService` races below API 34.
+    - Plain `http://` WebDAV gets no warning.
+    - Drive may keep a duplicate file after a timed-out create.
+    - A LAN first sync above 64 MiB fails, because it's sent as one frame.
+    - A spoofed mDNS announcement can redirect a paired peer's address until it reconnects (authentication still holds).
 - Versions: Kotlin 2.4.21, Compose Multiplatform 1.12.2, AGP 9.5.2, Gradle 9.9.2, compileSdk/targetSdk 37, minSdk 26 — latest stable; Spotube v6 ships the same Kotlin/CMP pair, so they are known to work together.
 - Material3 1.9.0 and material-icons-extended 1.7.3 for basic text/icons under the custom glass design system — saves hand-drawing every icon.
 - `BlossomBuildInfo` is generated from `blossom.version` in `gradle.properties`, so the version lives in one place for the app, the APK and the installers.

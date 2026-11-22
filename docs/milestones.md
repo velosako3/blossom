@@ -63,3 +63,15 @@ repository has no `main` branch (see `docs/progress.md` → Open questions); pas
 - Evidence: `./gradlew check` and `verifyRoborazziDesktop` → `BUILD SUCCESSFUL`. Real app off-screen: `top song 'Around the World' playing at 129000 ms of 430000 (30%)`, then the previous song restored at 10 s, paused.
 - Screenshots: [Wrapped in the app](screenshots/m7/13_wrapped.png), [every card](screenshots/m7/wrapped_cards.png), [Stats](../feature/stats/src/desktopTest/snapshots/stats_week_full.png), [empty week](../feature/stats/src/desktopTest/snapshots/stats_empty.png).
 - Reviewer: 2 bugs + 14 risks + 1 question. Fixed: both bugs and 13 risks. Rulings: 2 (see `docs/progress.md`).
+
+## Milestone 8: Sync
+- Per-device op logs (JSONL, `"v":1`, 5 MB segments plus a manifest) through four backends: a folder (desktop path / Android SAF tree), WebDAV, Google Drive (desktop; app-data folder) and Dropbox. Sign-in uses OAuth PKCE (desktop loopback, Android `db-<key>` redirect) and only happens when you choose a service. Android syncs hourly through WorkManager. LAN pairing: a QR code or eight words, an ECDH key exchange authenticated by the one-time secret (the client proves first), and AES-GCM sessions. Paired devices gossip each other's changes and find each other again over mDNS. Settings → Sync screen and the pairing screen.
+- Evidence: `./gradlew check` and `verifyRoborazziDesktop` → `BUILD SUCCESSFUL`. `TwoInstanceSyncTest` runs two instances with separate data directories and DB files: `folder: both have 5 likes` → `lan: paired [Laptop] / [Desk]; both have 7 likes`; after "Remove device" the removed peer no longer syncs.
+- Not checked live: Google Drive and Dropbox. They need someone to sign in to an account (Open questions).
+- Screenshots: [Settings → Sync](screenshots/m8/sync_settings.png), [pairing](screenshots/m8/sync_pair.png).
+- Reviewer: 2 critical, 4 important, 6 minor. Fixed:
+  - both criticals: offline guessing of the pairing secret plus try and window bypasses; ops lost after a read error
+  - all 4 important: LAN DoS limits, sign-in only on choose with timeouts handled, sync work off the UI thread, camera released
+  - 2 minors: a blank WebDAV password wiped the stored one; peers could write this device's own history
+  - Deferred: 4 minors (see `docs/progress.md`).
+

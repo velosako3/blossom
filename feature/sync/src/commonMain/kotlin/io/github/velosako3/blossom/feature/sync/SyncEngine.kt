@@ -33,12 +33,13 @@ class SyncEngine(
 ) {
     private val lock = Mutex()
 
-    suspend fun syncOnce(): SyncReport = lock.withLock {
+    /** Runs on [Dispatchers.Default]: segments are parsed line by line, which mustn't happen on a UI thread. */
+    suspend fun syncOnce(): SyncReport = withContext(Dispatchers.Default) { lock.withLock {
         val errors = mutableListOf<String>()
         val pushed = try { push() } catch (e: CancellationException) { throw e } catch (e: Exception) { errors += "push: ${e.message}"; 0 }
         val (pulled, seen) = try { pull(errors) } catch (e: CancellationException) { throw e } catch (e: Exception) { errors += "pull: ${e.message}"; 0 to emptyList() }
         SyncReport(pushed, pulled, seen, errors)
-    }
+    } }
 
     private suspend fun ownManifest(): DeviceManifest? =
         runCatching { DeviceManifest.decode(String(backend.read(SyncLayout.manifest(deviceId)))) }.getOrNull()
@@ -96,11 +97,12 @@ class SyncEngine(
             val ops = mutableListOf<OpEnvelope>()
             for (seg in m.segments.filter { it.lastSeq > have }) {
                 val path = SyncLayout.segment(m.deviceId, seg.index)
-                val text = try { String(backend.read(path)) } catch (e: CancellationException) { throw e } catch (e: Exception) { errors += "$path: unreadable"; continue }
+                // Unreadable: stop here; the op log only takes the unbroken run, so the rest comes on a later sync.
+                val text = try { String(backend.read(path)) } catch (e: CancellationException) { throw e } catch (e: Exception) { errors += "$path: unreadable"; break }
                 text.lineSequence().filter { it.isNotBlank() }.forEachIndexed { n, line ->
                     when (val d = OpLogCodec.decode(line)) {
                         is DecodedLine.Known -> if (d.op.seq > have && d.op.deviceId == m.deviceId) ops += d.op
-                        is DecodedLine.Unknown -> Unit // a newer blossom's operation: kept in the file, not applied here
+                        is DecodedLine.Unknown -> Unit // a newer blossom's operation: kept in the file; this device stops before it
                         is DecodedLine.Corrupt -> errors += "$path:${n + 1}: ${d.error}"
                     }
                 }
