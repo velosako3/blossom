@@ -85,8 +85,7 @@ fun createDesktopGraph(): AppGraph {
             if (songs.isNotEmpty()) { player.setQueue(songs, 0); player.play() }
         }
     }
-    Runtime.getRuntime().addShutdownHook(Thread { runCatching { engine.release() } })
-    return AppGraph(
+    val graph = AppGraph(
         player, db, prefs.deviceId(), ytm, prefs, network, scope, local,
         shareLink = { link -> Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(link), null) },
         localLyrics = io.github.velosako3.blossom.feature.lyrics.FileLocalLyricsSource(localLibrary::pathFor),
@@ -101,4 +100,10 @@ fun createDesktopGraph(): AppGraph {
             io.github.velosako3.blossom.feature.importer.ImportService.UNTITLED to io.github.velosako3.blossom.source.untitled.UntitledImporter(untitledClient),
         ),
     )
+    Runtime.getRuntime().addShutdownHook(Thread {
+        // The play in progress is recorded before the process ends.
+        runCatching { kotlinx.coroutines.runBlocking { kotlinx.coroutines.withTimeoutOrNull(2_000) { graph.playTracker.finish() } } }
+        runCatching { engine.release() }
+    })
+    return graph
 }
