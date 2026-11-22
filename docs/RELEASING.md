@@ -10,7 +10,7 @@ Each run produces three artifacts, each with a `SHA256SUMS` file:
 
 - `android`: APKs per ABI and a universal one.
 - `windows`: an MSI and a portable zip.
-- `linux`: an AppImage and a `.deb`.
+- `linux`: an AppImage and a `.deb`. They need glibc 2.38 or newer (Ubuntu 24.04, Debian 13, Fedora 39 and later), because the bundled libVLC is built against it.
 
 > **Before sharing any installer:** blossom is AGPL-3.0. Anyone you give it to is entitled to the source, so make the
 > repository public first (Settings → General → Danger zone → Change visibility).

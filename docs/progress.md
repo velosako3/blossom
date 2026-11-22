@@ -356,6 +356,7 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - **No remote `main` branch.** `github.com/velosako3/blossom` has no commits, so `dev` starts from an empty history and the `dev → main` PR can't be opened until `main` exists (see open questions). Pushing to `main` is not allowed for this run.
 
 - 2026-11-22: the first installers crashed on launch (`NoClassDefFoundError: java/sql/DriverManager`): the bundled Java runtime only had Compose's default modules, and every earlier desktop check ran on the full JDK. Fixed with an explicit `modules(...)` list in `composeApp/build.gradle.kts`, plus `blossom --self-check` (starts the app graph in a temp folder and checks JDBC, EC crypto, AES-GCM and ECDHE TLS without opening a window), which the installer workflow now runs on the Linux AppImage and the Windows app.
+- 2026-11-22: that self-check then failed on the `ubuntu-22.04` runner: the bundled libVLC (from `vlcj-bundler`) needs glibc 2.38. The Linux job now runs on `ubuntu-24.04`, and the minimum (Ubuntu 24.04 / Debian 13 / Fedora 39) is documented in `docs/RELEASING.md`. Falling back to the system libVLC on older systems is open.
 
 ## Open questions for owner
 - **Before sharing any installer, make the repository public:** the AGPL requires that anyone who receives blossom can get its source.

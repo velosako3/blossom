@@ -93,7 +93,7 @@ jobs:
 
   linux:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') || contains(github.event.head_commit.message, '[build]')
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04  # the bundled libVLC needs glibc 2.38+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
