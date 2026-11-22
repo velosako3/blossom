@@ -14,10 +14,10 @@ interface SyncBackend {
     suspend fun write(path: String, bytes: ByteArray)
 }
 
-/** Settings that follow you between devices. Never secrets, never device-specific values (folders, offline limits). */
+/**
+ * Settings that follow you between devices (their preference keys). Never secrets, never device-specific values:
+ * glass quality, the equalizer, folders, offline limits, window size.
+ */
 object SyncedSettings {
-    val keys: Set<String> = setOf(
-        "theme", "reduceMotion", "glassQuality", "crossfadeSeconds", "gaplessPlayback",
-        "lyricsReduceMotion", "autoplaySimilar", "untitledAutoSaveOffline", "streamQuality",
-    )
+    val keys: Set<String> = setOf("ui.theme", "ui.reduceMotion", "player.crossfade", "player.autoplay", "untitledAutoSaveOffline")
 }

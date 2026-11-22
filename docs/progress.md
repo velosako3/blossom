@@ -1,12 +1,37 @@
 # blossom progress
 
 ## Current position
-Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–6 done (M6 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–7 done (M7 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Tasks 8.1–8.5 done; the Milestone 8 review is running. Milestone 8 is wrapped up and its review fixed. Tasks 9.1–9.7 done. Next: Task 9.8 (installers on CI), then the Milestone 9 wrap-up and final review.
+All milestones (0–9) are done and every checkbox in the plan is ticked. The final whole-branch review is fixed (below). `./gradlew check` is green. The installers workflow built Android, Windows and Linux on CI, and every artifact checked out against its SHA256SUMS: run 45050433114, plus the run for the final `[build]` commit. What's left needs the owner: the items under "Open questions for owner".
+
+### Final summary
+- Every spec goal has an implementation and a test; the mapping is in `docs/milestones.md` → Milestone 9.
+- Hands-on evidence:
+  - desktop, the real app off-screen with live services: `docs/screenshots/m9/desktop/`
+  - Android emulator: `docs/screenshots/m9/android/`
+  - earlier milestones: `docs/screenshots/m1`–`m8`
+- Not exercised for real, because each needs the owner's own accounts: Google Drive, Dropbox, Last.fm/ListenBrainz scrobbling to an account, Discord status, and YouTube Music/Spotify sign-in. Their code is tested against mocked endpoints, and the login pages load in the app.
+
 
 Hands-on testing rule: the owner is using this desktop, so never inject keyboard/mouse input or capture the screen.
 Desktop end-to-end checks run off-screen with the real graph: `./gradlew :composeApp:desktopTest -PliveTests=true -Proborazzi.test.record=true --tests "*DesktopEndToEnd*"`. `./gradlew :composeApp:run -Pblossom.debugPlay="query"` plays a search result at startup, for `playerctl` checks. Kill stray app instances by PID (`ps … | grep 'blossom\.MainKt'`), never with a `pkill -f` pattern that matches your own shell.
 
 ## Decisions
+- Final review (whole spec), fixed with tests (RED → GREEN, full suite green):
+  - C1: a saved song whose link died stayed unplayable. Fix: `playableTracks()` lets the saved copy play, and the row isn't greyed out (`PlayableTracksTest`).
+  - I1: a song with several artists credited only the first. Each artist now gets its own name (`StatsCalculatorTest.everyArtistOfASongGetsItsOwnName`).
+  - I2: a skipped stranger counted as a "new artist". Only counted plays count now (`aSkippedStrangerIsNotANewArtist`).
+  - I3: allowlisted settings (theme, reduce motion, crossfade, autoplay, untitled auto-save) now sync as operations and apply back without echoing. Glass quality left the allowlist (`SettingsSyncTest`, `SyncEngineTest.unsyncedSettingsAreIgnored`).
+  - M1: a ✓ match now requires a known duration (`TrackMatcherTest.unknownDurationIsUncertain`).
+  - M3: the spring-forward week label ends on Sunday (`PeriodLabelTest`).
+  - M2: a committed JVM crash log (it held the home-folder path, no secrets) is removed and ignored. It stays in history, since pushed history is never rewritten.
+  - M5 (pointer part): taps on the welcome's scrim no longer reach the app.
+  - M6: Settings shows the effective Reduce motion value.
+  - M7: a cached Spotify token is tied to the session cookie it was minted for.
+  - M9: SPDX headers added to the `.sq` and `.sqm` files.
+- Final-review deferred minors:
+  - M4: dead-link checks are remembered per app session, not persisted per track, so a restart checks again (cheap).
+  - M5: Tab can still reach the app behind the welcome; screen readers can't.
+  - M8: the Android download notification title is English-only.
 - Milestone 8 review rulings:
   - Ruling: typed pairing codes are 8 words (64-bit secret), not 6. Why: 40 bits could be brute-forced offline by anyone watching a pairing. If wrong: one extra line to type.
   - Ruling: pairing stays HMAC-over-ECDH with the client proving first, not a PAKE (CPace/SPAKE2). Why: the JDK has no PAKE, and with a 32-byte QR secret or a 64-bit typed one, offline guessing is out of reach. If wrong: a LAN attacker who intercepts a typed-code pairing could still try to guess the secret offline.
@@ -331,6 +356,10 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - **No remote `main` branch.** `github.com/velosako3/blossom` has no commits, so `dev` starts from an empty history and the `dev → main` PR can't be opened until `main` exists (see open questions). Pushing to `main` is not allowed for this run.
 
 ## Open questions for owner
+- **Before sharing any installer, make the repository public:** the AGPL requires that anyone who receives blossom can get its source.
+- No `main` branch exists on the remote, so the `dev → main` pull request can't be opened. Create `main` (from the first commit, or empty) and open the PR from `dev`; the PR text is ready in `docs/milestones.md`. I don't create branches on the remote.
+- Android signing: add the four keystore secrets (`docs/RELEASING.md`). Until then the APKs are `test-build` debug-signed.
+- Optional service IDs on CI: add the client-ID secrets listed in `docs/RELEASING.md`, so CI installers also offer Drive, Dropbox, Last.fm and Discord.
 - Discord Rich Presence is tested against a fake Discord socket only. To check it: run Discord, turn on Settings → Integrations → Discord, and play a song.
 - Scrobbling: the Last.fm key and signing are verified live, but scrobbling into an account needs you to sign in: Settings → Integrations → Last.fm (and paste a ListenBrainz token). I don't sign in to your accounts.
 - Sync backends: Google Drive (desktop) and Dropbox sign-in are built and tested against mocked endpoints, but haven't been run against the real services. That needs signing in with an account, which I don't do with yours. To check: Settings → Sync → Google Drive / Dropbox → sign in on two devices. For Drive on Android, create an Android OAuth client in Google Cloud Console (package `io.github.velosako3.blossom` plus the release key's SHA-1) and put its ID in `GOOGLE_OAUTH_ANDROID_CLIENT_ID`.

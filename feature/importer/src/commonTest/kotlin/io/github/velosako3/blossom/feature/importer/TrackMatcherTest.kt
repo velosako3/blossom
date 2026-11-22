@@ -22,6 +22,12 @@ class TrackMatcherTest {
         assertEquals(EntryStatus.MATCHED, TrackMatcher.match(imp("Blinding Lights", listOf("The Weeknd"), 200_000), listOf(c)).status)
     }
 
+    /** A ✓ needs the duration within ±3 s; with no duration on one side it can't be checked, so it's "check this". */
+    @Test fun unknownDurationIsUncertain() {
+        val c = cand("Blinding Lights", listOf("The Weeknd"), 200_000)
+        assertEquals(EntryStatus.UNCERTAIN, TrackMatcher.match(imp("Blinding Lights", listOf("The Weeknd"), null), listOf(c)).status)
+    }
+
     @Test fun remasterSuffix() {
         val r = TrackMatcher.match(imp("Song - Remastered 2011", listOf("A"), 181_000), listOf(cand("Song", listOf("A"), 180_000)))
         assertEquals(EntryStatus.MATCHED, r.status)

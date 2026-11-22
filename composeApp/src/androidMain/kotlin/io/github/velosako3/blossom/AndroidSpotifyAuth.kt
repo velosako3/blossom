@@ -32,20 +32,21 @@ import kotlinx.serialization.json.jsonPrimitive
  */
 class AndroidSpotifyAuth(private val context: Context, private val secure: SecureStore) : SpotifyAuth {
     private val lock = Mutex()
-    @Volatile private var cached: Pair<String, Long>? = null
+    /** The token, until when, and the session cookie it was minted for (another sign-in invalidates it). */
+    @Volatile private var cached: Triple<String, Long, String>? = null
+
+    private fun fresh(cookie: String) = cached?.takeIf { (_, until, forCookie) -> forCookie == cookie && System.currentTimeMillis() < until - 30_000 }
 
     override suspend fun tokens(): SpotifyTokens? {
-        val cookie = secure.get(SPOTIFY_COOKIE_KEY) ?: return null
-        cached?.let { (t, until) -> if (System.currentTimeMillis() < until - 30_000) return SpotifyTokens(t, null) }
+        val cookie = secure.get(SPOTIFY_COOKIE_KEY) ?: return null.also { cached = null }
+        fresh(cookie)?.let { return SpotifyTokens(it.first, null) }
         return lock.withLock {
-            cached?.let { (t, until) -> if (System.currentTimeMillis() < until - 30_000) return@withLock SpotifyTokens(t, null) }
+            fresh(cookie)?.let { return@withLock SpotifyTokens(it.first, null) }
             val harvested = withContext(Dispatchers.Main) { harvest(cookie) } ?: return@withLock null
-            cached = harvested
+            cached = Triple(harvested.first, harvested.second, cookie)
             SpotifyTokens(harvested.first, null)
         }
     }
-
-    fun forget() { cached = null }
 
     @SuppressLint("SetJavaScriptEnabled")
     private suspend fun harvest(cookie: String): Pair<String, Long>? {

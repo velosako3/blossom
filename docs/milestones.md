@@ -75,3 +75,47 @@ repository has no `main` branch (see `docs/progress.md` → Open questions); pas
   - 2 minors: a blank WebDAV password wiped the stored one; peers could write this device's own history
   - The other minors are deferred (see `docs/progress.md`).
 
+## Milestone 9: Extras, polish, accessibility and release
+- Features:
+  - crossfade (a second engine, equal-power curve) and gapless
+  - a 10-band equalizer with presets on both platforms
+  - a sleep timer with a fade
+  - Last.fm and ListenBrainz scrobbling with an offline queue
+  - Discord status on desktop
+  - a GitHub update check
+  - onboarding, and the full Settings page: appearance with glass effects, playback, lyrics, storage, sync, import, accounts, integrations, about with the open-source license list
+  - account sign-in: Android web views; desktop pastes a YouTube Music cookie
+  - accessibility: an audit, keyboard order and 200 % text
+  - installers on CI
+- Evidence:
+  - `./gradlew check` and `verifyRoborazziDesktop` → `BUILD SUCCESSFUL`.
+  - Crossfade live on desktop: switched at 5.15 s with a 3 s fade on 8 s files.
+  - The Last.fm key's signed call was accepted.
+  - The installers workflow succeeded for android, windows and linux; every artifact matched its SHA256SUMS.
+  - Release APK on the emulator: cold start into Home, and the new launcher icon.
+- Screenshots: desktop, every main screen (`docs/screenshots/m9/desktop/`); Android, every main screen (`docs/screenshots/m9/android/`); 200 % text, compact and expanded (`composeApp/src/desktopTest/snapshots/a11y/`).
+- Found in the hands-on pass and fixed:
+  - the sleep timer dialog was drawn under the screens
+  - content ended under the mini player on Android
+  - an Android cold-start ANR with full glass on a weak GPU (the frame monitor now reacts to a single catastrophic frame and reads GPU frame metrics; glass is off on the emulator; new Glass effects setting)
+- Final reviewer: 1 critical, 3 important and 10 minor findings. All of the critical and important ones and 7 minors are fixed with tests; 3 minors are deferred (see `docs/progress.md`).
+
+### Spec goals → implementation → tests
+| Goal | Implemented | Tested by |
+| --- | --- | --- |
+| Android, Windows, Linux | composeApp shells, androidApp, `release.yml` | `ShellSnapshotTest`, `WindowLayoutTest`, installers CI |
+| Liquid glass | `GlassSurface`, `BlossomBackground`, `FrameBudgetMonitor` | `GlassSnapshotTest`, `GlassQualityResolveTest`, `ContrastTest`, `FrameBudgetMonitorTest` |
+| YouTube Music as a guest | `YtmSource`, `DefaultBlossomPlayer` | `YtmParsingTest`, `StreamSelectionTest`, `DefaultBlossomPlayerTest`, `DesktopEndToEndLiveTest` |
+| Playlists and library | `LibraryCommands`, `LibraryProjector` | `LibraryCommandsTest`, `ConvergenceTest`, `PlaylistViewModelTest` |
+| Import (Spotify, YouTube Music, SoundCloud, untitled) | `ImportRouter`, `TrackMatcher`, `ImportJobRunner` | `ImportJobRunnerTest` (5,000 tracks, resume), `TrackMatcherTest`, importer tests, `DesktopImportLiveTest` |
+| Encrypted offline | `ChunkedCipher`, `DownloadManager`, `SqlOfflineStore` | `ChunkedCipherTest`, `DownloadManagerTest`, `OfflineStoreTest`, `DesktopOfflineLiveTest` |
+| Stats and Wrapped | `StatsCalculator`, `Period`, Wrapped | `StatsCalculatorTest`, `PeriodTest`, `PeriodLabelTest`, `WrappedDeckBuilderTest`, `DesktopWrappedLiveTest` |
+| Lyrics | `LyricsResolver`, `LyricsView` | `LyricsResolverTest`, `LrcParserTest`, `LyricsUiTest`, `DesktopLyricsLiveTest` |
+| Sync (cloud and LAN) | `SyncEngine`, backends, `PeerSync` | `SyncEngineTest`, `PeerSyncTest`, `TwoInstanceSyncTest`, `SettingsSyncTest` |
+| Extras | `CrossfadeController`, EQ, `SleepTimer`, scrobbling, Discord, `UpdateChecker` | `CrossfadeControllerTest`, `EqBandMapperTest`, `SleepTimerTest`, `ScrobbleQueueTest`, `PresenceBuilderTest`, `SemVerTest` |
+| Accessibility | labels, focus order, large text | `AccessibilityAuditTest`, `KeyboardNavigationTest`, `AccessibilitySnapshotTest` |
+
+### For the dev → main pull request (when `main` exists)
+- **Before sharing any installer, make the repository public (AGPL).**
+- The owner's to-do list is "Open questions for owner" in `docs/progress.md`.
+

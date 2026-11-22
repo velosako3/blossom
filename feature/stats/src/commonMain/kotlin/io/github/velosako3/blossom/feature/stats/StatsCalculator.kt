@@ -35,8 +35,9 @@ object StatsCalculator {
             weekdays[local.dayOfWeek.value - 1] += e.playedMs
         }
 
-        val artistsInPeriod = inPeriod.flatMap { e -> e.track.artists }.distinctBy(::artistKey)
-        val newArtists = artistsInPeriod.filter { a -> allTimeFirstPlays[artistKey(a)]?.let { it in period } ?: true }
+        // New: the artist's first-ever counted play is in this period (a skipped stranger isn't new to you).
+        val countedArtists = counted.flatMap { e -> e.track.artists }.distinctBy(::artistKey)
+        val newArtists = countedArtists.filter { a -> allTimeFirstPlays[artistKey(a)]?.let { it in period } ?: true }
 
         val days = counted.map { localDate(it.startedAt, zone) }.toSortedSet()
         var longest = 0
@@ -52,10 +53,10 @@ object StatsCalculator {
             period = period,
             totalListeningMs = total,
             countedPlays = counted.size,
-            topTracks = rank(inPeriod, { listOf(it.track.id.value) }) { it.track },
-            topArtists = rank(inPeriod, { e -> e.track.artists.map(::artistKey) }) { e -> e.track.artists.first() }
-                .let { ranked -> ranked.map { r -> r.copy(item = artistsInPeriod.first { artistKey(it) == artistKey(r.item) }) } },
-            topAlbums = rank(inPeriod.filter { it.track.album != null }, { e -> listOf(albumKey(e.track.album!!)) }) { it.track.album!! },
+            topTracks = rank(inPeriod, { listOf(it.track.id.value) }) { e, _ -> e.track },
+            // Each artist of a song is credited under its own name.
+            topArtists = rank(inPeriod, { e -> e.track.artists.map(::artistKey) }) { e, k -> e.track.artists.first { artistKey(it) == k } },
+            topAlbums = rank(inPeriod.filter { it.track.album != null }, { e -> listOf(albumKey(e.track.album!!)) }) { e, _ -> e.track.album!! },
             byHourOfDayMs = hours,
             byDayOfWeekMs = weekdays,
             newArtists = newArtists,
@@ -65,11 +66,11 @@ object StatsCalculator {
     }
 
     /** Ranks items keyed by [keys]: counted plays, then listening time, then the latest play. */
-    private fun <T> rank(events: List<PlayEvent>, keys: (PlayEvent) -> List<String>, item: (PlayEvent) -> T): List<Ranked<T>> {
+    private fun <T> rank(events: List<PlayEvent>, keys: (PlayEvent) -> List<String>, item: (PlayEvent, key: String) -> T): List<Ranked<T>> {
         class Acc(var item: T, var plays: Int = 0, var ms: Long = 0, var last: Instant = Instant.DISTANT_PAST)
         val acc = LinkedHashMap<String, Acc>()
         for (e in events) for (k in keys(e).distinct()) {
-            val a = acc.getOrPut(k) { Acc(item(e)) }
+            val a = acc.getOrPut(k) { Acc(item(e, k)) }
             if (e.counted) a.plays++
             a.ms += e.playedMs
             if (e.startedAt > a.last) a.last = e.startedAt

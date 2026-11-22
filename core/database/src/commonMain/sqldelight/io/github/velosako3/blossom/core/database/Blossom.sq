@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: AGPL-3.0-or-later
 -- blossom library database. Everything synced is a projection of op_log; device-only state is marked.
 
 CREATE TABLE op_log (

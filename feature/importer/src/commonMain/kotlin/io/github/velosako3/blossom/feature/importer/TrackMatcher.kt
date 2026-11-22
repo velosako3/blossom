@@ -81,7 +81,8 @@ object TrackMatcher {
         val (track, s) = best
         val diff = durationDiffMs(imported, track)
         val status = when {
-            s >= 0.80f && (diff == null || diff <= 3_000) -> EntryStatus.MATCHED
+            // ✓ needs the duration checked: unknown on either side is "check this" at best.
+            s >= 0.80f && diff != null && diff <= 3_000 -> EntryStatus.MATCHED
             s >= 0.55f -> EntryStatus.UNCERTAIN
             else -> EntryStatus.UNAVAILABLE
         }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom
 
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -56,6 +57,7 @@ fun App(
     val current = graph?.player?.state?.collectAsState()?.value?.current
     // With a graph, the user's choices (Settings → Appearance) win; the parameters are the platform defaults.
     val themeMode = graph?.preferences?.theme?.state?.collectAsState()?.value ?: themeMode
+    graph?.preferences?.systemReduceMotion = reduceMotion
     val reduceMotion = graph?.preferences?.reduceMotion?.state?.collectAsState()?.value ?: reduceMotion
     // A link shared to blossom opens Import with it.
     graph?.let { g ->
@@ -104,7 +106,11 @@ fun App(
                     graph?.let { g ->
                         if (!g.preferences.onboarded.state.collectAsState().value) {
                             // A scrim keeps the welcome card readable over a busy home feed.
-                            Box(Modifier.fillMaxSize().zIndex(3f).background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.55f))) {
+                            Box(
+                                Modifier.fillMaxSize().zIndex(3f).background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.55f))
+                                    // Taps outside the card don't reach the app underneath.
+                                    .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent().changes.forEach { it.consume() } } },
+                            ) {
                                 io.github.velosako3.blossom.feature.settings.onboarding.OnboardingFlow(
                                     g.preferences.theme.state.collectAsState().value, g.preferences.theme::set,
                                     onFinish = { extra ->

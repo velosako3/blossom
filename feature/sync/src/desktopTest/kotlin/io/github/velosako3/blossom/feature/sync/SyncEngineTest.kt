@@ -157,11 +157,13 @@ class SyncEngineTest {
     @Test fun unsyncedSettingsAreIgnored(): Unit = runBlocking {
         val backend = InMemoryBackend()
         val a = Peer("A", backend); val b = Peer("B", backend)
-        b.commands.changeSetting("theme", "\"light\"")
+        b.commands.changeSetting("ui.theme", "\"LIGHT\"")
         b.commands.changeSetting("local.folders", "[\"/home/b/Music\"]")
+        b.commands.changeSetting("ui.glass", "\"OFF\"") // device-specific: never syncs
         b.engine.syncOnce(); a.engine.syncOnce()
-        assertEquals("\"light\"", a.db.blossomQueries.settingValue("theme").executeAsOneOrNull())
+        assertEquals("\"LIGHT\"", a.db.blossomQueries.settingValue("ui.theme").executeAsOneOrNull())
         assertEquals(null, a.db.blossomQueries.settingValue("local.folders").executeAsOneOrNull()?.takeIf { it.isNotEmpty() })
+        assertEquals(null, a.db.blossomQueries.settingValue("ui.glass").executeAsOneOrNull()?.takeIf { it.isNotEmpty() })
     }
 
     @Test fun segmentsRollOver(): Unit = runBlocking {

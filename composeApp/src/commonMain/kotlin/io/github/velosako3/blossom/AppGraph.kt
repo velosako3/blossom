@@ -229,6 +229,26 @@ class AppGraph(
     val sync = syncController?.let { io.github.velosako3.blossom.feature.sync.ui.SyncViewModel(it, scope) }
 
     init {
+        // Allowlisted settings sync as operations. The marker per key is the last value seen in the database: a row
+        // is applied only when it changed (another device), so a local change on its way in is never reverted.
+        val seen = java.util.concurrent.ConcurrentHashMap<String, String>()
+        val json = kotlinx.serialization.json.Json
+        fun stored(key: String) = db.blossomQueries.settingValue(key).executeAsOneOrNull()?.takeIf { it.isNotEmpty() }
+            ?.let { runCatching { json.decodeFromString(kotlinx.serialization.serializer<String>(), it) }.getOrNull() }
+        preferences.synced.forEach { pref ->
+            pref.publish = { raw ->
+                seen[pref.key] = raw
+                scope.launch { commands.changeSetting(pref.key, json.encodeToString(kotlinx.serialization.serializer<String>(), raw)) }
+            }
+        }
+        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            opLog.changes().collect {
+                for (pref in preferences.synced) {
+                    val raw = stored(pref.key) ?: continue
+                    if (seen.put(pref.key, raw) != raw) pref.applyRemote(raw)
+                }
+            }
+        }
         if (secure != null) scope.launch { refreshAccounts() }
         if (secure != null) scope.launch { update.value = runCatching { updateChecker.check() }.getOrNull() }
         if (_eq.value.enabled) player.setEqualizer(_eq.value)

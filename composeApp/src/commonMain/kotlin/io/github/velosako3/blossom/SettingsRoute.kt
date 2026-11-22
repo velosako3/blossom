@@ -32,7 +32,7 @@ fun SettingsRoute(graph: AppGraph, navigator: Navigator, topBar: @Composable () 
     val state = SettingsUi(
         theme = p.theme.state.collectAsState().value,
         glass = p.glass.state.collectAsState().value,
-        reduceMotion = p.reduceMotion.state.collectAsState().value ?: false,
+        reduceMotion = p.reduceMotion.state.collectAsState().value ?: p.systemReduceMotion,
         systemTitleBar = graph.systemTitleBar?.state?.collectAsState()?.value,
         crossfadeSeconds = p.crossfade.state.collectAsState().value,
         autoplay = p.autoplay.state.collectAsState().value,

@@ -222,6 +222,7 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
                     PlaylistScreen(
                         vm, play, onAddToPlaylist = { addTracks = it }, onDeleted = { navigator.back() }, topBar = { ScreenTopBar("", navigator) },
                         isAvailable = { graph.isAvailable(it, online) },
+                        isSavedOffline = { it.id in savedIds },
                         menuActions = listOfNotNull(
                             offline?.let { store ->
                                 if (isSavedPlaylist) PlaylistMenuAction(removeLabel) { graph.scope.launch { store.unsavePlaylist(pid) } }

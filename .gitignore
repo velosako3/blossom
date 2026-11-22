@@ -21,3 +21,6 @@ captures/
 
 # owner's handoff prompt (saved copy lives in docs/plans/)
 blossom-claude-code-prompt.md
+
+# JVM crash logs
+hs_err_pid*.log

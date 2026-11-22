@@ -160,7 +160,8 @@ fun label(p: Period): String {
         is Period.Week -> {
             val zone = java.time.ZoneId.of(p.zone.id)
             val first = p.start.toJavaInstant().atZone(zone).toLocalDate()
-            val last = (p.endExclusive - 1.days).toJavaInstant().atZone(zone).toLocalDate()
+            // Monday + 6 days: an instant minus 24 h lands on Saturday in a spring-forward week.
+            val last = first.plusDays(6)
             val month = { d: LocalDate -> d.month.getDisplayName(TextStyle.SHORT, locale) }
             when {
                 first.year != last.year -> "${first.dayOfMonth} ${month(first)} ${first.year} – ${last.dayOfMonth} ${month(last)} ${last.year}"

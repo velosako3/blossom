@@ -92,6 +92,8 @@ fun PlaylistScreen(
     modifier: Modifier = Modifier,
     topBar: @Composable () -> Unit = {},
     isAvailable: (Track) -> Boolean = { true },
+    /** Saved on this device: plays even when its link has died. */
+    isSavedOffline: (Track) -> Boolean = { false },
     menuActions: List<PlaylistMenuAction> = emptyList(),
     headerExtras: @Composable () -> Unit = {},
     rowBadge: @Composable (PlaylistEntry) -> Unit = {},
@@ -111,7 +113,7 @@ fun PlaylistScreen(
         val f = from.index - 1; val t = to.index - 1 // index 0 is the header
         if (f in items.indices && t in items.indices) items = items.toMutableList().apply { add(t, removeAt(f)) }
     }
-    val playable = items.mapNotNull { e -> e.track?.takeIf { e.status != EntryStatus.UNAVAILABLE && isAvailable(it) } }
+    val playable = playableTracks(items, isAvailable, isSavedOffline)
     fun playFrom(entry: PlaylistEntry?, shuffle: Boolean) = onPlay(playable, entry?.track?.let { playable.indexOf(it) }?.coerceAtLeast(0) ?: 0, shuffle)
     val colors = BlossomTheme.colors
 
@@ -155,7 +157,7 @@ fun PlaylistScreen(
                     LaunchedEffect(dismiss.currentValue) { if (dismiss.currentValue != SwipeToDismissBoxValue.Settled) vm.onRemove(entry.entryId) }
                     SwipeToDismissBox(dismiss, backgroundContent = {}, modifier = Modifier.padding(horizontal = 8.dp)) {
                         val track = entry.track
-                        val unavailable = entry.status == EntryStatus.UNAVAILABLE || track == null
+                        val unavailable = track == null || entry.status == EntryStatus.UNAVAILABLE && !isSavedOffline(track)
                         val missing = !unavailable && !isAvailable(track!!)
                         val selected = entry.entryId in state.selected
                         MediaRow(
@@ -227,3 +229,10 @@ fun PlaylistScreen(
         }
     }
 }
+
+/**
+ * The entries that can play now, in order. An UNAVAILABLE entry (its link died) still plays when this device saved it
+ * before: the encrypted copy is what saving was for.
+ */
+fun playableTracks(entries: List<PlaylistEntry>, isAvailable: (Track) -> Boolean, isSaved: (Track) -> Boolean): List<Track> =
+    entries.mapNotNull { e -> e.track?.takeIf { t -> (e.status != EntryStatus.UNAVAILABLE || isSaved(t)) && isAvailable(t) } }

@@ -38,6 +38,18 @@ class StatsCalculatorTest {
         assertEquals(3, s.topTracks[0].plays)
     }
 
+    @Test fun everyArtistOfASongGetsItsOwnName() {
+        val duet = Track(TrackId.of(SourceKind.YOUTUBE_MUSIC, "d"), "Duet", listOf(ArtistRef(null, "Kanye West"), ArtistRef(null, "Ty Dolla Sign")), null, 200_000, null)
+        val s = StatsCalculator.compute(nov, List(5) { play(duet, at(11, 3 + it)) }, emptyMap(), 0)
+        assertEquals(setOf("Kanye West", "Ty Dolla Sign"), s.topArtists.map { it.item.name }.toSet())
+    }
+
+    @Test fun aSkippedStrangerIsNotANewArtist() {
+        val stranger = track("s", artist = "Stranger")
+        val s = StatsCalculator.compute(nov, listOf(play(stranger, at(11, 4), ms = 10_000, counted = false)), emptyMap(), 0)
+        assertEquals(emptyList(), s.newArtists.map { it.name })
+    }
+
     @Test fun newArtistsOnlyWhenFirstPlayedInPeriod() {
         val old = track("o", artist = "Old Band"); val fresh = track("f", artist = "Fresh Face")
         val first = mapOf(StatsCalculator.artistKey(old.artists[0]) to at(10, 15), StatsCalculator.artistKey(fresh.artists[0]) to at(11, 2))
