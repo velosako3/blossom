@@ -14,16 +14,17 @@ class CacheCorruptedException(message: String, cause: Throwable? = null) : Excep
 /**
  * Offline files: AES-256-GCM in independent 64 KiB chunks, so any position can be read without decrypting the rest.
  *
- * Header (13 bytes): `BLSM`, version 1, chunk size (int), a random 4-byte nonce prefix. Then each chunk's ciphertext
- * and 16-byte tag. Chunk nonce = prefix + 8-byte chunk index. The chunk's associated data is its index and whether it
+ * Header (17 bytes): `BLSM`, version 2, chunk size (int), a random 8-byte nonce prefix. Then each chunk's ciphertext
+ * and 16-byte tag. Chunk nonce = prefix + 4-byte chunk index. (8 random bytes per file, not 4: with 4, two files
+ * under the same key share a nonce with ~0.3% odds at 5,000 files, which breaks GCM.) The chunk's associated data is its index and whether it
  * is the last one, so reordering, swapping or truncating chunks fails authentication.
  */
 object ChunkedCipher {
     const val CHUNK = 65536
     const val TAG = 16
-    const val HEADER = 13
+    const val HEADER = 17
     private val MAGIC = "BLSM".encodeToByteArray()
-    private const val VERSION: Byte = 1
+    private const val VERSION: Byte = 2
 
     fun encrypt(input: InputStream, output: OutputStream, key: ByteArray) {
         val enc = ChunkedEncryptor.create(output, key)
@@ -38,10 +39,13 @@ object ChunkedCipher {
         if (bytes.size < HEADER || !bytes.copyOfRange(0, 4).contentEquals(MAGIC) || bytes[4] != VERSION ||
             ByteBuffer.wrap(bytes, 5, 4).int != CHUNK
         ) throw CacheCorruptedException("not a blossom offline file")
-        return bytes.copyOfRange(9, 13)
+        return bytes.copyOfRange(9, HEADER)
     }
 
-    internal fun nonce(prefix: ByteArray, index: Long): ByteArray = ByteBuffer.allocate(12).put(prefix).putLong(index).array()
+    internal fun nonce(prefix: ByteArray, index: Long): ByteArray {
+        require(index in 0..Int.MAX_VALUE.toLong()) { "chunk index out of range" } // 2^31 × 64 KiB: far beyond any song
+        return ByteBuffer.allocate(12).put(prefix).putInt(index.toInt()).array()
+    }
     internal fun aad(index: Long, last: Boolean): ByteArray = ByteBuffer.allocate(9).putLong(index).put(if (last) 1 else 0).array()
 }
 
@@ -85,7 +89,7 @@ class ChunkedEncryptor private constructor(
     companion object {
         /** A new file: writes the header first. */
         fun create(out: OutputStream, key: ByteArray): ChunkedEncryptor {
-            val prefix = ByteArray(4).also { SecureRandom().nextBytes(it) }
+            val prefix = ByteArray(8).also { SecureRandom().nextBytes(it) }
             out.write(ChunkedCipher.header(prefix))
             return ChunkedEncryptor(out, key, prefix, 0)
         }

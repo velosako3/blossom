@@ -67,7 +67,7 @@ fun App(
                     graph?.let { PlaybackErrorBanner(it.player, Modifier.align(androidx.compose.ui.Alignment.TopCenter).padding(top = 48.dp).zIndex(1f)) }
                     graph?.let { g ->
                         val online = g.network.status.collectAsState().value.online
-                        val storagePaused = (g.offline?.pausedForStorage() ?: kotlinx.coroutines.flow.flowOf(false)).collectAsState(false).value
+                        val storagePaused = androidx.compose.runtime.remember(g.offline) { g.offline?.pausedForStorage() ?: kotlinx.coroutines.flow.flowOf(false) }.collectAsState(false).value
                         androidx.compose.foundation.layout.Column(
                             Modifier.align(androidx.compose.ui.Alignment.BottomCenter).padding(bottom = 112.dp).zIndex(1f),
                             verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),

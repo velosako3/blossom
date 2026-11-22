@@ -51,6 +51,12 @@ class OfflineStoreTest {
         withTimeout(30_000) { store.state(track("c").id).first { it == OfflineState.SAVED } }
     }
 
+    @Test fun unreferencedFilesAreSweptAtStartup(): Unit = runBlocking {
+        java.io.File(h.dir, "leftover.blsm").writeBytes(ByteArray(10))
+        SqlOfflineStore(h.db, h.manager, null, h.scope)
+        withTimeout(5_000) { while (java.io.File(h.dir, "leftover.blsm").exists()) kotlinx.coroutines.delay(20) }
+    }
+
     @Test fun clearAllRemovesEverything(): Unit = runBlocking {
         val t = track("a")
         store.saveTrack(t, OfflineRef.Single(t.id))

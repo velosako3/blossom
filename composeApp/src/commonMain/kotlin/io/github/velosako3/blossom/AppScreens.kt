@@ -82,7 +82,7 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
     val addToPlaylist = stringResource(Res.string.menu_add_to_playlist)
     val online = graph.network.status.collectAsState().value.online
     val offline = graph.offline
-    val currentOffline by (current?.let { t -> offline?.state(t.id) } ?: flowOf(OfflineState.NOT_SAVED)).collectAsState(OfflineState.NOT_SAVED)
+    val currentOffline by remember(offline, current?.id) { current?.let { t -> offline?.state(t.id) } ?: flowOf(OfflineState.NOT_SAVED) }.collectAsState(OfflineState.NOT_SAVED)
     val saveLabel = stringResource(Res.string.menu_save_offline)
     val removeLabel = stringResource(Res.string.menu_remove_download)
     val menu = listOfNotNull(
@@ -92,7 +92,7 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
             else PlayerMenuAction(removeLabel) { t -> graph.scope.launch { store.unsave(OfflineRef.Single(t.id)) } }
         },
     )
-    val savedTracks by (offline?.savedTracks() ?: flowOf(emptyList())).collectAsState(emptyList())
+    val savedTracks by remember(offline) { offline?.savedTracks() ?: flowOf(emptyList()) }.collectAsState(emptyList())
     val savedIds = remember(savedTracks) { savedTracks.mapTo(HashSet()) { it.id } }
     val savedBadge: @Composable (Track) -> Unit = { t -> if (t.id in savedIds) SavedIcon() }
     val openPlaylistLocal: (io.github.velosako3.blossom.core.model.PlaylistId) -> Unit = { navigator.navigate(Destination.Playlist(it.value)) }
@@ -190,7 +190,7 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
                 is Destination.Playlist -> {
                     val vm = remember(destination.id) { PlaylistViewModel(io.github.velosako3.blossom.core.model.PlaylistId(destination.id), graph.repo, graph.commands, graph.scope) }
                     val pid = io.github.velosako3.blossom.core.model.PlaylistId(destination.id)
-                    val savedPlaylists by (offline?.savedPlaylists() ?: flowOf(emptySet())).collectAsState(emptySet())
+                    val savedPlaylists by remember(offline) { offline?.savedPlaylists() ?: flowOf(emptySet()) }.collectAsState(emptySet())
                     val isSavedPlaylist = pid in savedPlaylists
                     val entries = vm.state.collectAsState().value.playlist?.entries.orEmpty().mapNotNull { it.track }.filter { it.id.kind != SourceKind.LOCAL }
                     val savedCount = entries.count { it.id in savedIds }
@@ -231,7 +231,7 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
                     val store = graph.offline
                     val settingsStore = graph.offlineSettings
                     if (store == null || settingsStore == null) false else {
-                        val usage by store.usageBytes().collectAsState(0L)
+                        val usage by remember(store) { store.usageBytes() }.collectAsState(0L)
                         val settings by settingsStore.settings.collectAsState()
                         io.github.velosako3.blossom.feature.settings.StorageScreen(
                             usage, settings,

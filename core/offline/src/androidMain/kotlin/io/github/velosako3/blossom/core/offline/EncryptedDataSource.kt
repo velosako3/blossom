@@ -27,7 +27,8 @@ class EncryptedDataSource(private val store: OfflineStore) : BaseDataSource(fals
         } ?: throw DataSourceException(PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND)
         val c = DecryptingCursor(reader)
         if (!c.seek(dataSpec.position)) { c.close(); throw DataSourceException(PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE) }
-        remaining = if (dataSpec.length != C.LENGTH_UNSET.toLong()) dataSpec.length else c.size - dataSpec.position
+        val available = c.size - dataSpec.position
+        remaining = if (dataSpec.length != C.LENGTH_UNSET.toLong()) minOf(dataSpec.length, available) else available
         cursor = c
         uri = dataSpec.uri
         transferStarted(dataSpec)

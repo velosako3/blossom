@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Tasks 5.1–5.4 and 6.1 done. Milestone 5 review received; its fix pass is next, then Task 6.2.
+Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Task 6.1 done. Next: Task 6.2 (Spotify importer).
 
 Hands-on testing rule: the owner is using this desktop, so never inject keyboard/mouse input or capture the screen.
 Desktop end-to-end checks run off-screen with the real graph: `./gradlew :composeApp:desktopTest -PliveTests=true -Proborazzi.test.record=true --tests "*DesktopEndToEnd*"`. `./gradlew :composeApp:run -Pblossom.debugPlay="query"` plays a search result at startup, for `playerctl` checks. Kill stray app instances by PID (`ps … | grep 'blossom\.MainKt'`), never with a `pkill -f` pattern that matches your own shell.
@@ -43,6 +43,25 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - Desktop `NetworkMonitor` checks for an up interface plus a DNS answer every 15 s (no request to any server); `-Dblossom.forceOffline=true` pins it offline for testing.
 
 ## Deviations from plan
+- Milestone 5 review fixes, each covered by a test that failed first:
+  - The offline file format is version 2, with an 8-byte random nonce prefix + 4-byte chunk index instead of 4 + 8. With 4 random bytes, two files under one key share a nonce with ~0.3 % odds at 5,000 files, which breaks GCM. Nothing has shipped, so no migration.
+  - Resume never re-encrypts a chunk index already on disk. A file that authenticates to its last chunk counts as complete (crash before SAVED). A file with bytes past its last whole chunk starts over with new nonces.
+  - A stream URL that expires mid-download is resolved again (`fresh`, which invalidates the player's cache) and continues from the same offset.
+  - A Content-Range that doesn't start where asked is rejected. A 416 or a changed total restarts from zero (at most 3 times).
+  - Unsave waits for a running download to stop before deleting its file. Orphans are selected and deleted in one transaction. `isSaved` drops unsaved tracks immediately, so they stream again.
+  - Unreferenced files are swept at startup. Clear-all waits for downloads to stop.
+  - A saved file that no longer decrypts (key reset, damage) heals: it's deleted and downloaded again.
+  - A truncated file reports `CacheCorruptedException` instead of crashing a player callback.
+- Milestone 5 review fixes without a new test:
+  - Going offline pauses with one conditional UPDATE, never touching SAVED or FAILED rows.
+  - Retry counts reset when bytes arrive, and the backoff doesn't hold a download slot.
+  - Saved playlists save their new tracks in one transaction with one queue check.
+  - The key loads at startup, so `openReader` doesn't wait on the keyring.
+  - Media3 `EncryptedDataSource` never reports more bytes than exist.
+  - The Android `DownloadWorker` waits for downloads to start before waiting for them to end (it used to return at once).
+  - Offline flows built in composition are `remember`ed.
+  - Progress is written every MiB.
+- Milestone 5 review rulings (not changed): offline search filters in-memory lists of local and saved songs, fine at thousands of songs; revisit with SQL search if libraries get much larger. Progress stays in `offline_item`, at 1 MiB steps.
 - Task 6.1:
   - `Track` has no ISRC field, so `TrackMatcher.match` takes an optional `isrcOf` lookup.
   - Playlist entries keep no source key, so Refresh from source treats a track as present by its stored source title + artist, or by its native track ID.

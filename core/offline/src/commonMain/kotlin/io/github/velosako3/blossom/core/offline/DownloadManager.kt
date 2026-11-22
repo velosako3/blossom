@@ -9,6 +9,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -36,7 +37,8 @@ class DownloadManager(
     private val db: BlossomDatabase,
     val dir: File,
     val vault: KeyVault,
-    private val resolve: suspend (Track) -> StreamInfo,
+    /** The stream to download; `fresh = true` after a 403/410 (the URL expired), bypassing any cache. */
+    private val resolve: suspend (track: Track, fresh: Boolean) -> StreamInfo,
     private val http: OkHttpClient,
     private val network: NetworkMonitor,
     val settings: StateFlow<OfflineSettings>,
@@ -49,7 +51,6 @@ class DownloadManager(
     private val lock = Mutex()
     private val running = HashMap<String, Job>()
     private val slots = Semaphore(parallel)
-    private val restartFromZero = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     private val _busy = kotlinx.coroutines.flow.MutableStateFlow(false)
     /** True while any download runs. */
     val busy: StateFlow<Boolean> = _busy
@@ -78,14 +79,16 @@ class DownloadManager(
     }
 
     private fun schedule(retryPaused: Boolean) {
-        val ok = allowed()
+        if (!allowed()) {
+            running.values.forEach { it.cancel() }
+            running.clear()
+            _busy.value = false
+            // One conditional update: never touches SAVED or FAILED rows, whatever a stale read said.
+            q.offlinePauseForNetwork()
+            return
+        }
         for (row in q.offlinePending().executeAsList()) {
             val id = row.track_id
-            if (!ok) {
-                running.remove(id)?.cancel()
-                q.offlineSetState(OfflineState.PAUSED_NETWORK.name, id)
-                continue
-            }
             if (id in running) continue
             if (row.state == OfflineState.PAUSED_STORAGE.name && !retryPaused) continue
             if (running.isEmpty()) onWorkStarted?.invoke()
@@ -93,7 +96,7 @@ class DownloadManager(
             _busy.value = true
             running[id] = scope.launch(Dispatchers.IO) {
                 try {
-                    slots.withPermit { download(track) }
+                    download(track)
                 } finally {
                     lock.withLock {
                         if (running[id] === coroutineContext[Job]) running.remove(id)
@@ -105,10 +108,15 @@ class DownloadManager(
         }
     }
 
-    /** Stops [trackId]'s download (it was unsaved). */
-    suspend fun cancel(trackId: String) = lock.withLock { running.remove(trackId)?.cancel() }
+    /** Stops [trackId]'s download and waits until it has stopped writing (it was unsaved). */
+    suspend fun cancel(trackId: String) {
+        lock.withLock { running.remove(trackId) }?.cancelAndJoin()
+    }
 
-    suspend fun cancelAll() = lock.withLock { running.values.forEach { it.cancel() }; running.clear(); _busy.value = false }
+    suspend fun cancelAll() {
+        val jobs = lock.withLock { running.values.toList().also { running.clear(); _busy.value = false } }
+        jobs.forEach { it.cancelAndJoin() }
+    }
 
     fun fileFor(trackId: String): File = File(dir, sha256(trackId) + ".blsm")
 
@@ -117,44 +125,59 @@ class DownloadManager(
         if (q.offlineItem(id).executeAsOneOrNull() == null) return
         q.offlineSetState(OfflineState.DOWNLOADING.name, id)
         var attempt = 0
+        var restarts = 0
         while (true) {
+            var progressed = false
             try {
-                transfer(track)
-                q.offlineSetState(OfflineState.SAVED.name, id)
+                // A download slot is held only while bytes move, never during a backoff wait.
+                val finished = slots.withPermit { transfer(track) { progressed = true } }
+                if (finished) q.offlineSetState(OfflineState.SAVED.name, id)
                 return
             } catch (e: CancellationException) {
                 throw e
             } catch (_: RestartFromZero) {
-                restartFromZero += id
+                fileFor(id).delete()
+                if (++restarts > 3) { q.offlineSetState(OfflineState.FAILED.name, id); return }
             } catch (_: StorageFull) {
                 q.offlineSetState(OfflineState.PAUSED_STORAGE.name, id)
                 return
             } catch (_: Exception) {
+                if (progressed) attempt = 0 // three failures in a row, not three in the whole song
                 if (attempt >= backoffMs.size) { q.offlineSetState(OfflineState.FAILED.name, id); return }
                 delay(backoffMs[attempt++])
             }
         }
     }
 
-    private suspend fun transfer(track: Track) {
+    /** Downloads what's missing. False when the row disappeared (unsaved) and there's nothing to finish. */
+    private suspend fun transfer(track: Track, onProgress: () -> Unit): Boolean {
         val id = track.id.value
         val key = vault.offlineKey()
         val file = fileFor(id)
-        q.offlineSetFile(file.name, q.offlineItem(id).executeAsOne().bytes, id)
+        val row = q.offlineItem(id).executeAsOneOrNull() ?: return false
 
-        // Resume after the last complete chunk, if the file has a valid header and the server honours ranges.
-        if (restartFromZero.remove(id)) file.delete()
+        // A file that already authenticates to its last chunk is complete (a crash came before SAVED was recorded).
+        if (file.isFile && isComplete(file, key)) {
+            val length = DecryptingReader(file, key).let { r -> r.plainLength.also { r.close() } }
+            q.offlineSetFile(file.name, length, id)
+            q.offlineSetProgress(length, id)
+            return true
+        }
+        // Resume after the last whole chunk, but only if nothing past it was written: re-encrypting a chunk index
+        // that is already on disk (perhaps with other bytes) would reuse a nonce. Otherwise start over with new nonces.
         var prefix: ByteArray? = null
         var chunks = 0L
         if (file.length() >= ChunkedCipher.HEADER) {
+            val body = file.length() - ChunkedCipher.HEADER
             prefix = runCatching { ChunkedCipher.readHeader(file.inputStream().use { it.readNBytes(ChunkedCipher.HEADER) }) }.getOrNull()
-            if (prefix != null) {
-                chunks = (file.length() - ChunkedCipher.HEADER) / (ChunkedCipher.CHUNK + ChunkedCipher.TAG)
-                RandomAccessFile(file, "rw").use { it.setLength(ChunkedCipher.HEADER + chunks * (ChunkedCipher.CHUNK + ChunkedCipher.TAG)) }
-            }
-        }
+            if (prefix == null || body % (ChunkedCipher.CHUNK + ChunkedCipher.TAG) != 0L) { prefix = null; file.delete() }
+            else chunks = body / (ChunkedCipher.CHUNK + ChunkedCipher.TAG)
+        } else file.delete()
+        q.offlineSetFile(file.name, row.bytes, id)
+
         val start = chunks * ChunkedCipher.CHUNK
-        val stream = resolve(track)
+        var stream = resolve(track, false)
+        var refreshed = false
         val limit = settings.value.limitBytes
         val others = q.offlineUsageExcept(id).executeAsOne()
 
@@ -171,12 +194,28 @@ class DownloadManager(
                     header("Range", "bytes=$done-${done + REQUEST_BYTES - 1}")
                 }.build()
                 val call = http.newCall(request)
-                runInterruptible { call.execute() }.use { r ->
+                val again = runInterruptible { call.execute() }.use { r ->
+                    when (r.code) {
+                        403, 410 -> {
+                            // The signed URL expired mid-song: resolve it again once, then go on from here.
+                            if (refreshed) throw IOException("HTTP ${r.code} after refreshing the stream")
+                            refreshed = true
+                            return@use true
+                        }
+                        416 -> throw RestartFromZero() // the source changed size
+                        200, 206 -> Unit
+                        else -> throw IOException("HTTP ${r.code}")
+                    }
                     val whole = r.code == 200 // the server ignored Range and sends everything
-                    if (!whole && r.code != 206) throw IOException("HTTP ${r.code}")
                     if (whole && done > 0) throw RestartFromZero()
-                    total = if (whole) r.body.contentLength() else
-                        r.header("Content-Range")?.substringAfterLast('/')?.toLongOrNull() ?: throw IOException("no Content-Range")
+                    if (whole) total = r.body.contentLength()
+                    else {
+                        val range = CONTENT_RANGE.matchEntire(r.header("Content-Range").orEmpty()) ?: throw IOException("bad Content-Range")
+                        if (range.groupValues[1].toLong() != done) throw IOException("server sent bytes from ${range.groupValues[1]}, asked $done")
+                        val size = range.groupValues[3].toLong()
+                        if (total >= 0 && size != total) throw RestartFromZero()
+                        total = size
+                    }
                     if (total > 0) {
                         if (limit != null && others + total > limit) throw StorageFull()
                         q.offlineSetFile(file.name, total, id)
@@ -188,18 +227,30 @@ class DownloadManager(
                         if (n < 0) break
                         enc.write(buf, 0, n)
                         done += n; got += n
+                        onProgress()
                         if (limit != null && others + done > limit) throw StorageFull()
-                        if (done - reported >= 256 * 1024) { q.offlineSetProgress(done, id); reported = done }
+                        if (done - reported >= PROGRESS_STEP) { q.offlineSetProgress(done, id); reported = done }
                     }
                     if (whole) { if (total < 0) total = done }
                     else if (got == 0L) throw IOException("empty range at $done of $total")
+                    refreshed = false
+                    false
                 }
+                if (again) stream = resolve(track, true)
             }
             if (done != total) throw IOException("got $done of $total bytes")
             enc.finish()
             q.offlineSetFile(file.name, total, id)
             q.offlineSetProgress(done, id)
         }
+        return true
+    }
+
+    private fun isComplete(file: File, key: ByteArray): Boolean = try {
+        val r = DecryptingReader(file, key)
+        try { r.plainLength == 0L || r.read(r.plainLength - 1, ByteArray(1), 0, 1) == 1 } finally { r.close() }
+    } catch (_: Exception) {
+        false
     }
 
     private fun sha256(s: String) = MessageDigest.getInstance("SHA-256").digest(s.encodeToByteArray()).joinToString("") { "%02x".format(it) }
@@ -207,5 +258,8 @@ class DownloadManager(
     private companion object {
         /** Per request; YouTube serves bounded ranges up to ~10 MB at full speed. */
         const val REQUEST_BYTES = 2L * 1024 * 1024
+        /** Progress is written to the database every MiB (each write re-runs the offline flows). */
+        const val PROGRESS_STEP = 1024L * 1024
+        val CONTENT_RANGE = Regex("""bytes (\d+)-(\d+)/(\d+)""")
     }
 }

@@ -78,9 +78,17 @@ class SqlOfflineStore(
     init {
         scope.launch(io) { q.offlineSavedIds().asFlow().mapToList(io).collect { savedIds = it.toHashSet() } }
         scope.launch(io) {
+            manager.vault.offlineKey() // load the key now, so openReader never waits on the keyring
+            sweepUnreferencedFiles()
             q.offlinePlaylists().executeAsList().forEach { watch(PlaylistId(it)) }
             manager.kick(retryPaused = true)
         }
+    }
+
+    /** Files left by an unsave or clear that was interrupted, before any download starts. */
+    private fun sweepUnreferencedFiles() {
+        val known = q.offlineAllIds().executeAsList().mapTo(HashSet()) { manager.fileFor(it).name }
+        manager.dir.listFiles().orEmpty().filter { it.isFile && it.name !in known }.forEach { it.delete() }
     }
 
     override fun state(id: TrackId): Flow<OfflineState> =
@@ -96,15 +104,21 @@ class SqlOfflineStore(
         }
     }.distinctUntilChanged()
 
-    override suspend fun saveTrack(track: Track, ref: OfflineRef) {
-        if (track.id.kind == SourceKind.LOCAL) return // already on the device
+    override suspend fun saveTrack(track: Track, ref: OfflineRef) = saveTracks(listOf(track), ref)
+
+    /** One transaction and one queue check for any number of tracks (a whole playlist). */
+    private suspend fun saveTracks(tracks: List<Track>, ref: OfflineRef) {
+        val streamed = tracks.filter { it.id.kind != SourceKind.LOCAL } // local files are already on the device
+        if (streamed.isEmpty()) return
         withContext(io) {
             db.transaction {
-                q.offlineInsert(track.id.value, json.encodeToString(Track.serializer(), track))
-                q.offlineAddRef(track.id.value, ref.key)
-                // Saving again retries a failed download.
-                if (q.offlineItem(track.id.value).executeAsOne().state == OfflineState.FAILED.name) {
-                    q.offlineSetState(OfflineState.QUEUED.name, track.id.value)
+                for (track in streamed) {
+                    q.offlineInsert(track.id.value, json.encodeToString(Track.serializer(), track))
+                    q.offlineAddRef(track.id.value, ref.key)
+                    // Saving again retries a failed download.
+                    if (q.offlineItem(track.id.value).executeAsOne().state == OfflineState.FAILED.name) {
+                        q.offlineSetState(OfflineState.QUEUED.name, track.id.value)
+                    }
                 }
             }
         }
@@ -140,7 +154,8 @@ class SqlOfflineStore(
     private suspend fun sync(id: PlaylistId, p: io.github.velosako3.blossom.core.model.Playlist) {
         val ref = OfflineRef.FromPlaylist(id)
         val tracks = p.entries.mapNotNull { it.track }.filter { it.id.kind != SourceKind.LOCAL }
-        tracks.forEach { saveTrack(it, ref) }
+        val referenced = withContext(io) { q.offlineTracksWithRef(ref.key).executeAsList().toHashSet() }
+        saveTracks(tracks.filter { it.id.value !in referenced }, ref)
         val keep = tracks.mapTo(HashSet()) { it.id.value }
         val gone = withContext(io) { q.offlineTracksWithRef(ref.key).executeAsList().filter { it !in keep } }
         if (gone.isNotEmpty()) {
@@ -149,26 +164,41 @@ class SqlOfflineStore(
         }
     }
 
-    /** Deletes items nothing refers to any more, and their files. */
+    /** Deletes items nothing refers to any more (in one transaction, so a concurrent save can't lose its row), then their files. */
     private suspend fun collectOrphans() {
-        val orphans = withContext(io) { q.offlineOrphans().executeAsList() }
+        val orphans = withContext(io) { db.transactionWithResult { q.offlineOrphans().executeAsList().onEach { q.offlineDelete(it) } } }
+        if (orphans.isEmpty()) return
+        savedIds = savedIds - orphans.toSet() // the player must stream them from now on
         for (id in orphans) {
-            manager.cancel(id)
-            withContext(io) {
-                q.offlineDelete(id)
-                manager.fileFor(id).delete()
-            }
+            manager.cancel(id) // waits until the download stopped writing
+            withContext(io) { manager.fileFor(id).delete() }
         }
-        if (orphans.isNotEmpty()) manager.kick(retryPaused = true) // freed space
+        manager.kick(retryPaused = true) // freed space
     }
 
     override fun openReader(id: TrackId): DecryptingReader? {
         val row = q.offlineItem(id.value).executeAsOneOrNull() ?: return null
         if (row.state != OfflineState.SAVED.name) return null
-        val file = manager.fileFor(id.value).takeIf { it.isFile } ?: return null
-        // ponytail: blocks only on the very first call (KeyVault caches the key afterwards).
-        val key = runBlocking { manager.vault.offlineKey() }
-        return DecryptingReader(file, key)
+        val file = manager.fileFor(id.value).takeIf { it.isFile } ?: return heal(id)
+        // Loaded at startup; blocking only if playback starts before that finished.
+        val key = manager.vault.cachedKey() ?: runBlocking { manager.vault.offlineKey() }
+        return try {
+            DecryptingReader(file, key).also { r ->
+                if (r.plainLength > 0) r.read(0, ByteArray(1), 0, 1) // fails at once on a wrong key or a damaged file
+            }
+        } catch (_: CacheCorruptedException) {
+            heal(id)
+        }
+    }
+
+    /** The saved copy is missing or can't be decrypted (e.g. the key was reset): download it again. */
+    private fun heal(id: TrackId): DecryptingReader? {
+        savedIds = savedIds - id.value
+        manager.fileFor(id.value).delete()
+        q.offlineSetProgress(0, id.value)
+        q.offlineSetState(OfflineState.QUEUED.name, id.value)
+        manager.kick()
+        return null
     }
 
     override fun isSaved(id: TrackId): Boolean = id.value in savedIds
@@ -185,10 +215,9 @@ class SqlOfflineStore(
 
     override suspend fun clearAll() {
         watchers.values.forEach { it.cancel() }; watchers.clear()
-        manager.cancelAll()
-        withContext(io) {
-            q.offlineClear()
-            manager.dir.listFiles().orEmpty().forEach { it.delete() }
-        }
+        withContext(io) { q.offlineClear() }
+        savedIds = emptySet()
+        manager.cancelAll() // waits for running downloads to stop writing
+        withContext(io) { manager.dir.listFiles().orEmpty().forEach { it.delete() } }
     }
 }

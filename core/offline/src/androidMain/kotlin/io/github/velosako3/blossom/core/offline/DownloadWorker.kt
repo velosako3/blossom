@@ -16,6 +16,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Keeps blossom running while offline downloads finish with the app in the background. The [DownloadManager] does the
@@ -26,6 +27,8 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
         val manager = manager ?: return Result.success()
         runCatching { setForeground(getForegroundInfo()) }
         manager.kick(retryPaused = false)
+        // kick() schedules asynchronously: wait for downloads to start (none may be pending), then for them to finish.
+        withTimeoutOrNull(30_000) { manager.busy.first { it } } ?: return Result.success()
         manager.busy.first { !it }
         return Result.success()
     }

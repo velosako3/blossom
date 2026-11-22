@@ -85,6 +85,21 @@ class ChunkedCipherTest {
         r.close()
     }
 
+    @Test fun eightByteRandomNoncePrefix() {
+        val header = encrypted().readBytes().copyOf(ChunkedCipher.HEADER)
+        assertEquals(17, ChunkedCipher.HEADER)
+        assertEquals(2, header[4].toInt())
+        assertFalse(header.copyOfRange(9, 17).all { it == 0.toByte() })
+    }
+
+    @Test fun shrunkFileIsCorruptNotACrash() {
+        val f = encrypted()
+        val r = DecryptingReader(f, key)
+        RandomAccessFile(f, "rw").use { it.setLength(ChunkedCipher.HEADER + 10L) }
+        assertFailsWith<CacheCorruptedException> { r.read(5L * ChunkedCipher.CHUNK, ByteArray(10), 0, 10) }
+        r.close()
+    }
+
     @Test fun keyVaultKeepsOneKey() = runTest {
         val store = InMemorySecureStore()
         val a = KeyVault(store).offlineKey()

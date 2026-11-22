@@ -354,3 +354,9 @@ SELECT
     CAST(coalesce(sum(CASE WHEN written = 1 AND result_json LIKE '%"status":"UNCERTAIN"%' THEN 1 ELSE 0 END), 0) AS INTEGER) AS uncertain,
     CAST(coalesce(sum(CASE WHEN written = 1 AND result_json LIKE '%"status":"UNAVAILABLE"%' THEN 1 ELSE 0 END), 0) AS INTEGER) AS unavailable
 FROM import_job_item WHERE job_id = ?;
+
+offlinePauseForNetwork:
+UPDATE offline_item SET state = 'PAUSED_NETWORK' WHERE state IN ('QUEUED', 'DOWNLOADING');
+
+offlineAllIds:
+SELECT track_id FROM offline_item;

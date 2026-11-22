@@ -25,6 +25,6 @@ fun offlineStore(
     settings: StateFlow<OfflineSettings>,
     scope: CoroutineScope,
 ): SqlOfflineStore {
-    val manager = DownloadManager(db, dir, KeyVault(secure), { t -> resolver.resolve(t.id, settings.value.quality) }, OkHttpClient(), network, settings, scope)
+    val manager = DownloadManager(db, dir, KeyVault(secure), { t, fresh -> if (fresh) resolver.invalidate(t.id); resolver.resolve(t.id, settings.value.quality) }, OkHttpClient(), network, settings, scope)
     return SqlOfflineStore(db, manager, SqlLibraryRepository(db), scope)
 }

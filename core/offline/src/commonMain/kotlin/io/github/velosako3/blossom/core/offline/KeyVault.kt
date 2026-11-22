@@ -15,8 +15,12 @@ class KeyVault(private val store: SecureStore) {
     private val lock = Mutex()
     private var key: ByteArray? = null
 
+    /** The key if it was already loaded (no IO), else null. */
+    fun cachedKey(): ByteArray? = key
+
     suspend fun offlineKey(): ByteArray = lock.withLock {
-        key ?: (store.get(KEY)?.let { Base64.decode(it) } ?: ByteArray(32).also {
+        // An unreadable stored key counts as missing: saved files then fail to decrypt and download again.
+        key ?: (store.get(KEY)?.let { runCatching { Base64.decode(it) }.getOrNull()?.takeIf { k -> k.size == 32 } } ?: ByteArray(32).also {
             SecureRandom().nextBytes(it)
             store.put(KEY, Base64.encode(it))
         }).also { key = it }

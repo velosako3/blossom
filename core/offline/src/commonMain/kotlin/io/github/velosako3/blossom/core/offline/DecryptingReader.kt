@@ -54,9 +54,15 @@ class DecryptingReader(file: File, key: ByteArray) {
     private fun chunk(index: Long): ByteArray {
         if (index == cachedIndex) return cached
         val start = HEADER + index * (CHUNK + TAG)
-        val size = minOf((CHUNK + TAG).toLong(), raf.length() - start).toInt()
-        raf.seek(start)
-        raf.readFully(sealed, 0, size)
+        val size = try {
+            minOf((CHUNK + TAG).toLong(), raf.length() - start).toInt().also { n ->
+                if (n < TAG) throw CacheCorruptedException("file truncated at chunk $index")
+                raf.seek(start)
+                raf.readFully(sealed, 0, n)
+            }
+        } catch (e: java.io.IOException) {
+            throw CacheCorruptedException("unreadable chunk $index", e)
+        }
         cached = try {
             cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(TAG * 8, ChunkedCipher.nonce(prefix, index)))
             cipher.updateAAD(ChunkedCipher.aad(index, index == chunks - 1))
