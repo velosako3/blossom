@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Tasks 6.1–6.2 done. Next: Task 6.3 (YouTube Music / YouTube importer).
+Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Tasks 6.1–6.3 done. Next: Task 6.4 (SoundCloud source and importer).
 
 Hands-on testing rule: the owner is using this desktop, so never inject keyboard/mouse input or capture the screen.
 Desktop end-to-end checks run off-screen with the real graph: `./gradlew :composeApp:desktopTest -PliveTests=true -Proborazzi.test.record=true --tests "*DesktopEndToEnd*"`. `./gradlew :composeApp:run -Pblossom.debugPlay="query"` plays a search result at startup, for `playerctl` checks. Kill stray app instances by PID (`ps … | grep 'blossom\.MainKt'`), never with a `pkill -f` pattern that matches your own shell.
@@ -43,6 +43,7 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - Desktop `NetworkMonitor` checks for an up interface plus a DNS answer every 15 s (no request to any server); `-Dblossom.forceOffline=true` pins it offline for testing.
 
 ## Deviations from plan
+- Task 6.3: `YtmImporter` reuses `YtmSource.playlist` (continuation paging), `album` and `track`. Plain YouTube videos import as `ytm:` tracks too: YouTube Music's `next` endpoint resolves any video ID and plays through the same stream path. The fixtures are a real two-page playlist (98 + 82 tracks live), cut to 4 songs per page, with tracking and visitor fields removed.
 - Task 6.2:
   - `SpotifyAuth` is a token provider (`fun interface`). The sign-in web view that mints tokens comes with the account settings in 9.7, alongside YouTube Music sign-in, so private playlists and Liked Songs work once that lands.
   - Liked Songs import uses the special source `spotify:collection:tracks`.

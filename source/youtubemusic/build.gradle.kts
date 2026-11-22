@@ -17,5 +17,8 @@ kotlin {
             implementation(libs.innertubex)
             implementation(libs.newpipe.extractor)
         }
+        commonTest.dependencies {
+            implementation(libs.ktor.client.mock)
+        }
     }
 }
