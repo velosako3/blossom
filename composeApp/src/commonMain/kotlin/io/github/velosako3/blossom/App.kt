@@ -72,6 +72,9 @@ fun App(
                 BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
                     slots.overlay.let { overlay -> Box(Modifier.fillMaxSize().zIndex(2f)) { overlay() } }
                     graph?.let { PlaybackErrorBanner(it.player, Modifier.align(androidx.compose.ui.Alignment.TopCenter).padding(top = 48.dp).zIndex(1f)) }
+                    graph?.update?.collectAsState()?.value?.let { u ->
+                        UpdateChip(u.version.toString(), u.url, Modifier.align(androidx.compose.ui.Alignment.TopEnd).padding(top = 8.dp, end = 16.dp).zIndex(1f))
+                    }
                     graph?.let { g ->
                         val online = g.network.status.collectAsState().value.online
                         val storagePaused = androidx.compose.runtime.remember(g.offline) { g.offline?.pausedForStorage() ?: kotlinx.coroutines.flow.flowOf(false) }.collectAsState(false).value

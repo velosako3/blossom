@@ -179,6 +179,10 @@ class AppGraph(
     }
     val sleepTimer = io.github.velosako3.blossom.core.player.SleepTimer(player, scope)
 
+    /** A newer release on GitHub, checked at most daily (off in Settings); null in tests (no [secure]). */
+    val update = MutableStateFlow<io.github.velosako3.blossom.feature.integrations.update.Update?>(null)
+    val updateChecker = io.github.velosako3.blossom.feature.integrations.update.UpdateChecker(BlossomBuildInfo.VERSION, android = !desktop, prefs)
+
     private val _discord = MutableStateFlow(prefs.get(DISCORD_KEY) == "true")
     /** Discord Rich Presence (desktop only): off by default. */
     val discordEnabled: StateFlow<Boolean> = _discord
@@ -200,6 +204,7 @@ class AppGraph(
     val sync = syncController?.let { io.github.velosako3.blossom.feature.sync.ui.SyncViewModel(it, scope) }
 
     init {
+        if (secure != null) scope.launch { update.value = runCatching { updateChecker.check() }.getOrNull() }
         if (_eq.value.enabled) player.setEqualizer(_eq.value)
         if (syncController != null && sync != null) {
             scope.launch { runCatching { syncController.startLanIfPaired() } }

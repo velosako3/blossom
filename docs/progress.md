@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–6 done (M6 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–7 done (M7 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Tasks 8.1–8.5 done; the Milestone 8 review is running. Milestone 8 is wrapped up and its review fixed. Tasks 9.1–9.5 done. Next: Task 9.6 (update check).
+Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–6 done (M6 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–7 done (M7 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Tasks 8.1–8.5 done; the Milestone 8 review is running. Milestone 8 is wrapped up and its review fixed. Tasks 9.1–9.6 done. Next: Task 9.7 (onboarding, settings, accessibility, polish).
 
 Hands-on testing rule: the owner is using this desktop, so never inject keyboard/mouse input or capture the screen.
 Desktop end-to-end checks run off-screen with the real graph: `./gradlew :composeApp:desktopTest -PliveTests=true -Proborazzi.test.record=true --tests "*DesktopEndToEnd*"`. `./gradlew :composeApp:run -Pblossom.debugPlay="query"` plays a search result at startup, for `playerctl` checks. Kill stray app instances by PID (`ps … | grep 'blossom\.MainKt'`), never with a `pkill -f` pattern that matches your own shell.
@@ -53,6 +53,11 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - Desktop `NetworkMonitor` checks for an up interface plus a DNS answer every 15 s (no request to any server); `-Dblossom.forceOffline=true` pins it offline for testing.
 
 ## Deviations from plan
+- Task 9.6:
+  - The check runs at app start. The day's answer (tag and link) is kept in preferences, so there's at most one request a day.
+  - A failed request (today's 404: the repo has no releases yet) shows nothing and is retried at the next start.
+  - The "Update to x.y.z" glass chip sits at the top right over the content. On Android it opens the release's `.apk` asset when there is one; nothing is ever installed automatically.
+  - The off switch is `update.check`; its toggle comes in Settings → About (9.7).
 - Task 9.5:
   - The IPC client is built on JDK 16+ Unix-domain sockets (Linux/macOS: runtime/temp dirs, Flatpak and Snap paths) and a `RandomAccessFile` named pipe (Windows), with no extra library.
   - The activity has type 2 ("Listening to"), and the artwork URL is used as the large image when it's https.

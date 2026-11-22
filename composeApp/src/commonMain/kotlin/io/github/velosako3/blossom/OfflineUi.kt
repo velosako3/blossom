@@ -17,8 +17,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.rounded.SystemUpdate
 import io.github.velosako3.blossom.composeApp.resources.Res
 import io.github.velosako3.blossom.composeApp.resources.offline_banner
+import io.github.velosako3.blossom.composeApp.resources.update_chip
 import io.github.velosako3.blossom.composeApp.resources.offline_saved_icon
 import io.github.velosako3.blossom.composeApp.resources.storage_paused_banner
 import io.github.velosako3.blossom.core.designsystem.glass.GlassSurface
@@ -47,4 +49,15 @@ private fun Pill(icon: ImageVector, text: String, modifier: Modifier) {
 @Composable
 fun SavedIcon(modifier: Modifier = Modifier) {
     Icon(Icons.Rounded.DownloadForOffline, stringResource(Res.string.offline_saved_icon), tint = BlossomTheme.colors.accent, modifier = modifier.size(16.dp))
+}
+
+/** A newer blossom is out: opens its release page (or the APK on Android). Never installs anything itself. */
+@Composable
+fun UpdateChip(version: String, url: String, modifier: Modifier = Modifier) {
+    val uri = androidx.compose.ui.platform.LocalUriHandler.current
+    io.github.velosako3.blossom.core.designsystem.components.GlassChip(
+        selected = true, onClick = { runCatching { uri.openUri(url) } },
+        label = stringResource(Res.string.update_chip, version), modifier = modifier,
+        leadingIcon = androidx.compose.material.icons.Icons.Rounded.SystemUpdate,
+    )
 }

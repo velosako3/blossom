@@ -43,4 +43,5 @@
     <string name="settings_sync_hint">Your library, likes and plays on all your devices</string>
     <string name="settings_equalizer">Equalizer</string>
     <string name="settings_equalizer_hint">Presets and 10 bands</string>
+    <string name="update_chip">Update to %1$s</string>
 </resources>
