@@ -104,6 +104,7 @@ fun createDesktopGraph(): AppGraph {
             io.github.velosako3.blossom.feature.importer.ImportService.UNTITLED to io.github.velosako3.blossom.source.untitled.UntitledImporter(untitledClient),
         ),
         syncSetup = desktopSyncSetup(secure),
+        secure = secure,
     )
     Runtime.getRuntime().addShutdownHook(Thread {
         // The play in progress is recorded before the process ends.

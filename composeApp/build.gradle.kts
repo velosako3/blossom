@@ -82,6 +82,7 @@ kotlin {
                 implementation(projects.feature.importer)
                 implementation(projects.feature.stats)
                 implementation(projects.feature.sync)
+                implementation(projects.feature.integrations)
                 implementation(projects.source.spotify)
                 implementation(projects.source.soundcloud)
                 implementation(projects.source.untitled)

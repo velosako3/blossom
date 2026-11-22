@@ -79,6 +79,8 @@ class AppGraph(
     importers: Map<io.github.velosako3.blossom.feature.importer.ImportService, io.github.velosako3.blossom.source.api.PlaylistImporter> = emptyMap(),
     /** Sync backends and LAN pairing (null in UI tests). */
     syncSetup: SyncSetup? = null,
+    /** Tokens for scrobbling (null in UI tests: no scrobbling). */
+    secure: io.github.velosako3.blossom.core.platform.SecureStore? = null,
 ) {
     val search = SearchViewModel(ytm, RecentSearchStore(prefs), scope, network, offlineSearch = ::searchOffline)
     val hlc = HybridLogicalClock(deviceId, Clock.System)
@@ -141,7 +143,8 @@ class AppGraph(
     val importVm = io.github.velosako3.blossom.feature.importer.ui.ImportViewModel(importRunner, repo, scope)
 
     /** Every listening session, for stats and Wrapped (counted after 30 s or a natural end). */
-    val playTracker = io.github.velosako3.blossom.core.player.PlayTracker(player.state, { commands.recordPlay(it) }, Clock.System, deviceId, prefs, scope)
+    val scrobbling = secure?.let { Scrobbling(it, prefs, player.state, network, scope) }
+    val playTracker = io.github.velosako3.blossom.core.player.PlayTracker(player.state, { commands.recordPlay(it); scrobbling?.onPlay(it) }, Clock.System, deviceId, prefs, scope)
 
     val stats by lazy {
         io.github.velosako3.blossom.feature.stats.ui.StatsViewModel(repo, Clock.System, kotlinx.datetime.TimeZone.currentSystemDefault(), scope)
