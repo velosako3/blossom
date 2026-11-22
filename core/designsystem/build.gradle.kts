@@ -7,6 +7,8 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(libs.haze)
+            // Liquid glass (lens refraction, blur, highlight), as BitChord uses it. Apache-2.0.
+            api(libs.kyant.backdrop)
             implementation(libs.haze.blur)
             implementation(libs.haze.glass)
             api(libs.coil.compose)

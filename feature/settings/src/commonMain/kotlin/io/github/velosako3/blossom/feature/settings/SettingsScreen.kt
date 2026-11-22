@@ -115,7 +115,7 @@ fun SettingsScreen(state: SettingsUi, actions: SettingsActions, modifier: Modifi
     Column(modifier.fillMaxSize()) {
         topBar()
         Column(
-            Modifier.verticalScroll(rememberScrollState()).padding(16.dp).widthIn(max = 720.dp),
+            Modifier.verticalScroll(rememberScrollState()).padding(16.dp).padding(bottom = io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current).widthIn(max = 720.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Text(stringResource(Res.string.settings_title), style = MaterialTheme.typography.headlineLarge)

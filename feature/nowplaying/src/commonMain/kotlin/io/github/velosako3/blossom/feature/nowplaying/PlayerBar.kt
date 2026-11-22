@@ -57,7 +57,7 @@ fun PlayerBar(
     val track = state.current
     val colors = BlossomTheme.colors
     var volume by remember { mutableFloatStateOf(1f) }
-    GlassSurface(modifier.fillMaxWidth().height(88.dp)) {
+    GlassSurface(modifier.fillMaxWidth().height(88.dp), floating = true) {
         Row(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             Row(
                 Modifier.weight(1f).fillMaxHeight().clickable(enabled = track != null, role = Role.Button, onClick = onOpenNowPlaying),

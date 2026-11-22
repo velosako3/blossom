@@ -47,7 +47,7 @@ fun GlassNavBar(
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    GlassSurface(modifier.fillMaxWidth(), shape = CircleShape) {
+    GlassSurface(modifier.fillMaxWidth(), shape = CircleShape, floating = true) {
         Row(
             Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(6.dp).selectableGroup(), // grows with large text
             horizontalArrangement = Arrangement.spacedBy(4.dp),

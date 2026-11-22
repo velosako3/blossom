@@ -38,9 +38,14 @@ Reference: `../_upstream/BitChord` at `21356206` (kushagrasinghx/BitChord, GPL-3
   Done: BitChord's panel (translation, romanization and the one-line strip left out) on BitChord's lines end to end,
   cache stores the full lines (`v3:`). The player's position moved out of `PlaybackState` into `BlossomPlayer.progress`
   (BitChord's `PlaybackPosition` reasoning): a tick no longer recomposes everything that watches the player.
-- [ ] **3. Liquid glass.** Kyant0 `backdrop` 2.0.1 for glass surfaces (FULL = lens + blur + highlight, REDUCED = blur,
+- [x] **3. Liquid glass.** Kyant0 `backdrop` 2.0.1 for glass surfaces (FULL = lens + blur + highlight, REDUCED = blur,
   OFF = tint), lighter tint, BitChord's floating tab bar look; now-playing backdrop from `ArtworkMeshBackdrop`.
   Snapshot test proving the three settings render differently.
+  Done: Kyant0 `backdrop` 2.0.1 replaces Haze glass. Two recorded layers: the background (in-page glass) and the
+  page (floating chrome: nav bar, mini player, sidebar, player bar, combined with the background). Pages run under
+  the floating bars; screens end their lists `LocalBarsPadding` up. Tint 28 % / 42 % (FULL), 45 % / 55 % (REDUCED),
+  readability floor capped. `GlassQualitiesDifferTest`: full↔reduced 22, reduced↔off 39, full↔off 56 mean per channel.
+  Still open: BitChord's lens selection pill in the tab bar; now-playing `ArtworkMeshBackdrop`.
 - [ ] **4. Speed and memory.** Measure first (track start, track switch, lyrics time, RSS) on desktop and the
   emulator; compare with BitChord's stream pipeline; fix what the numbers show.
 - [ ] **5. Smoothness.** Frame-time pass over the lyric view, now playing and lists; Android baseline profile.

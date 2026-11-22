@@ -59,7 +59,7 @@ fun LicensesScreen(modifier: Modifier = Modifier, topBar: @Composable () -> Unit
     val muted = BlossomTheme.colors.onSurfaceVariant
     Column(modifier.fillMaxSize()) {
         topBar()
-        LazyColumn(contentPadding = PaddingValues(16.dp)) {
+        LazyColumn(contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 16.dp + io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current)) {
             item { Text(stringResource(Res.string.licenses_title), style = MaterialTheme.typography.headlineLarge, modifier = Modifier.padding(bottom = 12.dp)) }
             items(libraries, key = { it.name + it.version }) { lib ->
                 Column(

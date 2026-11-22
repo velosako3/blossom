@@ -92,7 +92,7 @@ private fun Content(
     topBar: @Composable () -> Unit,
 ) {
     val top = page.topSongs.take(5)
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp + io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current)) {
         item {
             Column(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars), horizontalAlignment = Alignment.CenterHorizontally) {
                 topBar()

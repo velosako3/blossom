@@ -17,7 +17,6 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 
 import io.github.velosako3.blossom.core.designsystem.color.ArtworkPalette
-import dev.chrisbanes.haze.HazeState
 import io.github.velosako3.blossom.core.designsystem.glass.FrameBudgetMonitor
 import io.github.velosako3.blossom.core.designsystem.glass.LocalGlassBackdrop
 import io.github.velosako3.blossom.core.designsystem.glass.GlassCapabilities
@@ -56,7 +55,8 @@ fun BlossomTheme(
         // Android reports from a background thread: one monitor, one reporting thread, state written through the snapshot.
         io.github.velosako3.blossom.core.designsystem.glass.FrameTimes { ms, now -> synchronized(monitor) { monitor.onFrame(ms, now) }?.let { monitorCap = it } }
     }
-    val backdrop = remember { HazeState() }
+    val backdrop = com.kyant.backdrop.backdrops.rememberLayerBackdrop()
+    val pageBackdrop = com.kyant.backdrop.backdrops.rememberLayerBackdrop()
     val quality = glassQuality ?: resolveGlassQuality(GlassCapabilities.maxSupported(), glassPreference, monitorCap)
     val colors = if (darkTheme) BlossomColors.Dark else BlossomColors.Light
     val scheme = if (darkTheme) {
@@ -80,6 +80,7 @@ fun BlossomTheme(
             LocalGlassTint provides colors.surface,
             LocalArtworkPalette provides palette,
             LocalGlassBackdrop provides backdrop,
+            io.github.velosako3.blossom.core.designsystem.glass.LocalPageBackdrop provides pageBackdrop,
             LocalContentColor provides colors.onSurface,
             content = content,
         )

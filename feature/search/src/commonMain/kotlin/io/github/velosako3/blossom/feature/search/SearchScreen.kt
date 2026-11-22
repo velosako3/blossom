@@ -116,7 +116,7 @@ private fun SearchTab.label() = when (this) {
 
 @Composable
 private fun Recents(recents: List<String>, onPick: (String) -> Unit, onRemove: (String) -> Unit) {
-    LazyColumn(contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)) {
+    LazyColumn(contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 12.dp, bottom = 12.dp + io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current)) {
         item {
             Text(
                 stringResource(if (recents.isEmpty()) Res.string.search_no_recent else Res.string.search_recent),
@@ -154,7 +154,7 @@ private fun Results(
         Text(stringResource(Res.string.search_no_results, state.query.trim()), color = BlossomTheme.colors.onSurfaceVariant, modifier = Modifier.padding(24.dp))
         return
     }
-    LazyColumn(contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 24.dp)) {
+    LazyColumn(contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 24.dp + io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current)) {
         when (state.tab) {
             SearchTab.SONGS -> itemsIndexed(r?.songs.orEmpty(), key = { _, t -> t.id.value }) { i, t ->
                 MediaRow(t.title, t.artistNames, t.artworkUrl, trailingText = formatDuration(t.durationMs).takeIf { t.durationMs > 0 }, onClick = { onPlay(r!!.songs, i) })

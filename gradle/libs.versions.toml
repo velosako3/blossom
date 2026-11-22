@@ -16,6 +16,7 @@ ktor = "3.6.1"
 koin = "4.2.2"
 coil = "3.6.3"
 haze = "2.1.0"
+backdrop = "2.0.1"
 sqldelight = "2.4.1"
 roborazzi = "1.79.0"
 media3 = "1.11.1"
@@ -84,6 +85,7 @@ lifecycle-viewmodel-compose = { module = "org.jetbrains.androidx.lifecycle:lifec
 lifecycle-runtime-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
 roborazzi-compose-desktop = { module = "io.github.takahirom.roborazzi:roborazzi-compose-desktop", version.ref = "roborazzi" }
 haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
+kyant-backdrop = { module = "io.github.kyant0:backdrop", version.ref = "backdrop" }
 haze-blur = { module = "dev.chrisbanes.haze:haze-blur", version.ref = "haze" }
 haze-glass = { module = "dev.chrisbanes.haze:haze-glass", version.ref = "haze" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }

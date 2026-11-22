@@ -78,7 +78,7 @@ fun StatsContent(
     Box(modifier.fillMaxSize()) {
         Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).windowInsetsPadding(WindowInsets.statusBars)
-                .padding(horizontal = 16.dp, vertical = 12.dp).widthIn(max = 900.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp).padding(bottom = io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current).widthIn(max = 900.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(stringResource(Res.string.stats_title), style = MaterialTheme.typography.headlineLarge)

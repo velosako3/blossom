@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.velosako3.blossom.core.designsystem.components.GlassNavBar
+import io.github.velosako3.blossom.core.designsystem.glass.glassPageSource
 import io.github.velosako3.blossom.core.designsystem.components.GlassNavItem
 import io.github.velosako3.blossom.navigation.BlossomNavHost
 import io.github.velosako3.blossom.navigation.Destination
@@ -32,12 +33,18 @@ fun CompactShell(navigator: Navigator, slots: ShellSlots, modifier: Modifier = M
     val density = androidx.compose.ui.platform.LocalDensity.current
     var barsHeight by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(if (slots.miniPlayer != null) 168.dp else 96.dp) }
     Box(modifier.fillMaxSize()) {
-        BlossomNavHost(
-            navigator,
-            Modifier.fillMaxSize().padding(bottom = if (immersive) 0.dp else barsHeight),
-            showSettingsAction = true,
-            screen = slots.screen,
-        )
+        // The page runs under the floating bars and is what their glass bends; screens end their lists
+        // [LocalBarsPadding] up so nothing is stuck beneath them.
+        androidx.compose.runtime.CompositionLocalProvider(
+            io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding provides if (immersive) 0.dp else barsHeight,
+        ) {
+            BlossomNavHost(
+                navigator,
+                Modifier.fillMaxSize().glassPageSource(),
+                showSettingsAction = true,
+                screen = slots.screen,
+            )
+        }
         if (!immersive) Column(
             Modifier.align(Alignment.BottomCenter)
                 .onSizeChanged { barsHeight = with(density) { it.height.toDp() } }

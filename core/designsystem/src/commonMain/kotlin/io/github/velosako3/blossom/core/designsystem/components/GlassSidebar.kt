@@ -45,7 +45,7 @@ fun GlassSidebar(
     width: Dp = 260.dp,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    GlassSurface(modifier.width(width).fillMaxHeight()) {
+    GlassSurface(modifier.width(width).fillMaxHeight(), floating = true) {
         Column(Modifier.fillMaxHeight().padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp), content = content)
     }
 }

@@ -81,7 +81,7 @@ fun CollectionScreen(
 
 @Composable
 private fun CollectionContent(c: Collection, onPlay: (List<Track>, Int, Boolean) -> Unit, topBar: @Composable () -> Unit, rowDecoration: @Composable (Track) -> Unit) {
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp + io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current)) {
         item {
             Column(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars), horizontalAlignment = Alignment.CenterHorizontally) {
                 topBar()

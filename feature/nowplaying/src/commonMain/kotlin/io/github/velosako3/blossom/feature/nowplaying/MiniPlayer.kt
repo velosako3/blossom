@@ -47,6 +47,7 @@ fun MiniPlayer(player: BlossomPlayer, onOpen: () -> Unit, modifier: Modifier = M
         modifier.fillMaxWidth().height(64.dp)
             .pointerInput(Unit) { detectVerticalDragGestures { _, dy -> if (dy < -12) onOpen() } },
         shape = RoundedCornerShape(22.dp),
+        floating = true,
     ) {
         Row(
             Modifier.fillMaxWidth().height(64.dp).clickable(role = Role.Button, onClick = onOpen).padding(horizontal = 12.dp)

@@ -118,7 +118,7 @@ fun HomeScreen(
             }
             is HomeState.Loaded -> LazyColumn(
                 Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 24.dp),
+                contentPadding = PaddingValues(bottom = 24.dp + io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 item {
@@ -144,7 +144,7 @@ private fun OfflineHomeList(
     banner: (@Composable () -> Unit)?,
 ) {
     val muted = BlossomTheme.colors.onSurfaceVariant
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 24.dp)) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 24.dp + io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current)) {
         item {
             Column(Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
                 Text(stringResource(Res.string.home_title), style = MaterialTheme.typography.headlineLarge, modifier = Modifier.padding(start = 12.dp, top = 12.dp))

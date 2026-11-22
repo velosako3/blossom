@@ -200,7 +200,7 @@ fun ImportContent(
                 }
             }
             if (state is ImportUi.InProgress || state is ImportUi.Done) {
-                LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 24.dp)) {
+                LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 24.dp + io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current)) {
                     items(entries, key = { it.entryId }) { e -> ImportRow(e, onFix) }
                 }
             }

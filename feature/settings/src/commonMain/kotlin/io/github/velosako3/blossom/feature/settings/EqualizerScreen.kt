@@ -60,7 +60,7 @@ fun EqualizerScreen(settings: EqSettings, onChange: (EqSettings) -> Unit, modifi
     val sliderColors = SliderDefaults.colors(thumbColor = colors.accent, activeTrackColor = colors.accent)
     Column(modifier.fillMaxSize()) {
         topBar()
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp).padding(bottom = io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(stringResource(Res.string.eq_title), style = MaterialTheme.typography.headlineLarge)
             GlassSurface(Modifier.fillMaxWidth()) {
                 // The whole row is the switch, so it's announced with its label.

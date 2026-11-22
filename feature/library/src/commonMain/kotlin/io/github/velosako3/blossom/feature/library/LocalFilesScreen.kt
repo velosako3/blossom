@@ -49,7 +49,7 @@ fun LocalFilesScreen(
     onRequestPermission: () -> Unit = {},
 ) {
     val colors = BlossomTheme.colors
-    LazyColumn(modifier.fillMaxSize(), contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 24.dp)) {
+    LazyColumn(modifier.fillMaxSize(), contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 24.dp + io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current)) {
         if (needsPermission) item {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(stringResource(Res.string.local_permission_title), style = MaterialTheme.typography.titleMedium)

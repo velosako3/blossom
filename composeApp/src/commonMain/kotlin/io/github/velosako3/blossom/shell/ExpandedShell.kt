@@ -47,6 +47,7 @@ import io.github.velosako3.blossom.composeApp.resources.panel_queue
 import io.github.velosako3.blossom.core.designsystem.components.GlassChip
 import io.github.velosako3.blossom.core.designsystem.components.GlassIconButton
 import io.github.velosako3.blossom.core.designsystem.components.GlassSidebar
+import io.github.velosako3.blossom.core.designsystem.glass.glassPageSource
 import io.github.velosako3.blossom.core.designsystem.components.GlassSidebarItem
 import io.github.velosako3.blossom.core.designsystem.glass.GlassSurface
 import io.github.velosako3.blossom.core.designsystem.theme.BlossomTheme
@@ -72,9 +73,11 @@ class ShellState {
 @Composable
 fun ExpandedShell(navigator: Navigator, slots: ShellSlots, modifier: Modifier = Modifier, shell: ShellState = remember { ShellState() }) {
     val panel = shell.rightPanel
-    Column(modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            GlassSidebar(Modifier.testTag(SIDEBAR_TAG)) {
+    // The player bar floats over the page, which runs under it so its glass has something to bend.
+    val barSpace = PLAYER_BAR_HEIGHT + 12.dp
+    Box(modifier.fillMaxSize().padding(12.dp)) {
+        Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            GlassSidebar(Modifier.testTag(SIDEBAR_TAG).padding(bottom = barSpace)) {
                 Text(
                     stringResource(Res.string.app_name),
                     style = MaterialTheme.typography.headlineMedium,
@@ -105,9 +108,11 @@ fun ExpandedShell(navigator: Navigator, slots: ShellSlots, modifier: Modifier = 
                     )
                 }
             }
-            BlossomNavHost(navigator, Modifier.weight(1f).fillMaxHeight(), screen = slots.screen)
+            androidx.compose.runtime.CompositionLocalProvider(io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding provides barSpace) {
+                BlossomNavHost(navigator, Modifier.weight(1f).fillMaxHeight().glassPageSource(), screen = slots.screen)
+            }
             AnimatedVisibility(panel != null, enter = expandHorizontally(motionSpec(spring<IntSize>())), exit = shrinkHorizontally(motionSpec(spring<IntSize>()))) {
-                GlassSurface(Modifier.width(360.dp).fillMaxHeight()) {
+                GlassSurface(Modifier.width(360.dp).fillMaxHeight().padding(bottom = barSpace)) {
                     Column(Modifier.padding(16.dp)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             GlassChip(panel == RightPanel.QUEUE, { shell.rightPanel = RightPanel.QUEUE }, stringResource(Res.string.panel_queue))
@@ -123,12 +128,16 @@ fun ExpandedShell(navigator: Navigator, slots: ShellSlots, modifier: Modifier = 
                 }
             }
         }
-        slots.playerBar?.invoke(shell) ?: PlaceholderPlayerBar(
-            onToggleQueue = { shell.toggle(RightPanel.QUEUE) },
-            onToggleLyrics = { shell.toggle(RightPanel.LYRICS) },
-        )
+        Box(Modifier.align(Alignment.BottomCenter)) {
+            slots.playerBar?.invoke(shell) ?: PlaceholderPlayerBar(
+                onToggleQueue = { shell.toggle(RightPanel.QUEUE) },
+                onToggleLyrics = { shell.toggle(RightPanel.LYRICS) },
+            )
+        }
     }
 }
+
+private val PLAYER_BAR_HEIGHT = 88.dp
 
 @Composable
 private fun PlaceholderPlayerBar(onToggleQueue: () -> Unit, onToggleLyrics: () -> Unit) {

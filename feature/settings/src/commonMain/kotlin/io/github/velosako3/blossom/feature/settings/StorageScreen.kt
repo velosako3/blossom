@@ -64,7 +64,7 @@ fun StorageScreen(
     val muted = BlossomTheme.colors.onSurfaceVariant
     Column(modifier.fillMaxSize()) {
         topBar()
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp).padding(bottom = io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(stringResource(Res.string.storage_title), style = MaterialTheme.typography.headlineLarge)
             GlassSurface(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(20.dp)) {

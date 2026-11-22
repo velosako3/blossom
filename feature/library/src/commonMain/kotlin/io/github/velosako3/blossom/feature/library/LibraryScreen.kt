@@ -85,7 +85,7 @@ fun LibraryScreen(
                 LibrarySegment.PLAYLISTS -> {
                     val list = playlists
                     if (list != null && list.isEmpty()) EmptyLibrary({ creating = true }, onImport)
-                    else LazyColumn(contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 24.dp)) {
+                    else LazyColumn(contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 24.dp + io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current)) {
                         items(list.orEmpty(), key = { it.id.value }) { p ->
                             GlassListItem(
                                 headline = p.name,
@@ -131,7 +131,7 @@ fun LikedList(
         Text(emptyText ?: stringResource(Res.string.lib_liked_empty), color = BlossomTheme.colors.onSurfaceVariant, modifier = modifier.padding(24.dp))
         return
     }
-    LazyColumn(modifier, contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 24.dp)) {
+    LazyColumn(modifier, contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 24.dp + io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current)) {
         item {
             Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 GlassButton({ onPlay(tracks, 0, false) }, prominent = true) { Text(stringResource(Res.string.pl_play)) }
