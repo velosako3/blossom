@@ -305,3 +305,6 @@ offlineClear {
     DELETE FROM offline_ref;
     DELETE FROM offline_playlist;
 }
+
+offlineSavedIds:
+SELECT track_id FROM offline_item WHERE state = 'SAVED';

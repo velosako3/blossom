@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom
 
+import io.github.velosako3.blossom.core.offline.OfflineSettings
+import kotlinx.coroutines.flow.MutableStateFlow
 import io.github.velosako3.blossom.core.designsystem.components.installImageLoader
 import io.github.velosako3.blossom.core.database.fileDatabase
 import io.github.velosako3.blossom.core.model.SourceKind
@@ -57,10 +59,14 @@ fun createDesktopGraph(): AppGraph {
         },
         removeFolder = { f -> prefs.setFolderList("local.folders", folders.value - f, folders) },
     )
-    val engine = DesktopPlaybackEngine()
+    val db = fileDatabase(File(dataDir, "blossom.db"))
+    val resolver = StreamResolver(mapOf(SourceKind.YOUTUBE_MUSIC to ytm, SourceKind.YOUTUBE to youtube), Clock.System)
+    val offline = offlineStore(db, File(dataDir, "offline"), secure, resolver, network, MutableStateFlow(OfflineSettings(wifiOnly = false)), scope)
+    val engine = DesktopPlaybackEngine(offlineReader = offline::openReader)
     val player = DefaultBlossomPlayer(
         engine = engine,
-        resolver = StreamResolver(mapOf(SourceKind.YOUTUBE_MUSIC to ytm, SourceKind.YOUTUBE to youtube), Clock.System),
+        resolver = resolver,
+        isSavedOffline = offline::isSaved,
         network = network,
         scope = scope,
         radio = { ytm.radio(it.id) },
@@ -77,9 +83,10 @@ fun createDesktopGraph(): AppGraph {
     }
     Runtime.getRuntime().addShutdownHook(Thread { runCatching { engine.release() } })
     return AppGraph(
-        player, fileDatabase(File(dataDir, "blossom.db")), prefs.deviceId(), ytm, prefs, network, scope, local,
+        player, db, prefs.deviceId(), ytm, prefs, network, scope, local,
         shareLink = { link -> Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(link), null) },
         localLyrics = io.github.velosako3.blossom.feature.lyrics.FileLocalLyricsSource(localLibrary::pathFor),
         desktop = true,
+        offline = offline,
     )
 }

@@ -42,9 +42,11 @@ class AudioServer(val sizes: Map<String, Int>) {
             val range = ex.requestHeaders.getFirst("Range")
             ranges += range
             val all = bytes(id)
-            val from = range?.removePrefix("bytes=")?.removeSuffix("-")?.toInt() ?: 0
-            val body = all.copyOfRange(from, all.size)
-            if (range != null) ex.responseHeaders.add("Content-Range", "bytes $from-${all.size - 1}/${all.size}")
+            val spec = range?.removePrefix("bytes=")?.split("-")
+            val from = spec?.get(0)?.toInt() ?: 0
+            val to = spec?.getOrNull(1)?.takeIf { it.isNotEmpty() }?.toInt()?.coerceAtMost(all.size - 1) ?: (all.size - 1)
+            val body = all.copyOfRange(from, to + 1)
+            if (range != null) ex.responseHeaders.add("Content-Range", "bytes $from-$to/${all.size}")
             ex.sendResponseHeaders(if (range != null) 206 else 200, body.size.toLong())
             val drop = dropFirstAt
             try {

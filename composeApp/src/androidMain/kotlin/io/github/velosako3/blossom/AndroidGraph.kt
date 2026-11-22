@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom
 
+import io.github.velosako3.blossom.core.offline.OfflineSettings
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -52,10 +53,16 @@ fun createAndroidGraph(context: Context): AppGraph {
     )
     AndroidLocalBridge.onFolderPicked = { uri -> prefs.setFolderList("local.trees", (trees.value + uri).distinct(), trees) }
     AndroidLocalBridge.onPermissionResult = { permission.value = !it; scope.launch { localLibrary.rescan() } }
-    val engine = Media3PlaybackEngine(context)
+    val db = androidDatabase(context)
+    val resolver = StreamResolver(mapOf(SourceKind.YOUTUBE_MUSIC to ytm, SourceKind.YOUTUBE to youtube), Clock.System)
+    // filesDir, not cacheDir: Android may purge the cache folder, and saved songs must stay.
+    val offline = offlineStore(db, java.io.File(context.filesDir, "offline"), secure, resolver, network, MutableStateFlow(OfflineSettings(wifiOnly = true)), scope)
+    io.github.velosako3.blossom.core.offline.DownloadWorker.install(context, offline.manager)
+    val engine = Media3PlaybackEngine(context, offlineDataSource = io.github.velosako3.blossom.core.offline.EncryptedDataSource.Factory(offline))
     val player = DefaultBlossomPlayer(
         engine = engine,
-        resolver = StreamResolver(mapOf(SourceKind.YOUTUBE_MUSIC to ytm, SourceKind.YOUTUBE to youtube), Clock.System),
+        resolver = resolver,
+        isSavedOffline = offline::isSaved,
         network = network,
         scope = scope,
         radio = { ytm.radio(it.id) },
@@ -63,7 +70,7 @@ fun createAndroidGraph(context: Context): AppGraph {
     )
     PlayerHolder.engine = engine
     PlayerHolder.player = player
-    return AppGraph(player, androidDatabase(context), prefs.deviceId(), ytm, prefs, network, scope, local, shareLink = { link ->
+    return AppGraph(player, db, prefs.deviceId(), ytm, prefs, network, scope, local, offline = offline, shareLink = { link ->
         context.startActivity(
             Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, link), null)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),

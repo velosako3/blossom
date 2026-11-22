@@ -8,6 +8,7 @@ kotlin {
         commonMain.dependencies {
             api(projects.source.api)
             api(projects.core.platform)
+            api(projects.core.offline)
         }
         getByName("desktopMain").dependencies {
             implementation(libs.vlcj)

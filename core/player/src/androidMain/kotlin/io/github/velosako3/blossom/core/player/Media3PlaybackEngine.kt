@@ -115,7 +115,7 @@ class Media3PlaybackEngine(
         val uri = when (input) {
             is MediaInput.Remote -> input.stream.url.also { headers.clear(); headers[it] = input.stream.headers }
             is MediaInput.LocalFile -> if (input.path.startsWith("content://")) input.path else Uri.fromFile(java.io.File(input.path)).toString()
-            is MediaInput.Offline -> "$OFFLINE_SCHEME://${input.trackId.value}"
+            is MediaInput.Offline -> offlineUri(input.trackId)
         }
         mediaId++
         exoPlayer.setMediaItem(MediaItem.Builder().setUri(uri).setMediaMetadata(metadata).build(), startPositionMs)
@@ -134,6 +134,9 @@ class Media3PlaybackEngine(
 
     companion object {
         const val OFFLINE_SCHEME = "blossom-offline"
+
+        /** Track IDs contain ':', so they travel encoded in the path: `blossom-offline:///<id>`. */
+        fun offlineUri(id: io.github.velosako3.blossom.core.model.TrackId): String = "$OFFLINE_SCHEME:///" + Uri.encode(id.value)
     }
 }
 

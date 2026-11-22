@@ -55,6 +55,8 @@ class AppGraph(
     localLyrics: LocalLyricsSource = LocalLyricsSource { null },
     /** Desktop-only extras (full-screen lyrics). */
     val desktop: Boolean = false,
+    /** The encrypted offline cache (null in UI tests that don't need it). */
+    val offline: io.github.velosako3.blossom.core.offline.OfflineStore? = null,
 ) {
     val search = SearchViewModel(ytm, RecentSearchStore(prefs), scope)
     val hlc = HybridLogicalClock(deviceId, Clock.System)

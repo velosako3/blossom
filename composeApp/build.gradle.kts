@@ -49,6 +49,8 @@ kotlin {
                 implementation(projects.feature.library)
                 implementation(projects.feature.lyrics)
                 implementation(projects.core.database)
+                implementation(projects.core.offline)
+                implementation(libs.okhttp)
             }
         }
         getByName("desktopMain") {

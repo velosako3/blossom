@@ -7,6 +7,9 @@
 package io.github.velosako3.blossom.core.player
 
 import io.github.velosako3.blossom.core.model.TrackId
+import io.github.velosako3.blossom.core.offline.CacheCorruptedException
+import io.github.velosako3.blossom.core.offline.DecryptingCursor
+import io.github.velosako3.blossom.core.offline.DecryptingReader
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import uk.co.caprica.vlcj.factory.MediaPlayerFactory
@@ -17,12 +20,13 @@ import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter
 
 /**
  * libVLC through vlcj, bundled with the app (see composeApp's vlcj-bundler setup). [offlineUrl] maps a saved track
- * to its loopback URL on the encrypted-cache server (Task 5.3).
+ * through a decrypting cursor over the encrypted cache (no plaintext file, no local server).
  */
 class DesktopPlaybackEngine(
-    private val offlineUrl: (TrackId) -> String? = { null },
+    /** Opens a saved track from the encrypted cache; it is decrypted chunk by chunk as libVLC reads. */
+    private val offlineReader: (TrackId) -> DecryptingReader? = { null },
 ) : PlaybackEngine {
-    @Volatile private var reader: HttpRangeReader? = null
+    @Volatile private var reader: ByteSource? = null
     @Volatile override var mediaId: Long = 0
         private set
     /** The id of the media libVLC is actually reporting on; switches in `mediaChanged`, in order with its events. */
@@ -67,17 +71,26 @@ class DesktopPlaybackEngine(
         when (input) {
             // libVLC's own HTTP client fails its second (seek) connection inside the JVM, so remote bytes come from
             // our ranged OkHttp reader through vlcj callback media; libVLC never opens a socket.
-            is MediaInput.Remote -> {
-                val r = HttpRangeReader(input.stream).also { reader = it }
-                mediaPlayer.media().prepare(ReaderMedia(r).also { media = it }, *options)
-            }
+            is MediaInput.Remote -> prepare(HttpRangeReader(input.stream).asSource(), options)
             is MediaInput.LocalFile -> { reader = null; mediaPlayer.media().prepare(input.path, *options) }
             is MediaInput.Offline -> {
-                reader = null
-                val url = offlineUrl(input.trackId) ?: run { _events.tryEmit(EngineEvent.Error(null, IllegalStateException("not saved"))); return }
-                mediaPlayer.media().prepare(url, *options)
+                val r = try { offlineReader(input.trackId) } catch (e: Exception) { null }
+                if (r == null) {
+                    reader = null
+                    _events.tryEmit(EngineEvent.Error(null, CacheCorruptedException("saved file missing or unreadable"), mediaId))
+                    return
+                }
+                prepare(DecryptingCursor(r).asSource(), options)
             }
         }
+    }
+
+    private fun prepare(source: ByteSource, options: Array<String>) {
+        reader = source
+        val id = mediaId
+        // A broken chunk can't throw into libVLC's native callback: report it and end the stream.
+        val onError: (Exception) -> Unit = { e -> _events.tryEmit(EngineEvent.Error(null, e, id)) }
+        mediaPlayer.media().prepare(ReaderMedia(source, onError).also { media = it }, *options)
     }
 
     override fun play() { mediaPlayer.submit { mediaPlayer.controls().play() } }
@@ -92,11 +105,37 @@ class DesktopPlaybackEngine(
     }
 }
 
-/** Hands [HttpRangeReader] bytes to libVLC. */
-private class ReaderMedia(private val reader: HttpRangeReader) : SeekableCallbackMedia() {
+/** Bytes libVLC reads through callback media: a ranged HTTP stream or a decrypting cursor over the cache. */
+private interface ByteSource {
+    fun size(): Long
+    fun read(buffer: ByteArray, length: Int): Int
+    fun seek(offset: Long): Boolean
+    fun close()
+    /** The last HTTP status, for re-resolving expired streams (403/410); null for the cache. */
+    val lastStatus: Int? get() = null
+}
+
+private fun HttpRangeReader.asSource() = object : ByteSource {
+    override val lastStatus: Int? get() = this@asSource.lastStatus
+    override fun size() = this@asSource.size()
+    override fun read(buffer: ByteArray, length: Int) = this@asSource.read(buffer, length)
+    override fun seek(offset: Long) = this@asSource.seek(offset)
+    override fun close() = this@asSource.close()
+}
+
+private fun DecryptingCursor.asSource() = object : ByteSource {
+    override fun size() = this@asSource.size
+    override fun read(buffer: ByteArray, length: Int) = this@asSource.read(buffer, length)
+    override fun seek(offset: Long) = this@asSource.seek(offset)
+    override fun close() = this@asSource.close()
+}
+
+/** Hands [ByteSource] bytes to libVLC. */
+private class ReaderMedia(private val reader: ByteSource, private val onError: (Exception) -> Unit) : SeekableCallbackMedia() {
     override fun onGetSize(): Long = reader.size()
     override fun onOpen(): Boolean = true
-    override fun onRead(buffer: ByteArray, bufferSize: Int): Int = reader.read(buffer, bufferSize)
+    override fun onRead(buffer: ByteArray, bufferSize: Int): Int =
+        try { reader.read(buffer, bufferSize) } catch (e: Exception) { onError(e); -1 }
     override fun onSeek(offset: Long): Boolean = reader.seek(offset)
     override fun onClose() = reader.close()
 }

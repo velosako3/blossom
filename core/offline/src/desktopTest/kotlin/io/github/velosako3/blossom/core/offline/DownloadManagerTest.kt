@@ -67,7 +67,17 @@ class DownloadManagerTest {
         store.saveTrack(t, OfflineRef.Single(t.id))
         withTimeout(30_000) { store.state(t.id).first { it == OfflineState.SAVED } }
         val resumed = h.server.ranges.filterNotNull()
-        assertTrue(resumed.any { Regex("bytes=[1-9]\\d*-").matches(it) }, "${h.server.ranges}")
+        assertTrue(resumed.any { Regex("bytes=[1-9]\\d*-\\d*").matches(it) }, "${h.server.ranges}")
+        assertContentEquals(h.server.bytes("a"), decrypted("a"))
+    }
+
+    @Test fun downloadsInBoundedRanges(): Unit = runBlocking {
+        // YouTube throttles open-ended downloads to playback speed; bounded ranges come at full speed.
+        val t = track("a")
+        store.saveTrack(t, OfflineRef.Single(t.id))
+        withTimeout(30_000) { store.state(t.id).first { it == OfflineState.SAVED } }
+        val ranges = h.server.ranges.toList()
+        assertTrue(ranges.size >= 1 && ranges.all { it != null && Regex("bytes=\\d+-\\d+").matches(it) }, "$ranges")
         assertContentEquals(h.server.bytes("a"), decrypted("a"))
     }
 

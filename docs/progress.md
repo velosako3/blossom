@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Next: Task 5.3 (playing from the encrypted cache).
+Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Task 5.3 done. Next: Task 5.4 (offline UX).
 
 Hands-on testing rule: the owner is using this desktop, so never inject keyboard/mouse input or capture the screen.
 Desktop end-to-end checks run off-screen with the real graph: `./gradlew :composeApp:desktopTest -PliveTests=true -Proborazzi.test.record=true --tests "*DesktopEndToEnd*"`. `./gradlew :composeApp:run -Pblossom.debugPlay="query"` plays a search result at startup, for `playerctl` checks. Kill stray app instances by PID (`ps … | grep 'blossom\.MainKt'`), never with a `pkill -f` pattern that matches your own shell.
@@ -43,6 +43,9 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - Desktop `NetworkMonitor` checks for an up interface plus a DNS answer every 15 s (no request to any server); `-Dblossom.forceOffline=true` pins it offline for testing.
 
 ## Deviations from plan
+- Task 5.3: no `LocalStreamServer`. Desktop already feeds libVLC through vlcj callback media (libVLC's own HTTP client fails inside the JVM), so saved tracks go through the same path. A `DecryptingCursor` over `DecryptingReader` decrypts chunk by chunk as libVLC reads. That means no loopback HTTP surface, no session token, and no plaintext anywhere. Android plays `blossom-offline:///<encoded track id>` through `EncryptedDataSource` (Media3); IDs contain ':', so they're encoded in the path. A corrupted chunk ends the stream with a player error instead of throwing into native code. `OfflineStore.isSaved` reads an in-memory set kept current from the database, so the player never does IO on the main thread. The player already preferred `MediaInput.Offline` for saved tracks (Milestone 2); `OfflinePreferenceTest` pins it down (it passed on first run).
+- Downloads use bounded `Range` requests of 2 MiB. YouTube throttled the first live run's open-ended request to playback speed (~5 % per 10 s); with ranges a 5.3 MB song saved in under 10 s (`downloadsInBoundedRanges` failed before the change). Servers that ignore Range get one plain download, restarted from zero if a partial file exists.
+- Hands-on (`DesktopOfflineLiveTest`, real app graph, network forced offline inside the JVM only): `offline saved: One More Time (Radio Edit) – Daft Punk, 5319766 bytes`, then `offline playing: One More Time (Radio Edit) at 3061 ms, online=false`.
 - Milestone 4 review fixes, each covered by a test that failed first:
   - Provider errors and timeouts no longer cache "no lyrics" for 7 days. "None found" is cached for 7 days only when every provider answered; for 1 hour when some failed; not at all when all failed.
   - Local files check their sidecar/tag before the cache, and unreadable local lyrics fall back to online providers.

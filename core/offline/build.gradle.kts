@@ -14,6 +14,7 @@ kotlin {
         }
         androidMain.dependencies {
             implementation(libs.androidx.work)
+            implementation(libs.media3.exoplayer)
         }
     }
 }

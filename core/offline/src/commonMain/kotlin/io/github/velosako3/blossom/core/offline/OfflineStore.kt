@@ -2,6 +2,7 @@
 package io.github.velosako3.blossom.core.offline
 
 import app.cash.sqldelight.coroutines.asFlow
+import app.cash.sqldelight.coroutines.mapToList
 import app.cash.sqldelight.coroutines.mapToOne
 import app.cash.sqldelight.coroutines.mapToOneOrNull
 import io.github.velosako3.blossom.core.database.BlossomDatabase
@@ -49,6 +50,8 @@ interface OfflineStore {
     suspend fun savePlaylist(id: PlaylistId)
     suspend fun unsavePlaylist(id: PlaylistId)
     fun openReader(id: TrackId): DecryptingReader?
+    /** Non-blocking (kept in memory), so the player can ask from any thread. */
+    fun isSaved(id: TrackId): Boolean
     fun usageBytes(): Flow<Long>
     suspend fun clearAll()
 }
@@ -56,7 +59,7 @@ interface OfflineStore {
 /** [repo] is only needed for saved playlists. */
 class SqlOfflineStore(
     private val db: BlossomDatabase,
-    private val manager: DownloadManager,
+    val manager: DownloadManager,
     private val repo: LibraryRepository?,
     private val scope: CoroutineScope,
 ) : OfflineStore {
@@ -64,8 +67,10 @@ class SqlOfflineStore(
     private val io = Dispatchers.IO
     private val json = Json { ignoreUnknownKeys = true }
     private val watchers = ConcurrentHashMap<String, Job>()
+    @Volatile private var savedIds: Set<String> = emptySet()
 
     init {
+        scope.launch(io) { q.offlineSavedIds().asFlow().mapToList(io).collect { savedIds = it.toHashSet() } }
         scope.launch(io) {
             q.offlinePlaylists().executeAsList().forEach { watch(PlaylistId(it)) }
             manager.kick(retryPaused = true)
@@ -159,6 +164,8 @@ class SqlOfflineStore(
         val key = runBlocking { manager.vault.offlineKey() }
         return DecryptingReader(file, key)
     }
+
+    override fun isSaved(id: TrackId): Boolean = id.value in savedIds
 
     override fun usageBytes(): Flow<Long> = q.offlineUsage().asFlow().mapToOne(io)
 

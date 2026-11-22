@@ -49,6 +49,7 @@ class DownloadManager(
     private val lock = Mutex()
     private val running = HashMap<String, Job>()
     private val slots = Semaphore(parallel)
+    private val restartFromZero = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     private val _busy = kotlinx.coroutines.flow.MutableStateFlow(false)
     /** True while any download runs. */
     val busy: StateFlow<Boolean> = _busy
@@ -57,6 +58,8 @@ class DownloadManager(
     @Volatile var onWorkStarted: (() -> Unit)? = null
 
     private class StorageFull : Exception()
+    /** The server doesn't honour Range, so a partial file can't be continued. */
+    private class RestartFromZero : IOException("server ignores Range")
 
     init {
         dir.mkdirs()
@@ -121,6 +124,8 @@ class DownloadManager(
                 return
             } catch (e: CancellationException) {
                 throw e
+            } catch (_: RestartFromZero) {
+                restartFromZero += id
             } catch (_: StorageFull) {
                 q.offlineSetState(OfflineState.PAUSED_STORAGE.name, id)
                 return
@@ -137,7 +142,8 @@ class DownloadManager(
         val file = fileFor(id)
         q.offlineSetFile(file.name, q.offlineItem(id).executeAsOne().bytes, id)
 
-        // Resume after the last complete chunk, if the file has a valid header.
+        // Resume after the last complete chunk, if the file has a valid header and the server honours ranges.
+        if (restartFromZero.remove(id)) file.delete()
         var prefix: ByteArray? = null
         var chunks = 0L
         if (file.length() >= ChunkedCipher.HEADER) {
@@ -147,47 +153,59 @@ class DownloadManager(
                 RandomAccessFile(file, "rw").use { it.setLength(ChunkedCipher.HEADER + chunks * (ChunkedCipher.CHUNK + ChunkedCipher.TAG)) }
             }
         }
-        var start = chunks * ChunkedCipher.CHUNK
-
+        val start = chunks * ChunkedCipher.CHUNK
         val stream = resolve(track)
-        val request = Request.Builder().url(stream.url).apply {
-            stream.headers.forEach { (k, v) -> header(k, v) }
-            if (start > 0) header("Range", "bytes=$start-")
-        }.build()
-        val call = http.newCall(request)
-        val response = runInterruptible { call.execute() }
-        response.use { r ->
-            if (start > 0 && r.code == 200) { start = 0; chunks = 0; prefix = null } // server ignored Range: start over
-            if (r.code != 200 && r.code != 206) throw IOException("HTTP ${r.code}")
-            val body = r.body
-            val length = body.contentLength()
-            val total = if (length >= 0) start + length else -1L
-            val limit = settings.value.limitBytes
-            val others = q.offlineUsageExcept(id).executeAsOne()
-            if (limit != null && total > 0 && others + total > limit) throw StorageFull()
-            q.offlineSetFile(file.name, if (total > 0) total else 0, id)
+        val limit = settings.value.limitBytes
+        val others = q.offlineUsageExcept(id).executeAsOne()
 
-            FileOutputStream(file, prefix != null).use { out ->
-                val enc = prefix?.let { ChunkedEncryptor.resume(out, key, it, chunks) } ?: ChunkedEncryptor.create(out, key)
-                val buf = ByteArray(64 * 1024)
-                var done = start
-                var reported = done
-                val input = body.byteStream()
-                while (true) {
-                    val n = runInterruptible { input.read(buf) }
-                    if (n < 0) break
-                    enc.write(buf, 0, n)
-                    done += n
-                    if (limit != null && others + done > limit) throw StorageFull()
-                    if (done - reported >= 256 * 1024) { q.offlineSetProgress(done, id); reported = done }
+        FileOutputStream(file, prefix != null).use { out ->
+            val enc = prefix?.let { ChunkedEncryptor.resume(out, key, it, chunks) } ?: ChunkedEncryptor.create(out, key)
+            var done = start
+            var total = -1L
+            var reported = done
+            val buf = ByteArray(64 * 1024)
+            // Bounded ranges: YouTube throttles open-ended downloads to playback speed.
+            while (total < 0 || done < total) {
+                val request = Request.Builder().url(stream.url).apply {
+                    stream.headers.forEach { (k, v) -> header(k, v) }
+                    header("Range", "bytes=$done-${done + REQUEST_BYTES - 1}")
+                }.build()
+                val call = http.newCall(request)
+                runInterruptible { call.execute() }.use { r ->
+                    val whole = r.code == 200 // the server ignored Range and sends everything
+                    if (!whole && r.code != 206) throw IOException("HTTP ${r.code}")
+                    if (whole && done > 0) throw RestartFromZero()
+                    total = if (whole) r.body.contentLength() else
+                        r.header("Content-Range")?.substringAfterLast('/')?.toLongOrNull() ?: throw IOException("no Content-Range")
+                    if (total > 0) {
+                        if (limit != null && others + total > limit) throw StorageFull()
+                        q.offlineSetFile(file.name, total, id)
+                    }
+                    val input = r.body.byteStream()
+                    var got = 0L
+                    while (true) {
+                        val n = runInterruptible { input.read(buf) }
+                        if (n < 0) break
+                        enc.write(buf, 0, n)
+                        done += n; got += n
+                        if (limit != null && others + done > limit) throw StorageFull()
+                        if (done - reported >= 256 * 1024) { q.offlineSetProgress(done, id); reported = done }
+                    }
+                    if (whole) { if (total < 0) total = done }
+                    else if (got == 0L) throw IOException("empty range at $done of $total")
                 }
-                if (total > 0 && done != total) throw IOException("short body: $done of $total")
-                enc.finish()
-                if (total <= 0) q.offlineSetFile(file.name, done, id)
-                q.offlineSetProgress(done, id)
             }
+            if (done != total) throw IOException("got $done of $total bytes")
+            enc.finish()
+            q.offlineSetFile(file.name, total, id)
+            q.offlineSetProgress(done, id)
         }
     }
 
     private fun sha256(s: String) = MessageDigest.getInstance("SHA-256").digest(s.encodeToByteArray()).joinToString("") { "%02x".format(it) }
+
+    private companion object {
+        /** Per request; YouTube serves bounded ranges up to ~10 MB at full speed. */
+        const val REQUEST_BYTES = 2L * 1024 * 1024
+    }
 }
