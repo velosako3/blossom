@@ -40,24 +40,30 @@ abstract class AddVlcPluginsTask : DefaultTask() {
         val skiptags = File(target, "plugins/stream_filter/libskiptags_plugin.so")
         val libs = listOf("libebml.so.5", "libmatroska.so.7")
         if (!target.isDirectory || (plugin.isFile && es.isFile && skiptags.isFile && libs.all { File(target, it).isFile })) return
-        val mirror = "http://archive.ubuntu.com/ubuntu"
+        val mirror = "https://archive.ubuntu.com/ubuntu"
         val wanted = setOf("vlc-plugin-base", "libebml5", "libmatroska7")
-        val index = HashMap<String, String>()
+        // Package -> (pool file, SHA256), from the index over HTTPS; every download is checked against it.
+        val index = HashMap<String, Pair<String, String>>()
         for (suite in listOf("noble-updates", "noble")) for (component in listOf("main", "universe")) {
             var name: String? = null
+            var file: String? = null
             GZIPInputStream(URI("$mirror/dists/$suite/$component/binary-amd64/Packages.gz").toURL().openStream()).bufferedReader().useLines { lines ->
                 for (line in lines) {
-                    if (line.startsWith("Package: ")) name = line.removePrefix("Package: ")
-                    if (line.startsWith("Filename: ") && name in wanted) index.putIfAbsent(name!!, line.removePrefix("Filename: "))
+                    when {
+                        line.startsWith("Package: ") -> { name = line.removePrefix("Package: "); file = null }
+                        line.startsWith("Filename: ") -> file = line.removePrefix("Filename: ")
+                        line.startsWith("SHA256: ") && name in wanted && file != null -> index.putIfAbsent(name!!, file!! to line.removePrefix("SHA256: ").trim())
+                    }
                 }
             }
         }
         val work = File(temporaryDir, "debs").apply { deleteRecursively(); mkdirs() }
         for (pkg in wanted) {
-            val filename = index[pkg] ?: throw GradleException("$pkg not found in the noble index")
+            val (filename, sha256) = index[pkg] ?: throw GradleException("$pkg not found in the noble index")
             val dir = File(work, pkg).apply { mkdirs() }
             val deb = File(dir, "p.deb")
             URI("$mirror/$filename").toURL().openStream().use { input -> deb.outputStream().use { input.copyTo(it) } }
+            if (sha256(deb) != sha256.lowercase()) throw GradleException("$filename: SHA256 mismatch, refusing to bundle it")
             exec(dir, "ar", "x", deb.absolutePath)
             val data = dir.listFiles { f -> f.name.startsWith("data.tar") }!!.single()
             exec(dir, "tar", "-xf", data.absolutePath, "-C", dir.absolutePath)
@@ -90,7 +96,12 @@ abstract class AddVlcPluginsTask : DefaultTask() {
         if (!target.isDirectory || wanted.all { (n, dir) -> File(target, "plugins/$dir/$n").isFile }) return
         var added = 0
         val url = "https://download.videolan.org/pub/videolan/vlc/3.0.23/win64/vlc-3.0.23-win64.zip"
-        ZipInputStream(URI(url).toURL().openStream()).use { zip ->
+        // Downloaded whole and checked against VideoLAN's published SHA256 before anything is extracted.
+        val zipFile = File(temporaryDir, "vlc-win64.zip")
+        URI(url).toURL().openStream().use { input -> zipFile.outputStream().use { input.copyTo(it) } }
+        val expected = URI("$url.sha256").toURL().readText().trim().substringBefore(' ').lowercase()
+        if (sha256(zipFile) != expected) throw GradleException("$url: SHA256 mismatch, refusing to bundle it")
+        ZipInputStream(zipFile.inputStream()).use { zip ->
             var e = zip.nextEntry
             while (e != null) {
                 val name = e.name.substringAfterLast('/')
@@ -110,5 +121,11 @@ abstract class AddVlcPluginsTask : DefaultTask() {
         val p = ProcessBuilder(*command).directory(dir).redirectErrorStream(true).start()
         val out = p.inputStream.bufferedReader().readText()
         if (p.waitFor() != 0) throw GradleException("`${command.joinToString(" ")}` failed:\n$out")
+    }
+
+    private fun sha256(file: File): String {
+        val md = java.security.MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input -> val buf = ByteArray(1 shl 16); while (true) { val n = input.read(buf); if (n < 0) break; md.update(buf, 0, n) } }
+        return md.digest().joinToString("") { "%02x".format(it) }
     }
 }

@@ -31,7 +31,9 @@ object ImportRouter {
         SPOTIFY_URI.matchEntire(text)?.let { m ->
             return DetectedLink(ImportService.SPOTIFY, kindOf(m.groupValues[1]), "https://open.spotify.com/${m.groupValues[1]}/${m.groupValues[2]}")
         }
-        val uri = runCatching { URI(if ("://" in text) text else "https://$text") }.getOrNull() ?: return null
+        val withScheme = if ("://" in text) text else "https://$text"
+        // A malformed query (a stray "%") shouldn't hide an otherwise fine link: drop the query and try again.
+        val uri = runCatching { URI(withScheme) }.getOrNull() ?: runCatching { URI(withScheme.substringBefore('?')) }.getOrNull() ?: return null
         if (uri.scheme?.lowercase() !in setOf("http", "https")) return null
         val host = uri.host?.lowercase()?.removePrefix("www.")?.removePrefix("m.") ?: return null
         val path = uri.rawPath.orEmpty()
@@ -42,8 +44,8 @@ object ImportRouter {
                 DetectedLink(ImportService.SPOTIFY, kindOf(type), "https://open.spotify.com/$type/${m.groupValues[2]}")
             }
             "music.youtube.com", "youtube.com" -> youtube(path, query)
-            "youtu.be" -> path.trim('/').takeIf { it.isNotEmpty() && '/' !in it }?.let { v ->
-                query["list"]?.let { DetectedLink(ImportService.YOUTUBE_MUSIC, LinkKind.PLAYLIST, ytPlaylist(it)) }
+            "youtu.be" -> path.trim('/').takeIf { VIDEO_ID.matches(it) }?.let { v ->
+                query["list"]?.takeIf { LIST_ID.matches(it) }?.let { DetectedLink(ImportService.YOUTUBE_MUSIC, LinkKind.PLAYLIST, ytPlaylist(it)) }
                     ?: DetectedLink(ImportService.YOUTUBE_MUSIC, LinkKind.TRACK, "https://music.youtube.com/watch?v=$v")
             }
             "soundcloud.com" -> {
@@ -63,13 +65,15 @@ object ImportRouter {
     }
 
     private fun youtube(path: String, query: Map<String, String>): DetectedLink? {
-        val list = query["list"]
+        val list = query["list"]?.takeIf { LIST_ID.matches(it) }
+        val video = query["v"]?.takeIf { VIDEO_ID.matches(it) }
         return when {
             path == "/playlist" && list != null -> DetectedLink(ImportService.YOUTUBE_MUSIC, LinkKind.PLAYLIST, ytPlaylist(list))
             path == "/watch" && list != null -> DetectedLink(ImportService.YOUTUBE_MUSIC, LinkKind.PLAYLIST, ytPlaylist(list))
-            path == "/watch" && query["v"] != null -> DetectedLink(ImportService.YOUTUBE_MUSIC, LinkKind.TRACK, "https://music.youtube.com/watch?v=${query["v"]}")
+            path == "/watch" && video != null -> DetectedLink(ImportService.YOUTUBE_MUSIC, LinkKind.TRACK, "https://music.youtube.com/watch?v=$video")
             path.startsWith("/browse/MPRE") -> DetectedLink(ImportService.YOUTUBE_MUSIC, LinkKind.ALBUM, "https://music.youtube.com${path.trimEnd('/')}")
-            path.startsWith("/shorts/") -> DetectedLink(ImportService.YOUTUBE_MUSIC, LinkKind.TRACK, "https://music.youtube.com/watch?v=${path.removePrefix("/shorts/").trim('/')}")
+            path.startsWith("/shorts/") -> path.removePrefix("/shorts/").trim('/').takeIf { VIDEO_ID.matches(it) }
+                ?.let { DetectedLink(ImportService.YOUTUBE_MUSIC, LinkKind.TRACK, "https://music.youtube.com/watch?v=$it") }
             else -> null
         }
     }
@@ -90,11 +94,14 @@ object ImportRouter {
 
     private fun kindOf(type: String) = when (type) { "track" -> LinkKind.TRACK; "album" -> LinkKind.ALBUM; else -> LinkKind.PLAYLIST }
 
-    /** Query parameters (tracking ones like `si`, `utm_*`, `feature` never reach the canonical URL anyway). */
-    private fun params(raw: String?): Map<String, String> = raw.orEmpty().split('&').filter { '=' in it }.associate {
+    /** Query parameters (tracking ones like `si`, `utm_*`, `feature` never reach the canonical URL anyway). A malformed escape drops only its own parameter. */
+    private fun params(raw: String?): Map<String, String> = raw.orEmpty().split('&').filter { '=' in it }.mapNotNull {
         val (k, v) = it.split('=', limit = 2)
-        URLDecoder.decode(k, Charsets.UTF_8) to URLDecoder.decode(v, Charsets.UTF_8)
-    }
+        runCatching { URLDecoder.decode(k, Charsets.UTF_8) to URLDecoder.decode(v, Charsets.UTF_8) }.getOrNull()
+    }.toMap()
+
+    private val VIDEO_ID = Regex("""[A-Za-z0-9_-]{1,32}""")
+    private val LIST_ID = Regex("""[A-Za-z0-9_-]{2,64}""")
 
     private val SC_RESERVED = setOf("discover", "search", "you", "stream", "upload", "charts", "pages", "settings")
 }

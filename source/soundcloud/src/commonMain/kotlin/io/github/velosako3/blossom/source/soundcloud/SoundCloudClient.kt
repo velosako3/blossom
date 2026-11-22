@@ -30,8 +30,9 @@ class SoundCloudClient(
     private val lock = Mutex()
     @Volatile private var clientId: String? = null
 
-    private suspend fun clientId(refresh: Boolean): String = lock.withLock {
-        if (!refresh) clientId?.let { return it }
+    /** The id to use. [rejected] is the one the API just refused, so concurrent callers refresh once, not each. */
+    private suspend fun clientId(rejected: String?): String = lock.withLock {
+        clientId?.let { if (it != rejected) return it }
         val home = text("$webBase/")
         val scripts = SCRIPT.findAll(home).map { it.groupValues[1] }.toList()
         // The id sits in one of the last bundles.
@@ -43,14 +44,15 @@ class SoundCloudClient(
 
     /** GET [path] on the API with the client id; retried once with a fresh id on 401/403. */
     suspend fun api(path: String, params: Map<String, String> = emptyMap()): JsonElement = withContext(Dispatchers.IO) {
-        var refresh = false
+        var rejected: String? = null
         while (true) {
+            val id = clientId(rejected)
             val url = "$apiBase$path".toHttpUrl().newBuilder().apply {
                 params.forEach { (k, v) -> addQueryParameter(k, v) }
-                addQueryParameter("client_id", clientId(refresh))
+                addQueryParameter("client_id", id)
             }.build()
             val (code, body) = get(url)
-            if ((code == 401 || code == 403) && !refresh) { refresh = true; continue }
+            if ((code == 401 || code == 403) && rejected == null) { rejected = id; continue }
             if (code == 404) throw NotFound(url.encodedPath)
             if (code !in 200..299) throw IOException("SoundCloud HTTP $code")
             return@withContext json.parseToJsonElement(body)
@@ -60,14 +62,15 @@ class SoundCloudClient(
 
     /** A transcoding URL as returned by the API (absolute), with the client id and the track's authorization. */
     suspend fun streamUrl(transcodingUrl: String, trackAuthorization: String?): String = withContext(Dispatchers.IO) {
-        var refresh = false
+        var rejected: String? = null
         while (true) {
+            val id = clientId(rejected)
             val url = transcodingUrl.toHttpUrl().newBuilder().apply {
-                addQueryParameter("client_id", clientId(refresh))
+                addQueryParameter("client_id", id)
                 trackAuthorization?.let { addQueryParameter("track_authorization", it) }
             }.build()
             val (code, body) = get(url)
-            if ((code == 401 || code == 403) && !refresh) { refresh = true; continue }
+            if ((code == 401 || code == 403) && rejected == null) { rejected = id; continue }
             if (code !in 200..299) throw IOException("SoundCloud stream HTTP $code")
             return@withContext json.parseToJsonElement(body).str("url") ?: throw IOException("no stream url")
         }

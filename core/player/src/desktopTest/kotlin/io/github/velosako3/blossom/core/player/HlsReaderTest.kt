@@ -28,6 +28,7 @@ class HlsReaderTest {
                     segments.indices.forEach { append("#EXTINF:10.0,\nseg$it.m4s?sig=abc\n") }
                     append("#EXT-X-ENDLIST\n")
                 }.toByteArray()
+                path == "/media/encrypted.m3u8" -> "#EXTM3U\n#EXT-X-KEY:METHOD=AES-128,URI=\"k\"\n#EXTINF:10.0,\nseg0.m4s\n#EXT-X-ENDLIST\n".toByteArray()
                 path == "/media/init.mp4" -> init
                 path.startsWith("/media/seg") -> segments[path.removePrefix("/media/seg").removeSuffix(".m4s").toInt()]
                 else -> null
@@ -83,5 +84,10 @@ class HlsReaderTest {
         while (true) { val n = tail.read(buf, buf.size); if (n <= 0) break; out.write(buf, 0, n) }
         assertContentEquals(init + segments[2] + segments[3] + segments[4], out.toByteArray())
         r.close()
+    }
+
+    @Test fun encryptedStreamsAreRefused() {
+        val e = kotlin.runCatching { HlsReader(StreamInfo(url.replace("master", "encrypted"), emptyMap(), "application/vnd.apple.mpegurl", null, null)) }.exceptionOrNull()
+        assertTrue(e is java.io.IOException, "$e")
     }
 }

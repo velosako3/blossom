@@ -9,6 +9,7 @@ import io.github.velosako3.blossom.core.database.NewEntry
 import io.github.velosako3.blossom.core.model.EntryStatus
 import io.github.velosako3.blossom.core.model.PlaylistId
 import io.github.velosako3.blossom.core.model.Track
+import io.github.velosako3.blossom.source.api.ImportError
 import io.github.velosako3.blossom.source.api.ImportedTrack
 import io.github.velosako3.blossom.source.api.PlaylistImporter
 import kotlinx.coroutines.CancellationException
@@ -52,7 +53,10 @@ class ImportJobRunner(
     private val onBatchWritten: (Int) -> Unit = {},
     /** After each batch commits: the native tracks it wrote (untitled auto-save uses this). */
     private val onWritten: suspend (ImportService, List<Track>) -> Unit = { _, _ -> },
+    /** Backoff for network errors while reading or matching; after the last one the job waits for the next start. */
+    private val retryDelaysMs: List<Long> = listOf(2_000, 8_000, 30_000),
 ) {
+    private val running = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     private val q get() = db.blossomQueries
     private val io = Dispatchers.IO
     private val json = Json { ignoreUnknownKeys = true }
@@ -92,6 +96,7 @@ class ImportJobRunner(
                             uncertain = (c.uncertain ?: 0).toInt(),
                             unavailable = (c.unavailable ?: 0).toInt(),
                             playlistId = it.playlist_id?.let(::PlaylistId),
+                            failure = it.error?.let { e -> runCatching { ImportFailure.valueOf(e) }.getOrNull() },
                         )
                     }
                 }
@@ -99,38 +104,49 @@ class ImportJobRunner(
         }.filterNotNull().distinctUntilChanged()
 
     private suspend fun run(id: ImportJobId) {
+        // One runner per job: start() and resumePending() can both reach the same job.
+        if (!running.add(id.value)) return
+        try {
+            runGuarded(id)
+        } finally {
+            running.remove(id.value)
+        }
+    }
+
+    private suspend fun runGuarded(id: ImportJobId) {
         try {
             val job = q.importJob(id.value).executeAsOneOrNull() ?: return
+            if (job.state == ImportJobState.DONE.name || job.state == ImportJobState.FAILED.name) return
             val target = json.decodeFromString(ImportTarget.serializer(), job.target_json)
-            var playlistId = job.playlist_id?.let(::PlaylistId)
 
             if (job.total == null) {
-                val importer = importers[ImportService.valueOf(job.service)] ?: error("no importer for ${job.service}")
-                val source = importer.read(job.url)
-                playlistId = playlistId ?: when (target) {
-                    is ImportTarget.NewPlaylist -> commands.createPlaylist(target.name ?: source.name, source.description, source.origin)
-                    is ImportTarget.Existing -> target.id
-                    is ImportTarget.UpdateExisting -> target.id
-                }
+                val importer = importers[ImportService.valueOf(job.service)] ?: return fail(id, ImportFailure.UNSUPPORTED)
+                // Offline or a flaky service: try again later instead of failing (the job stays READING and resumes next start).
+                val source = retrying { importer.read(job.url) } ?: return
                 val tracks = if (target is ImportTarget.UpdateExisting) withoutPresent(target.id, source.tracks) else source.tracks
-                db.transaction {
-                    q.importJobSetPlaylist(playlistId.value, id.value)
+                val store: (PlaylistId) -> Unit = { pid ->
+                    q.importJobSetPlaylist(pid.value, id.value)
                     tracks.forEachIndexed { i, t -> q.importItemInsert(id.value, i.toLong(), json.encodeToString(StoredImport.serializer(), StoredImport.of(t))) }
                     q.importJobSetTotal(tracks.size.toLong(), id.value)
                     q.importJobSetState(ImportJobState.MATCHING.name, id.value)
                 }
+                when (target) {
+                    // The new playlist and the job's record of it commit together: a crash can't orphan a playlist.
+                    is ImportTarget.NewPlaylist -> commands.createPlaylist(target.name ?: source.name, source.description, source.origin, store)
+                    is ImportTarget.Existing -> withContext(io) { db.transaction { store(target.id) } }
+                    is ImportTarget.UpdateExisting -> withContext(io) { db.transaction { store(target.id) } }
+                }
             }
-            val pid = playlistId ?: q.importJob(id.value).executeAsOne().playlist_id!!.let(::PlaylistId)
+            val pid = q.importJob(id.value).executeAsOne().playlist_id!!.let(::PlaylistId)
 
             var written = q.importItemCounts(id.value).executeAsOne().written?.toInt() ?: 0
             for (window in q.importItemsUnwritten(id.value).executeAsList().chunked(batchSize)) {
-                val results = coroutineScope {
-                    window.map { row ->
-                        async {
-                            matchWithRetries(json.decodeFromString(StoredImport.serializer(), row.imported_json).toImported())
-                        }
-                    }.awaitAll()
-                }
+                // A matching outage leaves the window unwritten and the job MATCHING; it carries on next start.
+                val results = retrying {
+                    coroutineScope {
+                        window.map { row -> async { match(json.decodeFromString(StoredImport.serializer(), row.imported_json).toImported()) } }.awaitAll()
+                    }
+                } ?: return
                 val entries = window.zip(results).map { (row, m) ->
                     val imported = json.decodeFromString(StoredImport.serializer(), row.imported_json)
                     NewEntry(m.track, m.status, imported.title, imported.artists.joinToString(", "), m.confidence.takeIf { imported.nativeTrack == null })
@@ -143,33 +159,45 @@ class ImportJobRunner(
                     }
                 }
                 written += window.size
-                onBatchWritten(written)
-                onWritten(ImportService.valueOf(job.service), results.mapNotNull { it.track.takeIf { _ -> it.status == EntryStatus.MATCHED } })
+                // Hooks (auto-save, tests) never stop the import.
+                runCatching { onBatchWritten(written) }
+                try {
+                    onWritten(ImportService.valueOf(job.service), results.mapNotNull { it.track.takeIf { _ -> it.status == EntryStatus.MATCHED } })
+                } catch (e: CancellationException) { throw e } catch (_: Exception) {}
             }
             withContext(io) { q.importJobSetState(ImportJobState.DONE.name, id.value) }
         } catch (e: CancellationException) {
             throw e // resumed on next start
+        } catch (e: ImportError.NeedsLogin) {
+            fail(id, ImportFailure.NEEDS_LOGIN)
+        } catch (e: ImportError.NotFound) {
+            fail(id, ImportFailure.NOT_FOUND)
         } catch (e: Exception) {
-            withContext(io) { q.importJobSetState(ImportJobState.FAILED.name, id.value) }
+            fail(id, ImportFailure.UNSUPPORTED)
         }
     }
 
-    private suspend fun matchWithRetries(t: ImportedTrack): StoredMatch {
+    private suspend fun fail(id: ImportJobId, why: ImportFailure) { withContext(io) { q.importJobFail(why.name, id.value) } }
+
+    /** [block] with backoff on network errors; null when it still fails (the job is left to resume later). */
+    private suspend fun <T> retrying(block: suspend () -> T): T? {
+        var attempt = 0
+        while (true) {
+            try {
+                return block()
+            } catch (e: java.io.IOException) {
+                if (attempt >= retryDelaysMs.size) return null
+                delay(retryDelaysMs[attempt++])
+            }
+        }
+    }
+
+    /** Native tracks skip matching; an empty search is UNAVAILABLE; a network error propagates (retried by the window). */
+    private suspend fun match(t: ImportedTrack): StoredMatch {
         t.nativeTrack?.let { return StoredMatch(it, 1f, EntryStatus.MATCHED) }
         return matching.withPermit {
-            var attempt = 0
-            while (true) {
-                try {
-                    val m = TrackMatcher.match(t, search(t))
-                    return@withPermit StoredMatch(m.track, m.confidence, m.status)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    if (++attempt >= 3) return@withPermit StoredMatch(null, 0f, EntryStatus.UNAVAILABLE)
-                    delay(500L * attempt)
-                }
-            }
-            @Suppress("UNREACHABLE_CODE") error("unreachable")
+            val m = TrackMatcher.match(t, search(t))
+            StoredMatch(m.track, m.confidence, m.status)
         }
     }
 

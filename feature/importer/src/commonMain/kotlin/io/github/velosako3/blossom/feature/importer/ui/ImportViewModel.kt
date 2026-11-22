@@ -28,7 +28,7 @@ sealed interface ImportUi {
     data class DuplicateFound(val link: DetectedLink, val existing: PlaylistId, val existingName: String) : ImportUi
     data class InProgress(val link: DetectedLink, val job: ImportJobId, val progress: ImportProgress?, val startedAt: Instant) : ImportUi
     data class Done(val link: DetectedLink, val playlistId: PlaylistId, val progress: ImportProgress, val startedAt: Instant) : ImportUi
-    data class Failed(val link: DetectedLink) : ImportUi
+    data class Failed(val link: DetectedLink, val failure: io.github.velosako3.blossom.feature.importer.ImportFailure? = null) : ImportUi
 }
 
 /**
@@ -48,6 +48,8 @@ class ImportViewModel(
     private val _state = MutableStateFlow<ImportUi>(ImportUi.Idle)
     val state: StateFlow<ImportUi> = _state
     private var job: Job? = null
+    /** Set synchronously on start, so a double tap can't start two imports. */
+    private val starting = java.util.concurrent.atomic.AtomicBoolean(false)
 
     fun onTextChange(value: String) {
         _text.value = value
@@ -64,10 +66,11 @@ class ImportViewModel(
     /** Starts the detected link: into [into] if given, else a new playlist named [name] (or after the source). */
     fun start(name: String? = null, into: PlaylistId? = null) {
         val link = (_state.value as? ImportUi.Detected)?.link ?: return
+        if (!starting.compareAndSet(false, true)) return
         scope.launch {
             if (into == null) {
                 val same = repo.playlists().first().firstOrNull { it.origin?.url == link.canonicalUrl }
-                if (same != null) { _state.value = ImportUi.DuplicateFound(link, same.id, same.name); return@launch }
+                if (same != null) { _state.value = ImportUi.DuplicateFound(link, same.id, same.name); starting.set(false); return@launch }
             }
             run(link, if (into != null) ImportTarget.Existing(into) else ImportTarget.NewPlaylist(name?.takeIf { it.isNotBlank() }))
         }
@@ -89,7 +92,8 @@ class ImportViewModel(
         scope.launch { run(link, ImportTarget.UpdateExisting(playlist)) }
     }
 
-    fun reset() { job?.cancel(); _text.value = ""; _state.value = ImportUi.Idle }
+    /** Back to an empty screen. A running import carries on in the background (it is resumable). */
+    fun reset() { job?.cancel(); starting.set(false); _text.value = ""; _state.value = ImportUi.Idle }
 
     private suspend fun run(link: DetectedLink, target: ImportTarget) {
         onStart(target)
@@ -101,7 +105,7 @@ class ImportViewModel(
             runner.progress(id).takeWhile { p ->
                 _state.value = when (p.state) {
                     ImportJobState.DONE -> ImportUi.Done(link, p.playlistId!!, p, started)
-                    ImportJobState.FAILED -> ImportUi.Failed(link)
+                    ImportJobState.FAILED -> ImportUi.Failed(link, p.failure)
                     else -> ImportUi.InProgress(link, id, p, started)
                 }
                 p.state != ImportJobState.DONE && p.state != ImportJobState.FAILED

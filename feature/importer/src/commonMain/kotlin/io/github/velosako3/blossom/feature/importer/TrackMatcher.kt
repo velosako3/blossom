@@ -15,16 +15,20 @@ data class MatchResult(val track: Track?, val confidence: Float, val status: Ent
  */
 object TrackMatcher {
     private val SUFFIXES = listOf(
-        Regex("""\s+-\s+.*\b(remaster(ed)?|mono|stereo|single version|radio edit|\d{4} mix)\b.*$""", RegexOption.IGNORE_CASE),
+        // Only a version tail ("- Remastered 2011", "- Mono", "- Radio Edit"), never words that merely contain those.
+        Regex("""\s+-\s+(\d{4}\s+)?(remaster(ed)?(\s+\d{4})?(\s+version)?|mono|stereo(\s+version)?|single version|radio edit|\d{4} (re)?mix)\s*$""", RegexOption.IGNORE_CASE),
         Regex("""\s*[(\[][^)\]]*\b(remaster(ed)?|official (music )?(audio|video)|lyrics?( video)?|audio|visuali[sz]er|hd|hq)\b[^)\]]*[)\]]""", RegexOption.IGNORE_CASE),
     )
-    private val FEAT_BRACKET = Regex("""\s*[(\[]\s*(?:feat\.?|ft\.?|featuring|with)\s+([^)\]]+)[)\]]""", RegexOption.IGNORE_CASE)
+    // "(with X)" only after a title, so "(With or Without You)" stays a title.
+    private val FEAT_BRACKET = Regex("""(?<=\S)\s*[(\[]\s*(?:feat\.?|ft\.?|featuring|with)\s+([^)\]]+)[)\]]""", RegexOption.IGNORE_CASE)
     private val FEAT_TAIL = Regex("""\s+(?:feat\.?|ft\.?|featuring)\s+(.+)$""", RegexOption.IGNORE_CASE)
     private val SPLIT_ARTISTS = Regex("""\s*(?:,|&| x | and |\+)\s*""", RegexOption.IGNORE_CASE)
-    private val PUNCTUATION = Regex("""[^\p{L}\p{N}\s]""")
+    // Keeps combining marks (Devanagari vowel signs, decomposed accents).
+    private val PUNCTUATION = Regex("""[^\p{L}\p{M}\p{N}\s]""")
     private val SPACES = Regex("""\s+""")
 
-    private fun normalize(s: String) = PUNCTUATION.replace(s.lowercase(), " ").let { SPACES.replace(it, " ").trim() }
+    private fun normalize(s: String) =
+        PUNCTUATION.replace(java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFC).lowercase(), " ").let { SPACES.replace(it, " ").trim() }
 
     /** Title without decorations, plus artists taken out of "feat." parts. */
     private fun clean(title: String, artists: List<String>): Pair<String, Set<String>> {
@@ -39,8 +43,9 @@ object TrackMatcher {
     }
 
     private fun similarity(a: String, b: String): Float {
-        if (a == b) return 1f
+        // Titles that are only symbols ("!!!") say nothing; never let artist + duration match them alone.
         if (a.isEmpty() || b.isEmpty()) return 0f
+        if (a == b) return 1f
         val prev = IntArray(b.length + 1) { it }
         val cur = IntArray(b.length + 1)
         for (i in 1..a.length) {

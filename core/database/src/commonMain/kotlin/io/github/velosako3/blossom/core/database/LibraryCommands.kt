@@ -52,9 +52,10 @@ class LibraryCommands(
         return envs
     }
 
-    suspend fun createPlaylist(name: String, description: String? = null, origin: PlaylistOrigin? = null): PlaylistId {
+    /** [inTransaction] runs in the same transaction, with the new ID (an import records it, so a crash can't orphan it). */
+    suspend fun createPlaylist(name: String, description: String? = null, origin: PlaylistOrigin? = null, inTransaction: (PlaylistId) -> Unit = {}): PlaylistId {
         val id = PlaylistId(Uuid.random().toString())
-        run(listOf(Operation.PlaylistCreated(id, name, description, origin)))
+        runComputed { inTransaction(id); listOf(Operation.PlaylistCreated(id, name, description, origin)) }
         return id
     }
 

@@ -49,6 +49,7 @@ class BlossomSqliteDriver(private val url: String, private val properties: Prope
 
     override fun close() {
         synchronized(opened) { opened.forEach { runCatching { it.close() } }; opened.clear() }
+        connections.remove()
     }
 
     companion object {
@@ -61,9 +62,18 @@ class BlossomSqliteDriver(private val url: String, private val properties: Prope
             }
             val driver = BlossomSqliteDriver(url, props)
             val version = driver.executeQuery(null, "PRAGMA user_version", { c -> QueryResult.Value(if (c.next().value) c.getLong(0) ?: 0 else 0) }, 0).value
-            when {
-                version == 0L -> { schema.create(driver); driver.execute(null, "PRAGMA user_version = ${schema.version}", 0) }
-                version < schema.version -> { schema.migrate(driver, version, schema.version); driver.execute(null, "PRAGMA user_version = ${schema.version}", 0) }
+            // Creating or migrating and recording the version commit together: a crash midway leaves the old schema intact.
+            if (version < schema.version) {
+                val c = driver.getConnection()
+                c.prepareStatement("BEGIN IMMEDIATE").use { it.execute() }
+                try {
+                    if (version == 0L) schema.create(driver) else schema.migrate(driver, version, schema.version)
+                    c.prepareStatement("PRAGMA user_version = ${schema.version}").use { it.execute() }
+                    c.prepareStatement("COMMIT").use { it.execute() }
+                } catch (e: Throwable) {
+                    runCatching { c.prepareStatement("ROLLBACK").use { it.execute() } }
+                    throw e
+                }
             }
             return driver
         }

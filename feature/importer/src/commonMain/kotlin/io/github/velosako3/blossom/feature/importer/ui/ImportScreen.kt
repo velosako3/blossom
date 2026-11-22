@@ -187,7 +187,14 @@ fun ImportContent(
                         }
                     }
                     is ImportUi.Failed -> {
-                        Text(stringResource(Res.string.import_failed), color = muted)
+                        Text(
+                            stringResource(when (state.failure) {
+                                io.github.velosako3.blossom.feature.importer.ImportFailure.NEEDS_LOGIN -> Res.string.import_failed_login
+                                io.github.velosako3.blossom.feature.importer.ImportFailure.NOT_FOUND -> Res.string.import_failed_not_found
+                                else -> Res.string.import_failed
+                            }),
+                            color = muted,
+                        )
                         GlassButton(onReset) { Text(stringResource(Res.string.import_again)) }
                     }
                 }

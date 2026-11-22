@@ -96,4 +96,64 @@ class ImportJobRunnerTest {
         assertEquals((0 until 8).map { "v$it" }, repo.playlist(pid).first()!!.entries.map { it.track!!.id.sourceId })
         scope.cancel()
     }
+
+    @Test fun offlineReadRetriesInsteadOfFailing(): Unit = runBlocking {
+        var attempts = 0
+        val flaky = object : PlaylistImporter {
+            override fun canHandle(url: String) = true
+            override suspend fun read(url: String, onProgress: (Int, Int?) -> Unit): ImportedPlaylist {
+                if (attempts++ < 2) throw java.io.IOException("offline")
+                return FakeImporter(3).read(url, onProgress)
+            }
+        }
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val r = ImportJobRunner(db, commands, repo, mapOf(ImportService.YOUTUBE_MUSIC to flaky), search = { emptyList() }, scope = scope, retryDelaysMs = listOf(10, 10, 10))
+        val id = r.start(link, ImportTarget.NewPlaylist(null))
+        val done = withTimeout(10_000) { r.progress(id).first { it.state == ImportJobState.DONE || it.state == ImportJobState.FAILED } }
+        assertEquals(ImportJobState.DONE, done.state)
+        assertEquals(3, done.done)
+        scope.cancel()
+    }
+
+    @Test fun signInNeededIsReported(): Unit = runBlocking {
+        val locked = object : PlaylistImporter {
+            override fun canHandle(url: String) = true
+            override suspend fun read(url: String, onProgress: (Int, Int?) -> Unit): ImportedPlaylist = throw io.github.velosako3.blossom.source.api.ImportError.NeedsLogin("Spotify")
+        }
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val r = ImportJobRunner(db, commands, repo, mapOf(ImportService.YOUTUBE_MUSIC to locked), search = { emptyList() }, scope = scope)
+        val id = r.start(link, ImportTarget.NewPlaylist(null))
+        val p = withTimeout(10_000) { r.progress(id).first { it.state == ImportJobState.FAILED } }
+        assertEquals(ImportFailure.NEEDS_LOGIN, p.failure)
+        assertEquals(0, repo.playlists().first().size) // no empty playlist left behind
+        scope.cancel()
+    }
+
+    @Test fun matchingOutageIsRetriedNotMarkedUnavailable(): Unit = runBlocking {
+        val spotifyLike = object : PlaylistImporter {
+            override fun canHandle(url: String) = true
+            override suspend fun read(url: String, onProgress: (Int, Int?) -> Unit) = ImportedPlaylist("S", null, null,
+                PlaylistOrigin(null, "Spotify", url), listOf(ImportedTrack("Song 1", listOf("Artist"), 180_000, null, null)))
+        }
+        var calls = 0
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val r = ImportJobRunner(db, commands, repo, mapOf(ImportService.YOUTUBE_MUSIC to spotifyLike), scope = scope, retryDelaysMs = listOf(10, 10, 10, 10, 10, 10),
+            search = { if (calls++ < 4) throw java.io.IOException("offline") else listOf(native(1).nativeTrack!!.copy(title = "Song 1")) })
+        val id = r.start(link, ImportTarget.NewPlaylist(null))
+        val p = withTimeout(10_000) { r.progress(id).first { it.state == ImportJobState.DONE } }
+        assertEquals(1, p.matched)
+        scope.cancel()
+    }
+
+    @Test fun oneRunnerPerJobAndHooksCannotFailIt(): Unit = runBlocking {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val r = ImportJobRunner(db, commands, repo, mapOf(ImportService.YOUTUBE_MUSIC to FakeImporter(20)), search = { emptyList() }, scope = scope, batchSize = 5,
+            onWritten = { _, _ -> throw IllegalStateException("auto-save broke") })
+        val id = r.start(link, ImportTarget.NewPlaylist(null))
+        r.resumePending(); r.resumePending()
+        val p = withTimeout(10_000) { r.progress(id).first { it.state == ImportJobState.DONE || it.state == ImportJobState.FAILED } }
+        assertEquals(ImportJobState.DONE, p.state)
+        assertEquals(20, repo.playlist(repo.playlists().first().single().id).first()!!.entries.size)
+        scope.cancel()
+    }
 }

@@ -25,6 +25,9 @@ class SpotifyImporterTest {
                     path == "/embed/playlist/FixturePlaylist000000" -> MockResponse().setBody(fixture("embed_playlist.html"))
                     path == "/embed/album/4LH4d3cOWNNsVw41Gqt2kv" -> MockResponse().setBody(fixture("embed_album.html"))
                     path == "/embed/track/0VjIjW4GlUZAMYd2vXMi3b" -> MockResponse().setBody(fixture("embed_track.html"))
+                    path == "/embed/playlist/DeletedPlaylist0000000" -> MockResponse().setResponseCode(404)
+                    path == "/embed/playlist/BusyPlaylist0000000000" -> MockResponse().setResponseCode(429)
+                    path == "/embed/playlist/PrivatePlaylist0000000" -> MockResponse().setBody("<html><body>no data</body></html>")
                     path == "/pathfinder/v1/query" -> {
                         val offset = Regex("\"offset\":(\\d+)").find(request.requestUrl!!.queryParameter("variables")!!)!!.groupValues[1]
                         MockResponse().setBody(fixture("pathfinder_playlist_$offset.json"))
@@ -78,5 +81,10 @@ class SpotifyImporterTest {
         assertTrue(importer.canHandle("https://open.spotify.com/intl-de/playlist/abc?si=x"))
         assertTrue(importer.canHandle("spotify:album:abc"))
         assertTrue(!importer.canHandle("https://music.youtube.com/playlist?list=PL"))
+    }
+
+    @Test fun deletedIsNotFoundAndBusyIsRetryable() = runTest {
+        assertFailsWith<ImportError.NotFound> { importer.read("https://open.spotify.com/playlist/DeletedPlaylist0000000") }
+        assertFailsWith<java.io.IOException> { importer.read("https://open.spotify.com/playlist/BusyPlaylist0000000000") }
     }
 }

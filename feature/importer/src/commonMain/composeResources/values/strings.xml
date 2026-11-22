@@ -35,4 +35,6 @@
     <string name="import_status_matched">Matched</string>
     <string name="import_status_uncertain">Not sure: tap to check</string>
     <string name="import_status_unavailable">Not found: tap to fix</string>
+    <string name="import_failed_login">This is private. Signing in to the service to import private playlists comes with account settings.</string>
+    <string name="import_failed_not_found">Nothing found at this link. It may have been deleted.</string>
 </resources>

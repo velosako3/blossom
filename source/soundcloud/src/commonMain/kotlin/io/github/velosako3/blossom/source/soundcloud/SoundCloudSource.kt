@@ -23,8 +23,9 @@ class SoundCloudSource(private val client: SoundCloudClient, private val clock: 
         return SearchResults(r.arr("collection").orEmpty().filterNot { it.previewOnly }.mapNotNull { it.toTrack() })
     }
 
+    /** Null only when the track is gone; network trouble throws, so a dead-link check can't mistake it for removal. */
     override suspend fun track(id: TrackId): Track? =
-        runCatching { client.api("/tracks/${id.sourceId}") }.getOrNull()?.toTrack()
+        try { client.api("/tracks/${id.sourceId}").toTrack() } catch (_: SoundCloudClient.NotFound) { null }
 
     override suspend fun resolveStream(id: TrackId, quality: AudioQuality): StreamInfo {
         val json = try { client.api("/tracks/${id.sourceId}") } catch (e: SoundCloudClient.NotFound) {

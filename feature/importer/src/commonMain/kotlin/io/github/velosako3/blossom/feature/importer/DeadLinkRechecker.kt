@@ -28,8 +28,9 @@ class DeadLinkRechecker(
         val track = entry.track ?: return
         val now = clock.now()
         lastChecked[entry.entryId]?.let { if (now - it < 24.hours) return }
-        lastChecked[entry.entryId] = now
+        // Only an answer uses up the day; offline or an error means "ask again next time".
         val available = try { isAvailable(track) } catch (e: CancellationException) { throw e } catch (_: Exception) { null } ?: return
+        lastChecked[entry.entryId] = now
         when {
             !available && entry.status != EntryStatus.UNAVAILABLE -> commands.replaceEntryTrack(playlistId, entry.entryId, track, EntryStatus.UNAVAILABLE)
             available && entry.status == EntryStatus.UNAVAILABLE -> commands.replaceEntryTrack(playlistId, entry.entryId, track, EntryStatus.MATCHED)

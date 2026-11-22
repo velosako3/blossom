@@ -53,4 +53,25 @@ class TrackMatcherTest {
         val r = TrackMatcher.match(imp("Yellow", listOf("Coldplay"), 266_000), listOf(cand("Yellow (Live)", listOf("Coldplay"), 300_000, "x"), cand("Yellow", listOf("Coldplay"), 267_000, "y")))
         assertEquals("y", r.track?.id?.sourceId)
     }
+
+    @Test fun dashTitlesKeepTheirWords() {
+        val r = TrackMatcher.match(imp("Song - Stereo Hearts", listOf("A"), 180_000), listOf(cand("Song", listOf("A"), 180_000)))
+        assertTrue(r.status != EntryStatus.MATCHED, "only a version suffix may be dropped, not words")
+    }
+
+    @Test fun withInsideATitleIsNotAnArtist() {
+        val r = TrackMatcher.match(imp("(With or Without You)", listOf("U2"), 296_000), listOf(cand("With or Without You", listOf("U2"), 296_000)))
+        assertEquals(EntryStatus.MATCHED, r.status)
+    }
+
+    @Test fun combiningMarksSurvive() {
+        val r = TrackMatcher.match(imp("तुम ही हो", listOf("Arijit Singh"), 262_000), listOf(cand("तुम ही हो", listOf("Arijit Singh"), 262_000)))
+        assertEquals(EntryStatus.MATCHED, r.status)
+        assertTrue(TrackMatcher.score(imp("तुम ही हो", listOf("Arijit Singh"), 262_000), cand("तम ह ह", listOf("Arijit Singh"), 262_000)) < 0.95f)
+    }
+
+    @Test fun symbolOnlyTitlesDoNotMatchByArtistAlone() {
+        val r = TrackMatcher.match(imp("!!!", listOf("A"), 180_000), listOf(cand("???", listOf("A"), 180_000)))
+        assertTrue(r.status != EntryStatus.MATCHED)
+    }
 }

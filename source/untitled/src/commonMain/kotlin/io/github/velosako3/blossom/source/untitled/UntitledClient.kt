@@ -28,8 +28,15 @@ class UntitledClient(
 
     class Gone(what: String) : IOException("untitled link is private or was removed: $what")
 
-    suspend fun project(slug: String): JsonObject =
-        page("/library/project/$slug", "routes/library.project.\$projectSlug").obj("project") ?: throw Gone(slug)
+    private val projects = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, JsonObject>>()
+
+    /** A project's page data, remembered for 10 minutes (each of its tracks would otherwise fetch it again). */
+    suspend fun project(slug: String): JsonObject {
+        projects[slug]?.let { (at, data) -> if (System.currentTimeMillis() - at < 600_000) return data }
+        val data = page("/library/project/$slug", "routes/library.project.\$projectSlug").obj("project") ?: throw Gone(slug)
+        projects[slug] = System.currentTimeMillis() to data
+        return data
+    }
 
     suspend fun track(slug: String): JsonObject =
         page("/library/track/$slug", "routes/library.track.\$trackSlug").obj("track") ?: throw Gone(slug)
@@ -40,6 +47,7 @@ class UntitledClient(
         val bucket = rest.substringBefore('/')
         val path = rest.substringAfter('/', "")
         if (bucket.isEmpty() || path.isEmpty()) throw IOException("not a storage URL")
+        // The path goes in as ONE encoded segment (slashes as %2F), as untitled's own player sends it.
         val url = "$base/api/storage/buckets".toHttpUrl().newBuilder()
             .addPathSegment(bucket).addPathSegment("objects").addPathSegment(path).addPathSegment("signedUrl")
             .addQueryParameter("durationInSeconds", "3600")
@@ -69,7 +77,8 @@ class UntitledClient(
         runInterruptible {
             http.newCall(request).execute().use { r ->
                 when {
-                    r.code == 204 || r.code == 404 || r.request.url.encodedPath.startsWith("/login") -> null
+                    // 401/403 here is a private or revoked link (the page data needs no account): gone, not an outage.
+                    r.code == 204 || r.code == 401 || r.code == 403 || r.code == 404 || r.request.url.encodedPath.startsWith("/login") -> null
                     !r.isSuccessful -> throw IOException("untitled HTTP ${r.code}")
                     else -> r.body.string()
                 }

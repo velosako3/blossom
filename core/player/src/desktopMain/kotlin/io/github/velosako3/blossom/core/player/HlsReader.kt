@@ -40,6 +40,9 @@ class HlsReader private constructor(
         total = starts[parts.size]
     }
 
+    /** Fragmented MP4 (an init segment) carries absolute timestamps; libVLC then reports the stream's own time. */
+    val absoluteTimes: Boolean get() = playlist.init != null
+
     /** The whole stream's length, from the playlist. */
     val durationMs: Long get() = playlist.durationsMs.sum()
 
@@ -60,7 +63,8 @@ class HlsReader private constructor(
     fun read(buffer: ByteArray, length: Int): Int {
         if (position >= total) return 0
         val index = partAt(position)
-        val bytes = try { segment(index) } catch (e: IOException) { return -1 }
+        // A network error is thrown, not reported as the end: the engine turns it into a playback error.
+        val bytes = segment(index)
         val within = (position - starts[index]).toInt()
         val n = minOf(length, bytes.size - within)
         if (n <= 0) return -1
@@ -105,9 +109,12 @@ class HlsReader private constructor(
                 val lines = String(fetch(http, stream, current)).lines().map(String::trim).filter(String::isNotEmpty)
                 val variant = lines.indexOfFirst { it.startsWith("#EXT-X-STREAM-INF") }
                 if (variant >= 0) {
-                    current = resolve(current, lines.drop(variant + 1).first { !it.startsWith("#") })
+                    current = resolve(current, lines.drop(variant + 1).firstOrNull { !it.startsWith("#") } ?: throw IOException("HLS variant without URL"))
                     return@repeat
                 }
+                // Not supported yet: refuse rather than play ciphertext or whole files per segment.
+                if (lines.any { it.startsWith("#EXT-X-KEY") && !it.contains("METHOD=NONE") }) throw IOException("encrypted HLS is not supported")
+                if (lines.any { it.startsWith("#EXT-X-BYTERANGE") }) throw IOException("byte-range HLS is not supported")
                 val init = lines.firstOrNull { it.startsWith("#EXT-X-MAP") }?.let { MAP_URI.find(it)?.groupValues?.get(1) }?.let { resolve(current, it) }
                 val segments = mutableListOf<String>()
                 val durations = mutableListOf<Long>()
@@ -126,26 +133,29 @@ class HlsReader private constructor(
         fun sizesOf(http: OkHttpClient, stream: StreamInfo, urls: List<String>): List<Long> {
             val pool = Executors.newFixedThreadPool(minOf(8, urls.size))
             try {
-                return pool.invokeAll(urls.map { u -> Callable { head(http, stream, u) } }).map { it.get() }
+                return pool.invokeAll(urls.map { u -> Callable { head(http, stream, u) } }).map { f ->
+                    try { f.get() } catch (e: java.util.concurrent.ExecutionException) { throw e.cause as? IOException ?: IOException(e.cause) }
+                }
             } finally {
                 pool.shutdown()
             }
         }
 
         fun head(http: OkHttpClient, stream: StreamInfo, url: String): Long {
-            val request = Request.Builder().url(url).head().apply { stream.headers.forEach { (k, v) -> header(k, v) } }.build()
+            // identity: sizes must match the bytes later read (OkHttp would otherwise ask for gzip and inflate it).
+            val request = Request.Builder().url(url).head().header("Accept-Encoding", "identity").apply { stream.headers.forEach { (k, v) -> header(k, v) } }.build()
             http.newCall(request).execute().use { r ->
-                r.header("Content-Length")?.toLongOrNull()?.takeIf { r.isSuccessful && it >= 0 }?.let { return it }
+                r.header("Content-Length")?.toLongOrNull()?.takeIf { r.isSuccessful && it > 0 }?.let { return it }
             }
             // No usable HEAD: ask for one byte and read the total from Content-Range.
-            val ranged = Request.Builder().url(url).header("Range", "bytes=0-0").apply { stream.headers.forEach { (k, v) -> header(k, v) } }.build()
+            val ranged = Request.Builder().url(url).header("Range", "bytes=0-0").header("Accept-Encoding", "identity").apply { stream.headers.forEach { (k, v) -> header(k, v) } }.build()
             http.newCall(ranged).execute().use { r ->
                 return r.header("Content-Range")?.substringAfterLast('/')?.toLongOrNull() ?: throw IOException("segment size unknown: $url")
             }
         }
 
         fun fetch(http: OkHttpClient, stream: StreamInfo, url: String): ByteArray {
-            val request = Request.Builder().url(url).apply { stream.headers.forEach { (k, v) -> header(k, v) } }.build()
+            val request = Request.Builder().url(url).header("Accept-Encoding", "identity").apply { stream.headers.forEach { (k, v) -> header(k, v) } }.build()
             http.newCall(request).execute().use { r ->
                 if (!r.isSuccessful) throw IOException("HLS HTTP ${r.code}")
                 return r.body.bytes()

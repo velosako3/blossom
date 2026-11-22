@@ -56,13 +56,17 @@ class YtmImporter(private val ytm: YtmSource) : PlaylistImporter {
         data class Video(val videoId: String) : Target
     }
 
+    private val ID = Regex("""[A-Za-z0-9_-]{1,64}""")
+
     private fun target(url: String): Target? {
         val uri = runCatching { URI(url.trim()) }.getOrNull() ?: return null
         val host = uri.host?.lowercase()?.removePrefix("www.")?.removePrefix("m.") ?: return null
         val path = uri.path.orEmpty()
-        val q = uri.rawQuery.orEmpty().split('&').filter { '=' in it }.associate {
-            val (k, v) = it.split('=', limit = 2); k to URLDecoder.decode(v, Charsets.UTF_8)
-        }
+        // A malformed escape drops only its own parameter; IDs must look like YouTube IDs.
+        val q = uri.rawQuery.orEmpty().split('&').filter { '=' in it }.mapNotNull {
+            val (k, v) = it.split('=', limit = 2)
+            runCatching { k to URLDecoder.decode(v, Charsets.UTF_8) }.getOrNull()?.takeIf { (_, value) -> ID.matches(value) }
+        }.toMap()
         return when (host) {
             "music.youtube.com", "youtube.com" -> when {
                 q["list"] != null && (path == "/playlist" || path == "/watch") -> Target.Playlist(q.getValue("list"))

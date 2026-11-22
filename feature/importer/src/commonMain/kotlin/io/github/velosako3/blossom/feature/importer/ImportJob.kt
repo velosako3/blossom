@@ -22,6 +22,9 @@ sealed interface ImportTarget {
 
 enum class ImportJobState { READING, MATCHING, DONE, FAILED }
 
+/** Why a job FAILED. Network trouble never fails a job: it waits and resumes. */
+enum class ImportFailure { NEEDS_LOGIN, NOT_FOUND, UNSUPPORTED }
+
 data class ImportProgress(
     val state: ImportJobState,
     val total: Int?,
@@ -30,6 +33,7 @@ data class ImportProgress(
     val uncertain: Int,
     val unavailable: Int,
     val playlistId: PlaylistId?,
+    val failure: ImportFailure? = null,
 )
 
 /** [ImportedTrack] as stored in `import_job_item`. */

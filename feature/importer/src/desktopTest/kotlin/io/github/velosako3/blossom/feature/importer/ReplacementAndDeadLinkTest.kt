@@ -119,4 +119,17 @@ class ReplacementAndDeadLinkTest {
             scope.cancel()
         }
     }
+
+    @Test fun anUnansweredCheckDoesNotUseUpTheDay(): Unit = runBlocking {
+        val pid = playlistWith(t(SourceKind.UNTITLED, "maybe"))
+        var answer: Boolean? = null
+        var checks = 0
+        val rechecker = DeadLinkRechecker(TestClock(), commands) { checks++; answer }
+        val entry = repo.playlist(pid).first()!!.entries[1]
+        rechecker.recheckIfDue(pid, entry) // offline: no answer
+        answer = false
+        rechecker.recheckIfDue(pid, entry)
+        assertEquals(2, checks)
+        assertEquals(EntryStatus.UNAVAILABLE, repo.playlist(pid).first()!!.entries[1].status)
+    }
 }

@@ -52,4 +52,23 @@ class ConcurrentWritesTest {
             file.delete(); java.io.File(file.path + "-wal").delete(); java.io.File(file.path + "-shm").delete()
         }
     }
+
+    /** A version-1 database (before import_job.error) upgrades in place. */
+    @Test fun versionOneDatabaseMigrates() {
+        val file = kotlin.io.path.createTempFile("blossom-v1", ".db").toFile()
+        try {
+            java.sql.DriverManager.getConnection("jdbc:sqlite:${file.absolutePath}").use { c ->
+                c.createStatement().use { st ->
+                    st.execute("CREATE TABLE import_job (id TEXT NOT NULL PRIMARY KEY, url TEXT NOT NULL, service TEXT NOT NULL, target_json TEXT NOT NULL, playlist_id TEXT, state TEXT NOT NULL, total INTEGER, created_at INTEGER NOT NULL)")
+                    st.execute("PRAGMA user_version = 1")
+                }
+            }
+            val db = fileDatabase(file)
+            db.blossomQueries.importJobInsert("j", "u", "SPOTIFY", "{}", "READING", 0)
+            db.blossomQueries.importJobFail("NEEDS_LOGIN", "j")
+            assertEquals("NEEDS_LOGIN", db.blossomQueries.importJob("j").executeAsOne().error)
+        } finally {
+            file.delete(); java.io.File(file.path + "-wal").delete(); java.io.File(file.path + "-shm").delete()
+        }
+    }
 }

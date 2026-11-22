@@ -49,8 +49,8 @@ class SpotifyImporter(
         val (type, id) = parse(url) ?: throw ImportError.NotFound(url)
         val canonical = "https://open.spotify.com/$type/$id"
         val origin = PlaylistOrigin(null, SERVICE, canonical)
-        val page = embed(type, id)
-        val entity = page?.obj("props")?.obj("pageProps")?.obj("state")?.obj("data")?.obj("entity")
+        val page = embed(type, id) ?: throw ImportError.NotFound(canonical)
+        val entity = page.obj("props")?.obj("pageProps")?.obj("state")?.obj("data")?.obj("entity")
         if (entity == null) {
             // Private, or deleted. Signed in, a private playlist can still be read.
             if (type == "playlist" && auth?.tokens() != null) return@withContext signedInPlaylist(id, origin, onProgress)
@@ -71,11 +71,14 @@ class SpotifyImporter(
             ))
             else -> {
                 val album = name.takeIf { type == "album" }
-                val tracks = entity.arr("trackList").orEmpty().mapNotNull { (it as? JsonObject)?.embedTrack(album) }.toMutableList()
+                val raw = entity.arr("trackList").orEmpty()
+                val tracks = raw.mapNotNull { (it as? JsonObject)?.embedTrack(album) }.toMutableList()
                 onProgress(tracks.size, null)
-                if (type == "playlist" && tracks.size >= EMBED_LIMIT) {
+                // The embed stops at 100 items; page on from the raw count (some items may have been unreadable).
+                if (type == "playlist" && raw.size >= EMBED_LIMIT) {
                     val token = page.obj("props")?.obj("pageProps")?.obj("state")?.obj("settings")?.obj("session")?.str("accessToken")
-                    if (token != null) pages(id, mapOf("Authorization" to "Bearer $token"), tracks.size, tracks, onProgress)
+                        ?: throw IOException("Spotify gave no token to read past the first 100 tracks")
+                    pages(id, mapOf("Authorization" to "Bearer $token"), raw.size, tracks, onProgress)
                 }
                 ImportedPlaylist(name, entity.str("subtitle").takeIf { type == "playlist" }, null, origin, tracks)
             }
@@ -95,14 +98,15 @@ class SpotifyImporter(
         val html = runInterruptible {
             http.newCall(request).execute().use { r ->
                 when {
-                    r.code == 404 || r.code == 403 -> null
-                    !r.isSuccessful -> throw IOException("Spotify embed HTTP ${r.code}")
+                    r.code == 404 -> null // deleted or never existed
+                    !r.isSuccessful -> throw IOException("Spotify embed HTTP ${r.code}") // 403/429/5xx: try again later
                     else -> r.body.string()
                 }
             }
         } ?: return null
-        val data = NEXT_DATA.find(html)?.groupValues?.get(1) ?: return null
-        return json.parseToJsonElement(data) as? JsonObject
+        // A page without data is how private items look; an empty object makes the caller ask for sign-in.
+        val data = NEXT_DATA.find(html)?.groupValues?.get(1) ?: return JsonObject(emptyMap())
+        return json.parseToJsonElement(data) as? JsonObject ?: JsonObject(emptyMap())
     }
 
     private fun JsonObject.embedTrack(album: String?): ImportedTrack? {

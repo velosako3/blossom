@@ -30,13 +30,10 @@ class DesktopPlaybackEngine(
     /** The current HLS stream, which seeks by restarting at a segment; positions add [hlsOffsetMs]. */
     @Volatile private var hls: HlsReader? = null
     @Volatile private var hlsOffsetMs = 0L
-    /** Whether libVLC reports a slice's time from its own start (MPEG-TS) or as the stream's time (fragmented MP4). */
-    @Volatile private var hlsRelative: Boolean? = null
 
     private fun hlsTime(vlcTime: Long): Long {
         if (hls == null || hlsOffsetMs == 0L) return vlcTime
-        val relative = hlsRelative ?: (vlcTime < hlsOffsetMs - 2_000).also { hlsRelative = it }
-        return if (relative) vlcTime + hlsOffsetMs else vlcTime
+        return if (hls?.absoluteTimes == true) vlcTime else vlcTime + hlsOffsetMs
     }
     @Volatile override var mediaId: Long = 0
         private set
@@ -86,7 +83,8 @@ class DesktopPlaybackEngine(
                 // HLS (SoundCloud): the playlist and segment sizes are fetched up front, off the caller's thread.
                 val stream = try {
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { HlsReader(input.stream) }
-                } catch (e: java.io.IOException) {
+                } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
                     _events.tryEmit(EngineEvent.Error(null, e, mediaId)); return
                 }
                 hls = stream
@@ -121,6 +119,7 @@ class DesktopPlaybackEngine(
         if (stream == null) { mediaPlayer.submit { mediaPlayer.controls().setTime(ms) }; return }
         // libVLC can't seek concatenated HLS segments by bytes: restart at the segment that holds [ms].
         mediaPlayer.submit {
+            if (hls !== stream) return@submit // the track changed before this ran
             val playing = mediaPlayer.status().isPlaying
             startHlsAt(stream, ms)
             if (playing) mediaPlayer.controls().play()
@@ -136,7 +135,6 @@ class DesktopPlaybackEngine(
         val next = stream.segmentStartMs(segment + 1)
         if (next - ms < ms - stream.segmentStartMs(segment) && next < stream.durationMs) segment++
         hlsOffsetMs = stream.segmentStartMs(segment)
-        hlsRelative = null
         prepare(stream.from(segment).asSource(), emptyArray())
     }
     override fun setVolume(v: Float) { mediaPlayer.submit { mediaPlayer.audio().setVolume((v * 100).toInt().coerceIn(0, 200)) } }

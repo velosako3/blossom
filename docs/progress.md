@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Tasks 6.1–6.6 and 7.1–7.3 done. Milestone 6 review received; its fix pass is next, then Task 7.4.
+Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–6 done (M6 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Tasks 7.1–7.3 done. Next: Task 7.4 (Wrapped).
 
 Hands-on testing rule: the owner is using this desktop, so never inject keyboard/mouse input or capture the screen.
 Desktop end-to-end checks run off-screen with the real graph: `./gradlew :composeApp:desktopTest -PliveTests=true -Proborazzi.test.record=true --tests "*DesktopEndToEnd*"`. `./gradlew :composeApp:run -Pblossom.debugPlay="query"` plays a search result at startup, for `playerctl` checks. Kill stray app instances by PID (`ps … | grep 'blossom\.MainKt'`), never with a `pkill -f` pattern that matches your own shell.
@@ -43,6 +43,25 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - Desktop `NetworkMonitor` checks for an up interface plus a DNS answer every 15 s (no request to any server); `-Dblossom.forceOffline=true` pins it offline for testing.
 
 ## Deviations from plan
+- Milestone 6 review fixes:
+  - Bundled libVLC plugins are now downloaded over HTTPS and checked against SHA256: the Ubuntu package index's for the .debs, VideoLAN's published one for the Windows zip. They used to come over plain HTTP with no check.
+  - Network errors never fail an import: reading and matching back off (2 s, 8 s, 30 s), then the job waits and resumes on the next start. A match is UNAVAILABLE only after a search that answered with nothing. Sign-in-needed and not-found imports fail with a reason the Import screen shows; the reason is stored in the new `import_job.error` column (migration `1.sqm`, applied in one transaction with the version bump).
+  - One runner per job (no duplicate entries from start/resume races). A new playlist and the job's record of it commit together (no orphan on a crash). Hook failures (untitled auto-save) don't stop an import. A double tap starts one import.
+  - The router and the YouTube importer no longer throw on malformed percent escapes, and they only take IDs made of URL-safe characters.
+  - Matcher: only true version tails are dropped ("- Stereo Hearts" stays a title); "(With or Without You)" stays a title; combining marks survive (NFC); symbol-only titles never match by artist and duration alone.
+  - Dead links: only an answer uses up the day's check. SoundCloud/untitled `track()` returns null only for gone links (network errors throw). untitled 401/403 counts as private/gone. untitled project data is cached for 10 minutes.
+  - Spotify: 404 → NotFound, 403/429 → retry later, a page without data → sign-in. Paging continues from the raw item count, and a missing token is an error instead of a silent 100-track cap.
+  - SoundCloud: the client ID refreshes once for concurrent callers.
+  - HLS: encrypted and byte-range playlists are refused; sizes and reads use `Accept-Encoding: identity` and reject zero sizes; read errors surface as playback errors; a seek arriving after a track change is dropped; the time mode comes from the container (fragmented MP4 → absolute).
+  - The desktop driver clears its thread-local connection on close.
+  Tests that failed first: the router, matcher, runner (offline read, sign-in reason, matching outage, one runner + hooks), rechecker, view model, Spotify, untitled and HLS tests. `versionOneDatabaseMigrates` passed at once.
+- Milestone 6 review rulings (not changed):
+  - The clipboard is read when Import opens, as the spec asks.
+  - `watch?v=…&list=…` imports the playlist, per the plan's router table.
+  - The untitled storage path is sent as one encoded segment, per the research doc; the live test played.
+  - ISRC matching stays dormant (`Track` has no ISRC; recorded under 6.1).
+  - A running import keeps going after "Import another link".
+  - The external vlcj-bundler plugin (Spotube's) still downloads the base VLC over HTTP; that's outside blossom's code (Open questions).
 - Task 7.3: `LibraryRepository.firstPlays()` (each track's first counted play) feeds "new artists". The view model reads the period's and the previous period's plays plus first plays, and never moves past the period holding today. `Destination.Wrapped` carries a compact period key (`week:2026-47`).
 - Task 7.1: `PlayTracker` takes the player's state flow, a `record` lambda (the app passes `LibraryCommands.recordPlay`) and device preferences for the checkpoint, not `BlossomPlayer` + `LibraryCommands`, so `core:player` doesn't depend on the database module. A track counts as having reached its natural end when its last position was within 1.5 s of the end; repeat-one restarts start a new play. Desktop records the play in progress on shutdown (2 s limit); Android relies on the 15 s checkpoint.
 - Task 6.6:
@@ -178,5 +197,6 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - **No remote `main` branch.** `github.com/velosako3/blossom` has no commits, so `dev` starts from an empty history and the `dev → main` PR can't be opened until `main` exists (see open questions). Pushing to `main` is not allowed for this run.
 
 ## Open questions for owner
+- The desktop packaging plugin `vlcj-bundler` (from Spotube) downloads the base libVLC packages over plain HTTP without checksums. blossom's own extra-plugin task now verifies its downloads; vendoring and hardening the bundler (HTTPS + SHA256) would close the rest. Should blossom fork it?
 - Lyrics frame time on real hardware: run `./gradlew :composeApp:run`, play a word-synced song with the lyrics panel open for 30 s, and check whether the glass quality stays FULL (it drops automatically if p90 > 20 ms). Off-screen CPU numbers are in Deviations.
 - **Create a `main` branch on GitHub** so the `dev → main` pull request can be opened. The repository had no commits when this run started, and this run may not push to `main`. One way: `git push origin <first commit of dev>:refs/heads/main` (the first commit only adds the plan). Until then, milestone summaries are kept in `docs/milestones.md`.

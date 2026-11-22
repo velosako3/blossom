@@ -90,4 +90,12 @@ class ImportViewModelTest {
         assertEquals(listOf<ImportTarget>(ImportTarget.UpdateExisting(existing)), targets)
         assertEquals(30, repo.playlist(existing).first()!!.entries.size)
     }
+
+    @Test fun doubleTapStartsOneImport(): Unit = runBlocking {
+        vm.onTextChange(url)
+        vm.start(); vm.start()
+        withTimeout(20_000) { vm.state.first { it is ImportUi.Done } }
+        assertEquals(1, targets.size)
+        assertEquals(1, repo.playlists().first().size)
+    }
 }

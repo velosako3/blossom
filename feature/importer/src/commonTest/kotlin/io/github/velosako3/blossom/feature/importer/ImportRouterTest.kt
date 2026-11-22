@@ -38,4 +38,10 @@ class ImportRouterTest {
         assertNull(ImportRouter.detect("https://example.com/playlist/1"))
         assertNull(ImportRouter.detect(""))
     }
+
+    @Test fun malformedEscapesNeverThrow() {
+        assertNull(ImportRouter.detect("https://music.youtube.com/watch?v=%zz"))
+        assertEquals("https://open.spotify.com/track/t1", ImportRouter.detect("https://open.spotify.com/track/t1?si=%")?.canonicalUrl)
+        assertNull(ImportRouter.detect("https://music.youtube.com/watch?v=abc%26list%3Devil"))
+    }
 }

@@ -87,7 +87,9 @@ CREATE TABLE import_job (
     playlist_id TEXT,
     state TEXT NOT NULL,
     total INTEGER,
-    created_at INTEGER NOT NULL
+    created_at INTEGER NOT NULL,
+    -- why a FAILED job failed (needsLogin, notFound, unsupported)
+    error TEXT
 );
 
 CREATE TABLE import_job_item (
@@ -327,6 +329,9 @@ SELECT id FROM import_job WHERE state IN ('READING', 'MATCHING') ORDER BY create
 
 importJobSetState:
 UPDATE import_job SET state = ? WHERE id = ?;
+
+importJobFail:
+UPDATE import_job SET state = 'FAILED', error = ? WHERE id = ?;
 
 importJobSetPlaylist:
 UPDATE import_job SET playlist_id = ? WHERE id = ?;

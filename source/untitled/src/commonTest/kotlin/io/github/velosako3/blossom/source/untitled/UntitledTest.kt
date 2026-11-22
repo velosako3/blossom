@@ -29,6 +29,8 @@ class UntitledTest {
                 return when {
                     path == "/library/project/WKbtDE6kGZpDiPCFdcERF" && url.queryParameter("_data") == "routes/library.project.\$projectSlug" -> MockResponse().setBody(fixture("project_data.json"))
                     path == "/library/track/WJw8irtvzDf939v5mbbbb" && url.queryParameter("_data") == "routes/library.track.\$trackSlug" -> MockResponse().setBody(fixture("track_data.json"))
+                    path == "/library/track/LockedLockedLocked1234" -> MockResponse().setResponseCode(403)
+                    path == "/library/track/BrokenBrokenBroken1234" -> MockResponse().setResponseCode(503)
                     path.startsWith("/library/") -> MockResponse().setResponseCode(204) // private or removed
                     path.startsWith("/api/storage/buckets/") && path.endsWith("/signedUrl") ->
                         if ("private-transcoded-audio" in path) MockResponse().setBody(fixture("signed_url.json")) else MockResponse().setResponseCode(404)
@@ -91,5 +93,10 @@ class UntitledTest {
             UntitledSource(client).resolveStream(TrackId.of(SourceKind.UNTITLED, "GoneGoneGoneGoneGone1"), AudioQuality.HIGH)
         }
         assertNull(UntitledSource(client).track(TrackId.of(SourceKind.UNTITLED, "GoneGoneGoneGoneGone1")))
+    }
+
+    @Test fun lockedIsGoneButOutageIsAnError() = runTest {
+        assertNull(UntitledSource(client).track(TrackId.of(SourceKind.UNTITLED, "LockedLockedLocked1234")))
+        assertFailsWith<java.io.IOException> { UntitledSource(client).track(TrackId.of(SourceKind.UNTITLED, "BrokenBrokenBroken1234")) }
     }
 }

@@ -1,0 +1,2 @@
+-- Version 1 -> 2: why an import failed (Milestone 6 review).
+ALTER TABLE import_job ADD COLUMN error TEXT;
