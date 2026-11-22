@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Task 6.1 done. Next: Task 6.2 (Spotify importer).
+Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Tasks 6.1–6.2 done. Next: Task 6.3 (YouTube Music / YouTube importer).
 
 Hands-on testing rule: the owner is using this desktop, so never inject keyboard/mouse input or capture the screen.
 Desktop end-to-end checks run off-screen with the real graph: `./gradlew :composeApp:desktopTest -PliveTests=true -Proborazzi.test.record=true --tests "*DesktopEndToEnd*"`. `./gradlew :composeApp:run -Pblossom.debugPlay="query"` plays a search result at startup, for `playerctl` checks. Kill stray app instances by PID (`ps … | grep 'blossom\.MainKt'`), never with a `pkill -f` pattern that matches your own shell.
@@ -43,6 +43,13 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - Desktop `NetworkMonitor` checks for an up interface plus a DNS answer every 15 s (no request to any server); `-Dblossom.forceOffline=true` pins it offline for testing.
 
 ## Deviations from plan
+- Task 6.2:
+  - `SpotifyAuth` is a token provider (`fun interface`). The sign-in web view that mints tokens comes with the account settings in 9.7, alongside YouTube Music sign-in, so private playlists and Liked Songs work once that lands.
+  - Liked Songs import uses the special source `spotify:collection:tracks`.
+  - Embed-page tracks have no album name; tracks read from GraphQL pages do.
+  - The embed joins artists with ", ", so names containing a comma split in two (the matcher tolerates it).
+  - `ImportError` (NeedsLogin, NotFound) lives in `source/api`.
+  - Live, no sign-in: `spotify live: 'All Out 80s' 150 tracks, first 'Thriller' – [Michael Jackson], last 'Slave To Love'`; album 'The Dark Side of the Moon' 10 tracks; track 'Blinding Lights'.
 - Milestone 5 review fixes, each covered by a test that failed first:
   - The offline file format is version 2, with an 8-byte random nonce prefix + 4-byte chunk index instead of 4 + 8. With 4 random bytes, two files under one key share a nonce with ~0.3 % odds at 5,000 files, which breaks GCM. Nothing has shipped, so no migration.
   - Resume never re-encrypts a chunk index already on disk. A file that authenticates to its last chunk counts as complete (crash before SAVED). A file with bytes past its last whole chunk starts over with new nonces.
