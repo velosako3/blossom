@@ -48,6 +48,7 @@ kotlin {
                 implementation(projects.feature.nowplaying)
                 implementation(projects.feature.library)
                 implementation(projects.feature.lyrics)
+                implementation(projects.feature.settings)
                 implementation(projects.core.database)
                 implementation(projects.core.offline)
                 implementation(libs.okhttp)

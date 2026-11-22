@@ -65,6 +65,18 @@ fun App(
                 BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
                     slots.overlay.let { overlay -> Box(Modifier.fillMaxSize().zIndex(2f)) { overlay() } }
                     graph?.let { PlaybackErrorBanner(it.player, Modifier.align(androidx.compose.ui.Alignment.TopCenter).padding(top = 48.dp).zIndex(1f)) }
+                    graph?.let { g ->
+                        val online = g.network.status.collectAsState().value.online
+                        val storagePaused = (g.offline?.pausedForStorage() ?: kotlinx.coroutines.flow.flowOf(false)).collectAsState(false).value
+                        androidx.compose.foundation.layout.Column(
+                            Modifier.align(androidx.compose.ui.Alignment.BottomCenter).padding(bottom = 112.dp).zIndex(1f),
+                            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+                            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                        ) {
+                            if (!online) OfflineBanner()
+                            if (storagePaused) StoragePausedBanner()
+                        }
+                    }
                     val layout = WindowLayout.from(maxWidth.value)
                     compactLayout = layout == WindowLayout.COMPACT
                     when (layout) {

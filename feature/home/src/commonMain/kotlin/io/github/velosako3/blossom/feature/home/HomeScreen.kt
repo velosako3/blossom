@@ -1,6 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.feature.home
 
+import io.github.velosako3.blossom.core.designsystem.components.MediaRow
+import io.github.velosako3.blossom.core.designsystem.components.GlassListItem
+import io.github.velosako3.blossom.core.designsystem.components.Artwork
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.itemsIndexed
+import io.github.velosako3.blossom.core.platform.NetworkMonitor
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.map
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,21 +51,41 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
+/** A saved playlist on the offline home. */
+data class OfflinePlaylistCard(val id: String, val name: String, val artworkUrls: List<String>)
+
 sealed interface HomeState {
     data object Loading : HomeState
     data class Loaded(val sections: List<HomeSection>) : HomeState
     data class Failed(val message: String?) : HomeState
+    /** No connection: saved playlists and recently played saved songs. */
+    data class OfflineHome(val playlists: List<OfflinePlaylistCard>, val recent: List<Track>) : HomeState
 }
 
-class HomeViewModel(private val browse: YtmBrowse, private val scope: CoroutineScope) {
+/** The YouTube Music home feed; while [network] is offline, [offline] (saved music) instead. */
+class HomeViewModel(
+    private val browse: YtmBrowse,
+    private val scope: CoroutineScope,
+    private val network: NetworkMonitor? = null,
+    private val offline: Flow<HomeState.OfflineHome> = emptyFlow(),
+) {
     private val _state = MutableStateFlow<HomeState>(HomeState.Loading)
     val state: StateFlow<HomeState> = _state.asStateFlow()
+    private var job: Job? = null
 
-    init { refresh() }
+    init {
+        if (network == null) refresh()
+        else scope.launch {
+            network.status.map { it.online }.distinctUntilChanged().collect { online ->
+                if (online) refresh() else { job?.cancel(); job = scope.launch { offline.collect { _state.value = it } } }
+            }
+        }
+    }
 
     fun refresh() {
+        job?.cancel()
         _state.value = HomeState.Loading
-        scope.launch {
+        job = scope.launch {
             _state.value = try {
                 HomeState.Loaded(browse.home())
             } catch (e: CancellationException) {
@@ -75,6 +106,7 @@ fun HomeScreen(
     onOpenPlaylist: (String) -> Unit,
     modifier: Modifier = Modifier,
     banner: (@Composable () -> Unit)? = null,
+    onOpenSavedPlaylist: (String) -> Unit = {},
 ) {
     val state by vm.state.collectAsState()
     Box(modifier.fillMaxSize()) {
@@ -98,6 +130,44 @@ fun HomeScreen(
                 items(s.sections, key = { it.title }) { section ->
                     SectionCard(section, onPlay, onOpenAlbum, onOpenArtist, onOpenPlaylist)
                 }
+            }
+            is HomeState.OfflineHome -> OfflineHomeList(s, onPlay, onOpenSavedPlaylist, banner)
+        }
+    }
+}
+
+@Composable
+private fun OfflineHomeList(
+    s: HomeState.OfflineHome,
+    onPlay: (List<Track>, Int) -> Unit,
+    onOpenSavedPlaylist: (String) -> Unit,
+    banner: (@Composable () -> Unit)?,
+) {
+    val muted = BlossomTheme.colors.onSurfaceVariant
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 24.dp)) {
+        item {
+            Column(Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
+                Text(stringResource(Res.string.home_title), style = MaterialTheme.typography.headlineLarge, modifier = Modifier.padding(start = 12.dp, top = 12.dp))
+                banner?.invoke()
+            }
+        }
+        if (s.playlists.isEmpty() && s.recent.isEmpty()) {
+            item { Text(stringResource(Res.string.home_offline_empty), color = muted, modifier = Modifier.padding(16.dp)) }
+        }
+        if (s.playlists.isNotEmpty()) {
+            item { Text(stringResource(Res.string.home_saved_playlists), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(12.dp)) }
+            items(s.playlists, key = { "p" + it.id }) { p ->
+                GlassListItem(
+                    headline = p.name,
+                    leading = { Artwork(p.artworkUrls.firstOrNull(), null, Modifier.size(48.dp)) },
+                    onClick = { onOpenSavedPlaylist(p.id) },
+                )
+            }
+        }
+        if (s.recent.isNotEmpty()) {
+            item { Text(stringResource(Res.string.home_recent_saved), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(12.dp)) }
+            itemsIndexed(s.recent, key = { _, t -> "t" + t.id.value }) { i, t ->
+                MediaRow(t.title, t.artistNames, t.artworkUrl, onClick = { onPlay(s.recent, i) })
             }
         }
     }

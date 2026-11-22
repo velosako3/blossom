@@ -1,6 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom
 
+import io.github.velosako3.blossom.composeApp.resources.saved_empty
+import io.github.velosako3.blossom.core.offline.OfflineRef
+import io.github.velosako3.blossom.core.offline.OfflineState
+import io.github.velosako3.blossom.core.model.SourceKind
+import io.github.velosako3.blossom.feature.library.PlaylistMenuAction
+import io.github.velosako3.blossom.composeApp.resources.menu_save_offline
+import io.github.velosako3.blossom.composeApp.resources.menu_remove_download
+import io.github.velosako3.blossom.composeApp.resources.pl_saved_badge
+import io.github.velosako3.blossom.composeApp.resources.pl_saving_badge
+import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.padding
 import io.github.velosako3.blossom.feature.lyrics.ui.LyricsPanel
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -69,7 +80,21 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
     val liked by (current?.let { graph.repo.isLiked(it.id) } ?: flowOf(false)).collectAsState(false)
     val toggleLike: (Track) -> Unit = { t -> graph.library.toggleLike(t) }
     val addToPlaylist = stringResource(Res.string.menu_add_to_playlist)
-    val menu = listOf(PlayerMenuAction(addToPlaylist) { addTracks = listOf(it) })
+    val online = graph.network.status.collectAsState().value.online
+    val offline = graph.offline
+    val currentOffline by (current?.let { t -> offline?.state(t.id) } ?: flowOf(OfflineState.NOT_SAVED)).collectAsState(OfflineState.NOT_SAVED)
+    val saveLabel = stringResource(Res.string.menu_save_offline)
+    val removeLabel = stringResource(Res.string.menu_remove_download)
+    val menu = listOfNotNull(
+        PlayerMenuAction(addToPlaylist) { addTracks = listOf(it) },
+        offline?.takeIf { current?.id?.kind != SourceKind.LOCAL }?.let { store ->
+            if (currentOffline == OfflineState.NOT_SAVED) PlayerMenuAction(saveLabel) { t -> graph.scope.launch { store.saveTrack(t, OfflineRef.Single(t.id)) } }
+            else PlayerMenuAction(removeLabel) { t -> graph.scope.launch { store.unsave(OfflineRef.Single(t.id)) } }
+        },
+    )
+    val savedTracks by (offline?.savedTracks() ?: flowOf(emptyList())).collectAsState(emptyList())
+    val savedIds = remember(savedTracks) { savedTracks.mapTo(HashSet()) { it.id } }
+    val savedBadge: @Composable (Track) -> Unit = { t -> if (t.id in savedIds) SavedIcon() }
     val openPlaylistLocal: (io.github.velosako3.blossom.core.model.PlaylistId) -> Unit = { navigator.navigate(Destination.Playlist(it.value)) }
     return ShellSlots(
         overlay = {
@@ -106,7 +131,11 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
         lyricsPanel = { LyricsPanel(graph.lyrics, graph.player, Modifier.fillMaxSize(), onFullScreen = if (graph.desktop) ({ fullScreenLyrics = true }) else null, color = io.github.velosako3.blossom.core.designsystem.theme.BlossomTheme.colors.onSurface) },
         screen = { destination ->
             when (destination) {
-                Destination.Home -> { HomeScreen(graph.home, { t, i -> play(t, i, false) }, openAlbum, openArtist, openPlaylist); true }
+                Destination.Home -> {
+                    HomeScreen(graph.home, { t, i -> play(t, i, false) }, openAlbum, openArtist, openPlaylist,
+                        onOpenSavedPlaylist = { navigator.navigate(Destination.Playlist(it)) })
+                    true
+                }
                 Destination.Search -> {
                     SearchScreen(graph.search, { t, i -> play(t, i, false) }, openAlbum, openArtist, openPlaylist, focusRequester = searchFocus, focusTrigger = shellState.searchFocusRequests)
                     true
@@ -147,6 +176,7 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
                     LibraryScreen(
                         graph.library, openPlaylistLocal, play, onImport = { navigator.navigate(Destination.Import()) },
                         onSettings = if (compact) ({ navigator.navigate(Destination.Settings) }) else null,
+                        saved = offline?.let { { LikedList(savedTracks, play, badge = savedBadge, emptyText = stringResource(Res.string.saved_empty)) } },
                         localFiles = {
                             val localTracks by graph.local.library.tracks().collectAsState(emptyList())
                             val folders by graph.local.folders.collectAsState()
@@ -159,16 +189,58 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
                 }
                 is Destination.Playlist -> {
                     val vm = remember(destination.id) { PlaylistViewModel(io.github.velosako3.blossom.core.model.PlaylistId(destination.id), graph.repo, graph.commands, graph.scope) }
-                    PlaylistScreen(vm, play, onAddToPlaylist = { addTracks = it }, onDeleted = { navigator.back() }, topBar = { ScreenTopBar("", navigator) }, isAvailable = graph.local::isAvailable)
+                    val pid = io.github.velosako3.blossom.core.model.PlaylistId(destination.id)
+                    val savedPlaylists by (offline?.savedPlaylists() ?: flowOf(emptySet())).collectAsState(emptySet())
+                    val isSavedPlaylist = pid in savedPlaylists
+                    val entries = vm.state.collectAsState().value.playlist?.entries.orEmpty().mapNotNull { it.track }.filter { it.id.kind != SourceKind.LOCAL }
+                    val savedCount = entries.count { it.id in savedIds }
+                    PlaylistScreen(
+                        vm, play, onAddToPlaylist = { addTracks = it }, onDeleted = { navigator.back() }, topBar = { ScreenTopBar("", navigator) },
+                        isAvailable = { graph.isAvailable(it, online) },
+                        menuActions = offline?.let { store ->
+                            listOf(
+                                if (isSavedPlaylist) PlaylistMenuAction(removeLabel) { graph.scope.launch { store.unsavePlaylist(pid) } }
+                                else PlaylistMenuAction(saveLabel) { graph.scope.launch { store.savePlaylist(pid) } },
+                            )
+                        }.orEmpty(),
+                        headerExtras = {
+                            if (isSavedPlaylist && entries.isNotEmpty()) {
+                                androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                    SavedIcon()
+                                    Text(
+                                        if (savedCount == entries.size) stringResource(Res.string.pl_saved_badge) else stringResource(Res.string.pl_saving_badge, savedCount, entries.size),
+                                        style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
+                                        modifier = Modifier.padding(start = 6.dp),
+                                    )
+                                }
+                            }
+                        },
+                        rowBadge = { e -> e.track?.let { savedBadge(it) } },
+                    )
                     true
                 }
                 Destination.Liked -> {
                     val likedTracks by graph.library.liked.collectAsState()
                     androidx.compose.foundation.layout.Column {
                         ScreenTopBar(stringResource(Res.string.dest_liked), navigator)
-                        LikedList(likedTracks.orEmpty(), play)
+                        LikedList(likedTracks.orEmpty(), play, isAvailable = { graph.isAvailable(it, online) }, badge = savedBadge)
                     }
                     true
+                }
+                Destination.Settings -> {
+                    val store = graph.offline
+                    val settingsStore = graph.offlineSettings
+                    if (store == null || settingsStore == null) false else {
+                        val usage by store.usageBytes().collectAsState(0L)
+                        val settings by settingsStore.settings.collectAsState()
+                        io.github.velosako3.blossom.feature.settings.StorageScreen(
+                            usage, settings,
+                            onChange = { change -> settingsStore.update(change); store.let { (it as? io.github.velosako3.blossom.core.offline.SqlOfflineStore)?.manager?.kick(retryPaused = true) } },
+                            onRemoveAll = { graph.scope.launch { store.clearAll() } },
+                            topBar = { ScreenTopBar("", navigator) },
+                        )
+                        true
+                    }
                 }
                 else -> false
             }

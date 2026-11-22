@@ -27,4 +27,12 @@
     <string name="dest_local_files">Local files</string>
     <string name="menu_add_to_playlist">Add to playlist</string>
     <string name="lyrics_close_full_screen">Close full-screen lyrics</string>
+    <string name="offline_banner">You're offline. Showing saved music.</string>
+    <string name="menu_save_offline">Save for offline</string>
+    <string name="menu_remove_download">Remove download</string>
+    <string name="pl_saved_badge">Saved</string>
+    <string name="pl_saving_badge">Saving %1$d of %2$d</string>
+    <string name="offline_saved_icon">Saved for offline</string>
+    <string name="storage_paused_banner">Saving paused: the storage limit is reached.</string>
+    <string name="saved_empty">Nothing saved yet. Save songs or playlists to listen without a connection.</string>
 </resources>

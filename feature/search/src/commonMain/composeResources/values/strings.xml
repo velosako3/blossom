@@ -14,4 +14,5 @@
     <string name="search_clear">Clear</string>
     <string name="search_remove_recent">Remove from recent searches</string>
     <string name="search_artist">Artist</string>
+    <string name="search_offline">Search needs a connection. Showing matches from your saved music and local files.</string>
 </resources>

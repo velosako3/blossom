@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.feature.search
 
+import io.github.velosako3.blossom.core.platform.NetworkMonitor
+import io.github.velosako3.blossom.core.model.Track
+import kotlinx.coroutines.flow.flowOf
 import io.github.velosako3.blossom.core.platform.PreferenceStore
 import io.github.velosako3.blossom.source.api.MusicSource
 import io.github.velosako3.blossom.source.api.SearchFilter
@@ -31,6 +34,8 @@ data class SearchUiState(
     val results: SearchResults? = null,
     val loading: Boolean = false,
     val error: String? = null,
+    /** No connection: results come from local files and saved music only. */
+    val offline: Boolean = false,
 )
 
 /** Up to 20 recent searches, most recent first, unique ignoring case. Kept on this device only. */
@@ -58,6 +63,9 @@ class SearchViewModel(
     private val source: MusicSource,
     private val recentStore: RecentSearchStore,
     scope: CoroutineScope,
+    private val network: NetworkMonitor? = null,
+    /** Local files and saved songs matching a query, for offline search. */
+    private val offlineSearch: suspend (String) -> List<Track> = { emptyList() },
 ) {
     private val query = MutableStateFlow("")
     private val tab = MutableStateFlow(SearchTab.SONGS)
@@ -66,15 +74,17 @@ class SearchViewModel(
 
     init {
         scope.launch {
-            combine(query.debounce(DEBOUNCE_MS).map { it.trim() }.distinctUntilChanged(), tab) { q, t -> q to t }
-                .collectLatest { (q, t) ->
+            val online = network?.status?.map { it.online }?.distinctUntilChanged() ?: flowOf(true)
+            combine(query.debounce(DEBOUNCE_MS).map { it.trim() }.distinctUntilChanged(), tab, online) { q, t, on -> Triple(q, t, on) }
+                .collectLatest { (q, t, on) ->
+                    _state.update { it.copy(offline = !on) }
                     if (q.isEmpty()) {
                         _state.update { it.copy(results = null, loading = false, error = null, recents = recentStore.recents()) }
                         return@collectLatest
                     }
                     _state.update { it.copy(loading = true, error = null) }
                     try {
-                        val results = source.search(q, t.filter)
+                        val results = if (on) source.search(q, t.filter) else SearchResults(offlineSearch(q))
                         recentStore.add(q)
                         _state.update { it.copy(results = results, loading = false, recents = recentStore.recents()) }
                     } catch (e: CancellationException) {

@@ -3,4 +3,7 @@
     <string name="home_title">Home</string>
     <string name="home_failed">Couldn't load your home feed.</string>
     <string name="home_retry">Try again</string>
+    <string name="home_saved_playlists">Saved playlists</string>
+    <string name="home_recent_saved">Recently played</string>
+    <string name="home_offline_empty">No saved music yet. Save songs or playlists to listen without a connection.</string>
 </resources>

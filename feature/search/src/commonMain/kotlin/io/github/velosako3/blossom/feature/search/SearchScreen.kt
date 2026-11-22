@@ -78,8 +78,16 @@ fun SearchScreen(
                 { GlassIconButton({ vm.onQueryChange("") }, Icons.Rounded.Close, stringResource(Res.string.search_clear), size = 32.dp, iconSize = 18.dp, glass = false) }
             } else null,
         )
-        offlineNotice?.invoke()
-        if (state.query.isNotBlank()) {
+        if (offlineNotice != null) offlineNotice() else if (state.offline) {
+            Text(
+                stringResource(Res.string.search_offline),
+                color = BlossomTheme.colors.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+            )
+        }
+        // Offline results are songs only (local files and saved music), so the tabs would mislead.
+        if (state.query.isNotBlank() && !state.offline) {
             Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SearchTab.entries.forEach { t ->
                     GlassChip(state.tab == t, { vm.onTabChange(t) }, stringResource(t.label()))

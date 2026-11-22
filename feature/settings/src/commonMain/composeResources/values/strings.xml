@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="storage_title">Storage</string>
+    <string name="storage_used">%1$s of saved music</string>
+    <string name="storage_used_limit">%1$s of %2$s used</string>
+    <string name="storage_limit">Storage limit</string>
+    <string name="storage_unlimited">No limit</string>
+    <string name="storage_gb">%1$d GB</string>
+    <string name="storage_quality">Download quality</string>
+    <string name="storage_quality_low">Low</string>
+    <string name="storage_quality_normal">Normal</string>
+    <string name="storage_quality_high">High</string>
+    <string name="storage_wifi_only">Download on Wi-Fi only</string>
+    <string name="storage_wifi_only_hint">Saving waits for Wi-Fi instead of using mobile data.</string>
+    <string name="storage_remove_all">Remove all saved music</string>
+    <string name="storage_remove_title">Remove all saved music?</string>
+    <string name="storage_remove_body">Songs you saved for offline will be deleted from this device. Your playlists and likes stay.</string>
+    <string name="storage_remove_confirm">Remove</string>
+    <string name="storage_cancel">Cancel</string>
+</resources>

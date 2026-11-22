@@ -1,6 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom
 
+import io.github.velosako3.blossom.core.offline.OfflineSettingsStore
+import io.github.velosako3.blossom.feature.home.HomeState
+import io.github.velosako3.blossom.feature.home.OfflinePlaylistCard
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
+import kotlin.time.Duration.Companion.days
 import io.github.velosako3.blossom.feature.lyrics.LocalLyricsSource
 import io.github.velosako3.blossom.feature.lyrics.LyricsResolver
 import io.github.velosako3.blossom.feature.lyrics.LyricsViewModel
@@ -57,15 +65,46 @@ class AppGraph(
     val desktop: Boolean = false,
     /** The encrypted offline cache (null in UI tests that don't need it). */
     val offline: io.github.velosako3.blossom.core.offline.OfflineStore? = null,
+    val offlineSettings: OfflineSettingsStore? = null,
 ) {
-    val search = SearchViewModel(ytm, RecentSearchStore(prefs), scope)
+    val search = SearchViewModel(ytm, RecentSearchStore(prefs), scope, network, offlineSearch = ::searchOffline)
     val hlc = HybridLogicalClock(deviceId, Clock.System)
     val opLog = SqlOpLog(db, deviceId, hlc)
     val projector = LibraryProjector(db)
     val commands = LibraryCommands(opLog, projector, db)
     val repo = SqlLibraryRepository(db)
     val library = LibraryViewModel(repo, commands, scope)
-    val home by lazy { HomeViewModel(ytm, scope) }
+    val home by lazy { HomeViewModel(ytm, scope, network, offlineHome()) }
+
+    /** Local files and saved songs whose title, artist or album contains [query]. */
+    private suspend fun searchOffline(query: String): List<Track> {
+        val saved = offline?.savedTracks()?.first().orEmpty()
+        val localTracks = local.library.tracks().first()
+        return (localTracks + saved).distinctBy { it.id }.filter { t ->
+            t.title.contains(query, true) || t.artistNames.contains(query, true) || t.album?.title?.contains(query, true) == true
+        }
+    }
+
+    /** Saved playlists, then recently played saved songs (or the newest saved ones). */
+    private fun offlineHome(): Flow<HomeState.OfflineHome> {
+        val store = offline ?: return flowOf(HomeState.OfflineHome(emptyList(), emptyList()))
+        val since = Clock.System.now() - 30.days
+        return combine(repo.playlists(), store.savedPlaylists(), store.savedTracks(), repo.playEvents(since, Clock.System.now() + 1.days)) { lists, savedIds, saved, plays ->
+            val savedSet = saved.mapTo(HashSet()) { it.id }
+            val recent = plays.sortedByDescending { it.startedAt }.map { it.track }.filter { it.id in savedSet }.distinctBy { it.id }
+            HomeState.OfflineHome(
+                lists.filter { it.id in savedIds }.map { OfflinePlaylistCard(it.id.value, it.name, it.artworkUrls) },
+                recent.ifEmpty { saved }.take(20),
+            )
+        }
+    }
+
+    /** Can [track] play right now? Local files need their file; offline, streamed songs need to be saved. */
+    fun isAvailable(track: Track, online: Boolean): Boolean = when {
+        track.id.kind == SourceKind.LOCAL -> local.isAvailable(track)
+        online -> true
+        else -> offline?.isSaved(track.id) == true
+    }
     val lyrics = LyricsViewModel(
         LyricsResolver(onlineLyricsProviders(), localLyrics, SqlLyricsCache(db), Clock.System),
         player.state.map { it.current },

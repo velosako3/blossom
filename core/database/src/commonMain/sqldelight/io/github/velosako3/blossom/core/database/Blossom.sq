@@ -308,3 +308,9 @@ offlineClear {
 
 offlineSavedIds:
 SELECT track_id FROM offline_item WHERE state = 'SAVED';
+
+offlineSavedTracks:
+SELECT track_json FROM offline_item WHERE state = 'SAVED' ORDER BY rowid DESC;
+
+offlinePausedForStorage:
+SELECT count(*) FROM offline_item WHERE state = 'PAUSED_STORAGE';

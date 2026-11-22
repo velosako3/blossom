@@ -46,7 +46,7 @@ import io.github.velosako3.blossom.feature.library.resources.*
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
-enum class LibrarySegment { PLAYLISTS, LIKED, LOCAL }
+enum class LibrarySegment { PLAYLISTS, LIKED, LOCAL, SAVED }
 
 /** Playlists, Liked Songs and Local files, with "+" for a new playlist or an import. */
 @Composable
@@ -59,6 +59,8 @@ fun LibraryScreen(
     onSettings: (() -> Unit)? = null,
     localFiles: (@Composable () -> Unit)? = null,
     filterChips: (@Composable () -> Unit)? = null,
+    /** Songs saved for offline; adds the "Saved" chip. */
+    saved: (@Composable () -> Unit)? = null,
 ) {
     var segment by rememberSaveable { mutableStateOf(LibrarySegment.PLAYLISTS) }
     var menu by remember { mutableStateOf(false) }
@@ -76,6 +78,7 @@ fun LibraryScreen(
                 GlassChip(segment == LibrarySegment.PLAYLISTS, { segment = LibrarySegment.PLAYLISTS }, stringResource(Res.string.lib_playlists))
                 GlassChip(segment == LibrarySegment.LIKED, { segment = LibrarySegment.LIKED }, stringResource(Res.string.lib_liked))
                 GlassChip(segment == LibrarySegment.LOCAL, { segment = LibrarySegment.LOCAL }, stringResource(Res.string.lib_local))
+                if (saved != null) GlassChip(segment == LibrarySegment.SAVED, { segment = LibrarySegment.SAVED }, stringResource(Res.string.lib_saved))
                 filterChips?.invoke()
             }
             when (segment) {
@@ -95,6 +98,7 @@ fun LibraryScreen(
                 }
                 LibrarySegment.LIKED -> LikedList(liked.orEmpty(), onPlay)
                 LibrarySegment.LOCAL -> localFiles?.invoke()
+                LibrarySegment.SAVED -> saved?.invoke()
             }
         }
         GlassSheet(menu, { menu = false }) {
@@ -115,9 +119,16 @@ private fun EmptyLibrary(onCreate: () -> Unit, onImport: () -> Unit) {
 
 /** Liked Songs as a list (also used by the Liked destination). */
 @Composable
-fun LikedList(tracks: List<Track>, onPlay: (List<Track>, Int, Boolean) -> Unit, modifier: Modifier = Modifier) {
+fun LikedList(
+    tracks: List<Track>,
+    onPlay: (List<Track>, Int, Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    isAvailable: (Track) -> Boolean = { true },
+    badge: (@Composable (Track) -> Unit)? = null,
+    emptyText: String? = null,
+) {
     if (tracks.isEmpty()) {
-        Text(stringResource(Res.string.lib_liked_empty), color = BlossomTheme.colors.onSurfaceVariant, modifier = modifier.padding(24.dp))
+        Text(emptyText ?: stringResource(Res.string.lib_liked_empty), color = BlossomTheme.colors.onSurfaceVariant, modifier = modifier.padding(24.dp))
         return
     }
     LazyColumn(modifier, contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 24.dp)) {
@@ -128,7 +139,14 @@ fun LikedList(tracks: List<Track>, onPlay: (List<Track>, Int, Boolean) -> Unit, 
             }
         }
         itemsIndexed(tracks, key = { _, t -> t.id.value }) { i, t ->
-            MediaRow(t.title, t.artistNames, t.artworkUrl, trailingText = formatDuration(t.durationMs).takeIf { t.durationMs > 0 }, onClick = { onPlay(tracks, i, false) })
+            val available = isAvailable(t)
+            MediaRow(
+                t.title, t.artistNames, t.artworkUrl,
+                trailingText = formatDuration(t.durationMs).takeIf { t.durationMs > 0 },
+                onClick = if (available) ({ onPlay(tracks, i, false) }) else null,
+                dimmed = !available,
+                badge = badge?.let { b -> { b(t) } },
+            )
         }
     }
 }

@@ -53,6 +53,12 @@ interface OfflineStore {
     /** Non-blocking (kept in memory), so the player can ask from any thread. */
     fun isSaved(id: TrackId): Boolean
     fun usageBytes(): Flow<Long>
+    /** Saved songs, newest first. */
+    fun savedTracks(): Flow<List<Track>>
+    /** Playlists saved for offline (their future entries are saved too). */
+    fun savedPlaylists(): Flow<Set<PlaylistId>>
+    /** True while downloads wait because the storage limit is reached. */
+    fun pausedForStorage(): Flow<Boolean>
     suspend fun clearAll()
 }
 
@@ -168,6 +174,14 @@ class SqlOfflineStore(
     override fun isSaved(id: TrackId): Boolean = id.value in savedIds
 
     override fun usageBytes(): Flow<Long> = q.offlineUsage().asFlow().mapToOne(io)
+
+    override fun savedTracks(): Flow<List<Track>> = q.offlineSavedTracks().asFlow().mapToList(io).map { rows ->
+        rows.mapNotNull { runCatching { json.decodeFromString(Track.serializer(), it) }.getOrNull() }
+    }
+
+    override fun pausedForStorage(): Flow<Boolean> = q.offlinePausedForStorage().asFlow().mapToOne(io).map { it > 0 }.distinctUntilChanged()
+
+    override fun savedPlaylists(): Flow<Set<PlaylistId>> = q.offlinePlaylists().asFlow().mapToList(io).map { ids -> ids.mapTo(HashSet()) { PlaylistId(it) } }
 
     override suspend fun clearAll() {
         watchers.values.forEach { it.cancel() }; watchers.clear()

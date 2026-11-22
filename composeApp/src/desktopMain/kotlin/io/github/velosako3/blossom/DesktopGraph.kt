@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom
 
-import io.github.velosako3.blossom.core.offline.OfflineSettings
-import kotlinx.coroutines.flow.MutableStateFlow
+import io.github.velosako3.blossom.core.offline.OfflineSettingsStore
 import io.github.velosako3.blossom.core.designsystem.components.installImageLoader
 import io.github.velosako3.blossom.core.database.fileDatabase
 import io.github.velosako3.blossom.core.model.SourceKind
@@ -61,7 +60,8 @@ fun createDesktopGraph(): AppGraph {
     )
     val db = fileDatabase(File(dataDir, "blossom.db"))
     val resolver = StreamResolver(mapOf(SourceKind.YOUTUBE_MUSIC to ytm, SourceKind.YOUTUBE to youtube), Clock.System)
-    val offline = offlineStore(db, File(dataDir, "offline"), secure, resolver, network, MutableStateFlow(OfflineSettings(wifiOnly = false)), scope)
+    val offlineSettings = OfflineSettingsStore(prefs, defaultWifiOnly = false)
+    val offline = offlineStore(db, File(dataDir, "offline"), secure, resolver, network, offlineSettings.settings, scope)
     val engine = DesktopPlaybackEngine(offlineReader = offline::openReader)
     val player = DefaultBlossomPlayer(
         engine = engine,
@@ -88,5 +88,6 @@ fun createDesktopGraph(): AppGraph {
         localLyrics = io.github.velosako3.blossom.feature.lyrics.FileLocalLyricsSource(localLibrary::pathFor),
         desktop = true,
         offline = offline,
+        offlineSettings = offlineSettings,
     )
 }
