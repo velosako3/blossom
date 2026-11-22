@@ -17,4 +17,23 @@
     <string name="storage_remove_body">Songs you saved for offline will be deleted from this device. Your playlists and likes stay.</string>
     <string name="storage_remove_confirm">Remove</string>
     <string name="storage_cancel">Cancel</string>
+    <string name="eq_title">Equalizer</string>
+    <string name="eq_enabled">Equalizer on</string>
+    <string name="eq_enabled_hint">Shapes everything blossom plays on this device.</string>
+    <string name="eq_presets">Presets</string>
+    <string name="eq_preamp">Preamp</string>
+    <string name="eq_bands">Bands</string>
+    <string name="eq_db">%1$s dB</string>
+    <string name="eq_hz">%1$s Hz</string>
+    <string name="eq_khz">%1$s kHz</string>
+    <string name="eq_flat">Flat</string>
+    <string name="eq_bass_boost">Bass boost</string>
+    <string name="eq_treble_boost">Treble boost</string>
+    <string name="eq_vocal">Vocal</string>
+    <string name="eq_rock">Rock</string>
+    <string name="eq_pop">Pop</string>
+    <string name="eq_electronic">Electronic</string>
+    <string name="eq_hip_hop">Hip-hop</string>
+    <string name="eq_acoustic">Acoustic</string>
+    <string name="eq_custom">Custom</string>
 </resources>

@@ -25,6 +25,7 @@ sealed interface Destination {
     data object Liked : Destination
     data object LocalFiles : Destination
     data object Sync : Destination
+    data object Equalizer : Destination
     data object PairDevice : Destination
 }
 

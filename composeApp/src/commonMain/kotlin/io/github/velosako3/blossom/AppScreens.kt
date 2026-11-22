@@ -4,6 +4,8 @@ package io.github.velosako3.blossom
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.clickable
 import io.github.velosako3.blossom.composeApp.resources.settings_sync
+import io.github.velosako3.blossom.composeApp.resources.settings_equalizer
+import io.github.velosako3.blossom.composeApp.resources.settings_equalizer_hint
 import io.github.velosako3.blossom.composeApp.resources.settings_sync_hint
 import io.github.velosako3.blossom.composeApp.resources.menu_refresh_from_source
 import androidx.compose.runtime.LaunchedEffect
@@ -263,6 +265,7 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
                             onRemoveAll = { graph.scope.launch { store.clearAll() } },
                             topBar = {
                                 ScreenTopBar("", navigator)
+                                SettingsLink(stringResource(Res.string.settings_equalizer), stringResource(Res.string.settings_equalizer_hint)) { navigator.navigate(Destination.Equalizer) }
                                 if (graph.sync != null) SettingsLink(stringResource(Res.string.settings_sync), stringResource(Res.string.settings_sync_hint)) { navigator.navigate(Destination.Sync) }
                             },
                         )
@@ -281,6 +284,11 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
                         )
                         true
                     }
+                }
+                Destination.Equalizer -> {
+                    val eq by graph.eq.collectAsState()
+                    io.github.velosako3.blossom.feature.settings.EqualizerScreen(eq, graph::setEq, topBar = { ScreenTopBar("", navigator) })
+                    true
                 }
                 Destination.PairDevice -> {
                     val vm = graph.sync

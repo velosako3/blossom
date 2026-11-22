@@ -22,4 +22,5 @@ interface BlossomPlayer {
     fun moveInQueue(from: Int, to: Int)
     fun removeFromQueue(index: Int)
     fun setVolume(volume: Float)
+    fun setEqualizer(settings: io.github.velosako3.blossom.core.player.eq.EqSettings) {}
 }

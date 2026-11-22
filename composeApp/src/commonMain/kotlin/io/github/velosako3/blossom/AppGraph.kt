@@ -44,6 +44,9 @@ import kotlin.uuid.Uuid
 /** Crossfade length in seconds, 0–12 (0 = off, gapless). A device preference. */
 const val CROSSFADE_KEY = "player.crossfade"
 
+/** The equalizer, encoded by [io.github.velosako3.blossom.core.player.eq.EqSettings.encode]. A device preference. */
+const val EQ_KEY = "player.eq"
+
 /** This device's stable sync identity, created once and kept in preferences. */
 @OptIn(ExperimentalUuidApi::class)
 fun PreferenceStore.deviceId(): String = get("device.id") ?: Uuid.random().toString().also { put("device.id", it) }
@@ -169,6 +172,15 @@ class AppGraph(
         YouTubeLyricsApi.browse = { id, params -> ytm.client.browse(id, params) }
         YouTubeLyricsApi.transcript = ytm.client::transcript
     }
+    private val _eq = MutableStateFlow(io.github.velosako3.blossom.core.player.eq.EqSettings.decode(prefs.get(EQ_KEY)))
+    /** The equalizer: saved per device and applied to the player at once. */
+    val eq: StateFlow<io.github.velosako3.blossom.core.player.eq.EqSettings> = _eq
+    fun setEq(settings: io.github.velosako3.blossom.core.player.eq.EqSettings) {
+        _eq.value = settings
+        prefs.put(EQ_KEY, settings.encode())
+        player.setEqualizer(settings)
+    }
+
     val syncController = syncSetup?.let { s ->
         io.github.velosako3.blossom.feature.sync.ui.SyncController(db, opLog, projector, prefs, s.secure, deviceId, s.defaultName, scope, s.connect, s.discovery)
     }
@@ -176,6 +188,7 @@ class AppGraph(
     val sync = syncController?.let { io.github.velosako3.blossom.feature.sync.ui.SyncViewModel(it, scope) }
 
     init {
+        if (_eq.value.enabled) player.setEqualizer(_eq.value)
         if (syncController != null && sync != null) {
             scope.launch { runCatching { syncController.startLanIfPaired() } }
             // At start, 10 s after the last local change, and every 15 minutes.

@@ -131,7 +131,23 @@ class Media3PlaybackEngine(
     override fun pause() = onMain { exoPlayer.pause() }
     override fun seekTo(ms: Long) = onMain { exoPlayer.seekTo(ms) }
     override fun setVolume(v: Float) = onMain { exoPlayer.volume = v }
-    override fun release() = onMain { scope.cancel(); exoPlayer.release() }
+    override fun release() = onMain { scope.cancel(); runCatching { equalizer?.release() }; exoPlayer.release() }
+
+    private var equalizer: android.media.audiofx.Equalizer? = null
+
+    /** The platform equalizer on this player's audio session; the preamp is added to every band (it has none). */
+    override fun setEqualizer(settings: io.github.velosako3.blossom.core.player.eq.EqSettings) = onMain {
+        runCatching {
+            if (!settings.enabled) { equalizer?.enabled = false; return@runCatching }
+            val eq = equalizer ?: android.media.audiofx.Equalizer(0, exoPlayer.audioSessionId).also { equalizer = it }
+            val freqs = IntArray(eq.numberOfBands.toInt()) { eq.getCenterFreq(it.toShort()) / 1000 } // milliHz → Hz
+            val (min, max) = eq.bandLevelRange.let { it[0].toInt() to it[1].toInt() }
+            io.github.velosako3.blossom.core.player.eq.mapBands(settings.gains.toFloatArray(), freqs).forEachIndexed { i, db ->
+                eq.setBandLevel(i.toShort(), ((db + settings.preampDb) * 100).toInt().coerceIn(min, max).toShort()) // dB → millibels
+            }
+            eq.enabled = true
+        }
+    }
 
     private fun onMain(block: () -> Unit) {
         if (Looper.myLooper() == Looper.getMainLooper()) block() else main.post(block)

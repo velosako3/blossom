@@ -137,6 +137,15 @@ class DesktopPlaybackEngine(
         hlsOffsetMs = stream.segmentStartMs(segment)
         prepare(stream.from(segment).asSource(), emptyArray())
     }
+    override fun setEqualizer(settings: io.github.velosako3.blossom.core.player.eq.EqSettings) {
+        mediaPlayer.submit {
+            if (!settings.enabled) { mediaPlayer.audio().setEqualizer(null); return@submit }
+            val bands = factory.equalizer().bands().map { it.toInt() }.toIntArray()
+            val gains = io.github.velosako3.blossom.core.player.eq.mapBands(settings.gains.toFloatArray(), bands)
+            mediaPlayer.audio().setEqualizer(factory.equalizer().newEqualizer().apply { setPreamp(settings.preampDb); setAmps(gains) })
+        }
+    }
+
     override fun setVolume(v: Float) { mediaPlayer.submit { mediaPlayer.audio().setVolume((v * 100).toInt().coerceIn(0, 200)) } }
 
     override fun release() {

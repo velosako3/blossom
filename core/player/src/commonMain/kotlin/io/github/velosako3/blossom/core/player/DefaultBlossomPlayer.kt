@@ -135,6 +135,9 @@ class DefaultBlossomPlayer(
         if (fadeJob?.isActive != true) engine.setVolume(this.volume)
     }
 
+    /** Both engines, so a crossfade keeps the same sound. */
+    override fun setEqualizer(settings: io.github.velosako3.blossom.core.player.eq.EqSettings) = listOfNotNull(primary, fadeEngine).forEach { it.setEqualizer(settings) }
+
     private fun command(block: suspend () -> Unit) {
         scope.launch { mutex.withLock { block() } }
     }

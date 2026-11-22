@@ -41,4 +41,6 @@ interface PlaybackEngine {
     fun release()
     /** The track about to be loaded, for system media controls (notification, lock screen, MPRIS, SMTC). */
     fun onTrackChanged(track: Track?) {}
+    /** Applies the equalizer (off when not [EqSettings.enabled]); it stays on across loads. */
+    fun setEqualizer(settings: io.github.velosako3.blossom.core.player.eq.EqSettings) {}
 }

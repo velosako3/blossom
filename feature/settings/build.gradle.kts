@@ -8,6 +8,7 @@ kotlin {
         commonMain.dependencies {
             implementation(projects.core.designsystem)
             api(projects.core.offline)
+            api(projects.core.player)
         }
     }
 }
