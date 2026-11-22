@@ -381,3 +381,6 @@ DELETE FROM sync_peer WHERE device_id = ?;
 
 allOpsCount:
 SELECT count(*) FROM op_log;
+
+clearLyrics:
+DELETE FROM lyrics_cache;

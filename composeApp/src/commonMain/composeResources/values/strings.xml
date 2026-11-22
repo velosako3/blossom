@@ -44,4 +44,20 @@
     <string name="settings_equalizer">Equalizer</string>
     <string name="settings_equalizer_hint">Presets and 10 bands</string>
     <string name="update_chip">Update to %1$s</string>
+    <string name="licenses_title">Open-source licenses</string>
+    <string name="signin_ytm_title">Sign in to YouTube Music</string>
+    <string name="signin_spotify_title">Sign in to Spotify</string>
+    <string name="signin_cookie_hint">Open music.youtube.com in your browser and sign in. Open the developer tools (F12) → Network, click any request to music.youtube.com, and copy the value of its Cookie request header here. blossom keeps it in its encrypted store and sends it only to YouTube.</string>
+    <string name="signin_cookie_label">Cookie header</string>
+    <string name="signin_cookie_bad">That doesn't look like a signed-in YouTube cookie (it has no SAPISID).</string>
+    <string name="signin_save">Sign in</string>
+    <string name="signin_confirm">Use this account</string>
+    <string name="signin_confirm_hint">Pick your account on the page, then confirm here.</string>
+    <string name="sleep_timer">Sleep timer</string>
+    <string name="sleep_timer_left">Sleep timer: %1$d min left</string>
+    <string name="sleep_timer_end">Sleep timer: end of this song</string>
+    <string name="sleep_minutes">%1$d min</string>
+    <string name="sleep_end_of_track">End of song</string>
+    <string name="sleep_off">Turn off</string>
+    <string name="sleep_close">Close</string>
 </resources>

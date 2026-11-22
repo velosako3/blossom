@@ -184,6 +184,25 @@ class AppGraph(
         YouTubeLyricsApi.transcript = ytm.client::transcript
     }
     val sleepTimer = io.github.velosako3.blossom.core.player.SleepTimer(player, scope)
+    val preferences = AppPreferences(prefs)
+    /** Desktop: the window's "use the system title bar" switch (applies at the next start); null elsewhere. */
+    var systemTitleBar: PrefFlow<Boolean>? = null
+
+    private val secureStore = secure
+    /** The secure store, for the sign-in screens (null in UI tests). */
+    val secureForSignIn: io.github.velosako3.blossom.core.platform.SecureStore? get() = secureStore
+    /** Accounts with a stored session. */
+    val signedIn = MutableStateFlow(emptySet<Account>())
+    suspend fun refreshAccounts() {
+        val store = secureStore ?: return
+        signedIn.value = Account.entries.filter { store.get(it.storeKey()) != null }.toSet()
+    }
+    suspend fun signOut(account: Account) {
+        secureStore?.remove(account.storeKey())
+        clearWebSession(account)
+        refreshAccounts()
+    }
+    suspend fun clearLyrics() = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { db.blossomQueries.clearLyrics() }
 
     /** A newer release on GitHub, checked at most daily (off in Settings); null in tests (no [secure]). */
     val update = MutableStateFlow<io.github.velosako3.blossom.feature.integrations.update.Update?>(null)
@@ -210,6 +229,7 @@ class AppGraph(
     val sync = syncController?.let { io.github.velosako3.blossom.feature.sync.ui.SyncViewModel(it, scope) }
 
     init {
+        if (secure != null) scope.launch { refreshAccounts() }
         if (secure != null) scope.launch { update.value = runCatching { updateChecker.check() }.getOrNull() }
         if (_eq.value.enabled) player.setEqualizer(_eq.value)
         if (syncController != null && sync != null) {

@@ -52,6 +52,9 @@ fun App(
     titleBar: (@Composable () -> Unit)? = null,
 ) {
     val current = graph?.player?.state?.collectAsState()?.value?.current
+    // With a graph, the user's choices (Settings → Appearance) win; the parameters are the platform defaults.
+    val themeMode = graph?.preferences?.theme?.state?.collectAsState()?.value ?: themeMode
+    val reduceMotion = graph?.preferences?.reduceMotion?.state?.collectAsState()?.value ?: reduceMotion
     // A link shared to blossom opens Import with it.
     graph?.let { g ->
         val shared = g.pendingImport.collectAsState().value
@@ -92,6 +95,25 @@ fun App(
                         ) {
                             if (offlineNotice) OfflineBanner()
                             if (storagePaused) StoragePausedBanner()
+                        }
+                    }
+                    // First run: the welcome, over everything (skippable).
+                    graph?.let { g ->
+                        if (!g.preferences.onboarded.state.collectAsState().value) {
+                            Box(Modifier.fillMaxSize().zIndex(3f)) {
+                                io.github.velosako3.blossom.feature.settings.onboarding.OnboardingFlow(
+                                    g.preferences.theme.state.collectAsState().value, g.preferences.theme::set,
+                                    onFinish = { extra ->
+                                        g.preferences.onboarded.set(true)
+                                        when (extra) {
+                                            io.github.velosako3.blossom.feature.settings.onboarding.OnboardingExtra.LOCAL_FILES -> navigator.navigate(io.github.velosako3.blossom.navigation.Destination.LocalFiles)
+                                            io.github.velosako3.blossom.feature.settings.onboarding.OnboardingExtra.SYNC -> navigator.navigate(io.github.velosako3.blossom.navigation.Destination.Sync)
+                                            io.github.velosako3.blossom.feature.settings.onboarding.OnboardingExtra.IMPORT -> navigator.navigate(io.github.velosako3.blossom.navigation.Destination.Import())
+                                            null -> Unit
+                                        }
+                                    },
+                                )
+                            }
                         }
                     }
                     val layout = WindowLayout.from(maxWidth.value)

@@ -26,6 +26,10 @@ sealed interface Destination {
     data object LocalFiles : Destination
     data object Sync : Destination
     data object Equalizer : Destination
+    data object Storage : Destination
+    data object Licenses : Destination
+    /** [account] is an [io.github.velosako3.blossom.Account] name. */
+    data class SignIn(val account: String) : Destination
     data object PairDevice : Destination
 }
 

@@ -53,6 +53,7 @@ fun Destination.titleRes(): StringResource = when (this) {
     Destination.LocalFiles -> Res.string.dest_local_files
     Destination.Sync, Destination.PairDevice -> Res.string.settings_sync
     Destination.Equalizer -> Res.string.settings_equalizer
+    Destination.Storage, Destination.Licenses, is Destination.SignIn -> Res.string.nav_settings
 }
 
 /**

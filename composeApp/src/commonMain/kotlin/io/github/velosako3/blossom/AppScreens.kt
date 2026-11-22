@@ -4,6 +4,9 @@ package io.github.velosako3.blossom
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.clickable
 import io.github.velosako3.blossom.composeApp.resources.settings_sync
+import io.github.velosako3.blossom.composeApp.resources.sleep_timer
+import io.github.velosako3.blossom.composeApp.resources.sleep_timer_end
+import io.github.velosako3.blossom.composeApp.resources.sleep_timer_left
 import io.github.velosako3.blossom.composeApp.resources.settings_equalizer
 import io.github.velosako3.blossom.composeApp.resources.settings_equalizer_hint
 import io.github.velosako3.blossom.composeApp.resources.settings_sync_hint
@@ -95,8 +98,18 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
     val saveLabel = stringResource(Res.string.menu_save_offline)
     val removeLabel = stringResource(Res.string.menu_remove_download)
     val refreshLabel = stringResource(Res.string.menu_refresh_from_source)
+    val sleep by graph.sleepTimer.state.collectAsState()
+    var sleepDialog by remember { mutableStateOf(false) }
+    val sleepLabel = when (val s = sleep) {
+        null -> stringResource(Res.string.sleep_timer)
+        io.github.velosako3.blossom.core.player.SleepState.EndOfTrack -> stringResource(Res.string.sleep_timer_end)
+        is io.github.velosako3.blossom.core.player.SleepState.Until ->
+            stringResource(Res.string.sleep_timer_left, ((s.endsAt - kotlin.time.Clock.System.now()).inWholeSeconds / 60 + 1).toInt().coerceAtLeast(1))
+    }
+    if (sleepDialog) SleepTimerDialog(graph.sleepTimer) { sleepDialog = false }
     val menu = listOfNotNull(
         PlayerMenuAction(addToPlaylist) { addTracks = listOf(it) },
+        PlayerMenuAction(sleepLabel) { sleepDialog = true },
         offline?.takeIf { current?.id?.kind != SourceKind.LOCAL }?.let { store ->
             if (currentOffline == OfflineState.NOT_SAVED) PlayerMenuAction(saveLabel) { t -> graph.scope.launch { store.saveTrack(t, OfflineRef.Single(t.id)) } }
             else PlayerMenuAction(removeLabel) { t -> graph.scope.launch { store.unsave(OfflineRef.Single(t.id)) } }
@@ -253,7 +266,8 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
                     }
                     true
                 }
-                Destination.Settings -> {
+                Destination.Settings -> { SettingsRoute(graph, navigator) { ScreenTopBar("", navigator) }; true }
+                Destination.Storage -> {
                     val store = graph.offline
                     val settingsStore = graph.offlineSettings
                     if (store == null || settingsStore == null) false else {
@@ -263,12 +277,17 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
                             usage, settings,
                             onChange = { change -> settingsStore.update(change); store.let { (it as? io.github.velosako3.blossom.core.offline.SqlOfflineStore)?.manager?.kick(retryPaused = true) } },
                             onRemoveAll = { graph.scope.launch { store.clearAll() } },
-                            topBar = {
-                                ScreenTopBar("", navigator)
-                                SettingsLink(stringResource(Res.string.settings_equalizer), stringResource(Res.string.settings_equalizer_hint)) { navigator.navigate(Destination.Equalizer) }
-                                if (graph.sync != null) SettingsLink(stringResource(Res.string.settings_sync), stringResource(Res.string.settings_sync_hint)) { navigator.navigate(Destination.Sync) }
-                            },
+                            topBar = { ScreenTopBar("", navigator) },
                         )
+                        true
+                    }
+                }
+                Destination.Licenses -> { LicensesScreen(topBar = { ScreenTopBar("", navigator) }); true }
+                is Destination.SignIn -> {
+                    val account = Account.valueOf(destination.account)
+                    val secure = graph.secureForSignIn
+                    if (secure == null) false else {
+                        AccountSignInScreen(account, secure, onDone = { graph.scope.launch { graph.refreshAccounts() }; navigator.back() }, topBar = { ScreenTopBar("", navigator) })
                         true
                     }
                 }

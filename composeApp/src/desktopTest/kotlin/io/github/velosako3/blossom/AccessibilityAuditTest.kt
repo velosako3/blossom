@@ -23,7 +23,7 @@ class AccessibilityAuditTest {
         val screens = listOf(
             Destination.Home, Destination.Search, Destination.Library, Destination.Playlist(t.playlist.value), Destination.Liked,
             Destination.NowPlaying, Destination.Stats, Destination.Settings, Destination.Import(), Destination.LocalFiles,
-            Destination.Sync, Destination.Equalizer,
+            Destination.Sync, Destination.Equalizer, Destination.Licenses, Destination.PairDevice,
         )
         val problems = mutableListOf<String>()
         val unlabeled = SemanticsMatcher("clickable without a label") { node ->

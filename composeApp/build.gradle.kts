@@ -7,6 +7,16 @@ import java.util.Properties
 plugins {
     id("blossom.compose")
     id("blossom.desktop.app")
+    // Open-source licenses for Settings → About, read from the dependencies' POMs.
+    id("com.mikepenz.aboutlibraries.plugin") version "15.3.0"
+}
+
+aboutLibraries {
+    export {
+        // Regenerate with `./gradlew :composeApp:exportLibraryDefinitions` after changing dependencies.
+        outputFile = file("src/commonMain/composeResources/files/aboutlibraries.json")
+        prettyPrint = true
+    }
 }
 
 val blossomVersion = providers.gradleProperty("blossom.version").get()
@@ -135,6 +145,7 @@ tasks.withType<Test>().configureEach {
     val dir = if (os.contains("win")) "windows-x64" else "linux-x64"
     systemProperty("compose.application.resources.dir", layout.buildDirectory.dir("vlc-natives/$dir").get().asFile.absolutePath)
     systemProperty("blossom.dataDir", layout.buildDirectory.dir("test-data").get().asFile.absolutePath)
+    systemProperty("blossom.skipOnboarding", "true")
     // Live end-to-end tests do real network and audio for minutes.
     systemProperty("kotlinx.coroutines.test.default_timeout", "10m")
 }

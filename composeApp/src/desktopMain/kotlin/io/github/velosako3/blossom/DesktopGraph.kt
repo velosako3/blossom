@@ -79,6 +79,7 @@ fun createDesktopGraph(): AppGraph {
         localPath = localLibrary::pathFor,
         fadeEngine = fadeEngine,
         crossfadeSeconds = { prefs.get(CROSSFADE_KEY)?.toIntOrNull() ?: 0 },
+        autoplaySimilar = { prefs.get(AUTOPLAY_KEY) != "false" },
     )
     SystemMediaControls(player, scope)
     // Debug hook for hands-on checks: search and play the first song at startup.
@@ -107,6 +108,14 @@ fun createDesktopGraph(): AppGraph {
         secure = secure,
     )
     DiscordPresence(player.state, graph.discordEnabled, scope)
+    // "Use the system title bar" lives in the window state file, which the window reads at start.
+    val windows = io.github.velosako3.blossom.window.WindowStateStore()
+    graph.systemTitleBar = PrefFlow(
+        io.github.velosako3.blossom.core.platform.MapPreferenceStore(mapOf("t" to windows.load().systemTitleBar.toString())) { m ->
+            windows.save(windows.load().copy(systemTitleBar = m["t"] == "true"))
+        },
+        "t", false, { it.toBooleanStrictOrNull() },
+    )
     Runtime.getRuntime().addShutdownHook(Thread {
         // The play in progress is recorded before the process ends.
         runCatching { kotlinx.coroutines.runBlocking { kotlinx.coroutines.withTimeoutOrNull(2_000) { graph.playTracker.finish() } } }
