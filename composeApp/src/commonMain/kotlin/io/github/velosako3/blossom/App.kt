@@ -52,6 +52,13 @@ fun App(
     titleBar: (@Composable () -> Unit)? = null,
 ) {
     val current = graph?.player?.state?.collectAsState()?.value?.current
+    // A link shared to blossom opens Import with it.
+    graph?.let { g ->
+        val shared = g.pendingImport.collectAsState().value
+        androidx.compose.runtime.LaunchedEffect(shared) {
+            if (shared != null) { navigator.navigate(io.github.velosako3.blossom.navigation.Destination.Import(shared)); g.pendingImport.value = null }
+        }
+    }
     var compactLayout by remember { mutableStateOf(false) }
     val artworkPalette = rememberArtworkPalette(current?.artworkUrl)
     val activePalette = if (current != null) artworkPalette else palette

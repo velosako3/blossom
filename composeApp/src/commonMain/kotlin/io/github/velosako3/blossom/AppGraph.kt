@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom
 
+import kotlinx.coroutines.launch
 import io.github.velosako3.blossom.core.offline.OfflineSettingsStore
 import io.github.velosako3.blossom.feature.home.HomeState
 import io.github.velosako3.blossom.feature.home.OfflinePlaylistCard
@@ -68,6 +69,8 @@ class AppGraph(
     val offlineSettings: OfflineSettingsStore? = null,
     /** Every playable source by kind (YouTube Music is [ytm]). */
     val sources: Map<SourceKind, io.github.velosako3.blossom.source.api.MusicSource> = emptyMap(),
+    /** Reads a pasted/shared link's tracks, per service. */
+    importers: Map<io.github.velosako3.blossom.feature.importer.ImportService, io.github.velosako3.blossom.source.api.PlaylistImporter> = emptyMap(),
 ) {
     val search = SearchViewModel(ytm, RecentSearchStore(prefs), scope, network, offlineSearch = ::searchOffline)
     val hlc = HybridLogicalClock(deviceId, Clock.System)
@@ -111,6 +114,30 @@ class AppGraph(
             SourceKind.UNTITLED, SourceKind.SOUNDCLOUD -> sources[t.id.kind]?.track(t.id) != null
             else -> null
         }
+    }
+
+    /** Song matching for imports that don't play natively (Spotify): YouTube Music search for "title artists". */
+    val matchFix = io.github.velosako3.blossom.feature.importer.FindReplacement(listOf(ytm), commands)
+
+    /** untitled songs are saved offline as they're imported (setting on by default): links can vanish. */
+    private val untitledAutoSave = io.github.velosako3.blossom.feature.importer.UntitledAutoSave(
+        enabled = { prefs.get(io.github.velosako3.blossom.feature.importer.UntitledAutoSave.SETTING) != "false" },
+    ) { t -> offline?.saveTrack(t, io.github.velosako3.blossom.core.offline.OfflineRef.UntitledAuto) }
+
+    val importRunner = io.github.velosako3.blossom.feature.importer.ImportJobRunner(
+        db, commands, repo, importers,
+        search = { t -> ytm.search((listOf(t.title) + t.artists).joinToString(" "), io.github.velosako3.blossom.source.api.SearchFilter.SONGS).songs },
+        scope = scope,
+        onWritten = untitledAutoSave::onWritten,
+    )
+    val importVm = io.github.velosako3.blossom.feature.importer.ui.ImportViewModel(importRunner, repo, scope)
+
+    /** A link shared to blossom (Android share sheet, deep link); the app opens Import with it. */
+    val pendingImport = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+
+    init {
+        // Imports interrupted by a quit or crash carry on.
+        scope.launch(kotlinx.coroutines.Dispatchers.IO) { runCatching { importRunner.resumePending() } }
     }
 
     /** Can [track] play right now? Local files need their file; offline, streamed songs need to be saved. */

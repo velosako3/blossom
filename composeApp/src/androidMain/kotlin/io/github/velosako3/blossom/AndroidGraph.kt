@@ -76,7 +76,13 @@ fun createAndroidGraph(context: Context): AppGraph {
     PlayerHolder.engine = engine
     PlayerHolder.player = player
     return AppGraph(player, db, prefs.deviceId(), ytm, prefs, network, scope, local, offline = offline, offlineSettings = offlineSettings,
-        sources = mapOf(SourceKind.YOUTUBE to youtube, SourceKind.SOUNDCLOUD to soundcloud, SourceKind.UNTITLED to untitled), shareLink = { link ->
+        sources = mapOf(SourceKind.YOUTUBE to youtube, SourceKind.SOUNDCLOUD to soundcloud, SourceKind.UNTITLED to untitled),
+        importers = mapOf(
+            io.github.velosako3.blossom.feature.importer.ImportService.SPOTIFY to io.github.velosako3.blossom.source.spotify.SpotifyImporter(auth = null),
+            io.github.velosako3.blossom.feature.importer.ImportService.YOUTUBE_MUSIC to io.github.velosako3.blossom.source.youtubemusic.YtmImporter(ytm),
+            io.github.velosako3.blossom.feature.importer.ImportService.SOUNDCLOUD to io.github.velosako3.blossom.source.soundcloud.SoundCloudImporter(soundcloudClient),
+            io.github.velosako3.blossom.feature.importer.ImportService.UNTITLED to io.github.velosako3.blossom.source.untitled.UntitledImporter(untitledClient),
+        ), shareLink = { link ->
         context.startActivity(
             Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, link), null)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),

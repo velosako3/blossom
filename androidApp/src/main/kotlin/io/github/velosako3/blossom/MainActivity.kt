@@ -28,7 +28,21 @@ class MainActivity : ComponentActivity() {
         AndroidLocalBridge.pickFolder = { folderLauncher.launch(null) }
         // Until the in-app Reduce motion setting exists, follow the system "Remove animations" switch.
         val systemReduceMotion = Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+        sharedLink(intent)?.let { graph.pendingImport.value = it }
         setContent { App(graph = graph, reduceMotion = systemReduceMotion) }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        sharedLink(intent)?.let { (application as BlossomApplication).graph.pendingImport.value = it }
+    }
+
+    /** "Share to blossom" (text with a link in it) or an opened link (Spotify, YouTube, SoundCloud, untitled). */
+    private fun sharedLink(intent: android.content.Intent?): String? = when (intent?.action) {
+        android.content.Intent.ACTION_SEND -> intent.getStringExtra(android.content.Intent.EXTRA_TEXT)
+            ?.let { text -> Regex("https?://\\S+").find(text)?.value ?: text.trim().takeIf { it.startsWith("spotify:") } }
+        android.content.Intent.ACTION_VIEW -> intent.dataString
+        else -> null
     }
 
     override fun onStart() {

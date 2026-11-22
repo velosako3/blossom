@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom
 
+import io.github.velosako3.blossom.composeApp.resources.menu_refresh_from_source
 import androidx.compose.runtime.LaunchedEffect
 import io.github.velosako3.blossom.composeApp.resources.saved_empty
 import io.github.velosako3.blossom.core.offline.OfflineRef
@@ -87,6 +88,7 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
     val currentOffline by remember(offline, current?.id) { current?.let { t -> offline?.state(t.id) } ?: flowOf(OfflineState.NOT_SAVED) }.collectAsState(OfflineState.NOT_SAVED)
     val saveLabel = stringResource(Res.string.menu_save_offline)
     val removeLabel = stringResource(Res.string.menu_remove_download)
+    val refreshLabel = stringResource(Res.string.menu_refresh_from_source)
     val menu = listOfNotNull(
         PlayerMenuAction(addToPlaylist) { addTracks = listOf(it) },
         offline?.takeIf { current?.id?.kind != SourceKind.LOCAL }?.let { store ->
@@ -199,12 +201,16 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
                     PlaylistScreen(
                         vm, play, onAddToPlaylist = { addTracks = it }, onDeleted = { navigator.back() }, topBar = { ScreenTopBar("", navigator) },
                         isAvailable = { graph.isAvailable(it, online) },
-                        menuActions = offline?.let { store ->
-                            listOf(
+                        menuActions = listOfNotNull(
+                            offline?.let { store ->
                                 if (isSavedPlaylist) PlaylistMenuAction(removeLabel) { graph.scope.launch { store.unsavePlaylist(pid) } }
-                                else PlaylistMenuAction(saveLabel) { graph.scope.launch { store.savePlaylist(pid) } },
-                            )
-                        }.orEmpty(),
+                                else PlaylistMenuAction(saveLabel) { graph.scope.launch { store.savePlaylist(pid) } }
+                            },
+                            // Imported playlists: add the source's new tracks (keeps every edit made here).
+                            vm.state.collectAsState().value.playlist?.origin?.url?.let { url ->
+                                PlaylistMenuAction(refreshLabel) { graph.importVm.refresh(pid, url); navigator.navigate(Destination.Import()) }
+                            },
+                        ),
                         headerExtras = {
                             if (isSavedPlaylist && entries.isNotEmpty()) {
                                 androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
@@ -254,6 +260,23 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
                         )
                         true
                     }
+                }
+                is Destination.Import -> {
+                    androidx.compose.runtime.LaunchedEffect(destination.url) { destination.url?.let(graph.importVm::onTextChange) }
+                    @Suppress("DEPRECATION") val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+                    val clip = remember { runCatching { clipboard.getText()?.text }.getOrNull() }
+                    io.github.velosako3.blossom.feature.importer.ui.ImportScreen(
+                        graph.importVm, graph.repo, clip, graph.matchFix, graph.findReplacement,
+                        io.github.velosako3.blossom.feature.importer.ui.ImportActions(
+                            openPlaylist = { navigator.navigate(Destination.Playlist(it.value)) },
+                            play = { t -> play(listOf(t), 0, false) },
+                            queue = { t -> graph.player.addToQueue(listOf(t)) },
+                            like = { t -> graph.scope.launch { graph.commands.like(t) } },
+                            fix = { p, e, t -> graph.scope.launch { graph.commands.replaceEntryTrack(p, e.entryId, t, io.github.velosako3.blossom.core.model.EntryStatus.MATCHED) } },
+                        ),
+                        topBar = { ScreenTopBar("", navigator) },
+                    )
+                    true
                 }
                 else -> false
             }

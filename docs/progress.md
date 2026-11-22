@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Tasks 6.1–6.5 done. Next: Task 6.6 (Import UI).
+Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Tasks 6.1–6.6 done. Next: Milestone 6 wrap-up (check, review, push).
 
 Hands-on testing rule: the owner is using this desktop, so never inject keyboard/mouse input or capture the screen.
 Desktop end-to-end checks run off-screen with the real graph: `./gradlew :composeApp:desktopTest -PliveTests=true -Proborazzi.test.record=true --tests "*DesktopEndToEnd*"`. `./gradlew :composeApp:run -Pblossom.debugPlay="query"` plays a search result at startup, for `playerctl` checks. Kill stray app instances by PID (`ps … | grep 'blossom\.MainKt'`), never with a `pkill -f` pattern that matches your own shell.
@@ -43,6 +43,12 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - Desktop `NetworkMonitor` checks for an up interface plus a DNS answer every 15 s (no request to any server); `-Dblossom.forceOffline=true` pins it offline for testing.
 
 ## Deviations from plan
+- Task 6.6:
+  - The destination is chosen when the import starts, not at the end: a new playlist named after the source unless the name field is filled, or "Add to existing playlist". The resumable runner needs a playlist to write into as it goes. At the end the screen offers Open playlist, plus Play now / Add to queue / Like for a single song.
+  - "Fix this match" (YouTube Music) and Find replacement (YouTube uploads + SoundCloud; for untitled) share one sheet.
+  - Android: share target (`text/plain`) and "Open with" for Spotify, YouTube Music, SoundCloud and untitled links. Both go through `AppGraph.pendingImport` to the Import screen.
+  - Interrupted imports resume when the app starts.
+  - Hands-on (real app, off-screen): the public Spotify album 'The Dark Side of the Moon' imported with no sign-in: 10 tracks, 6 matched, 4 "not sure" (album crossfades push durations past the 3 s rule), screenshot `docs/screenshots/m6/12_import_done.png`.
 - Task 6.5:
   - Gate (a), so no untitled sign-in was built: no `UntitledSession`/web view/accounts row, and none of the sign-in tests apply. Private or removed links answer 204 and are reported as unavailable.
   - untitled tracks inside a project have no page of their own (the track route answers 204), so their IDs are `untitled:<project slug>/<track slug>` and resolve through the project's data. Standalone tracks keep `untitled:<slug>`.
