@@ -35,7 +35,8 @@ class PlayTrackerTest {
         var trackerScope = child(scope)
         var tracker = start()
 
-        fun start() = PlayTracker(state, { recorded += it }, VirtualClock(scope), "dev", prefs, trackerScope)
+        var failNext = false
+        fun start() = PlayTracker(state, { if (failNext) { failNext = false; error("database busy") }; recorded += it }, VirtualClock(scope), "dev", prefs, trackerScope)
 
         fun play() = state.update { it.copy(isPlaying = true, isBuffering = false) }
         fun pause() = state.update { it.copy(isPlaying = false) }
@@ -97,5 +98,32 @@ class PlayTrackerTest {
         val e = r.recorded.single()
         assertTrue(e.playedMs in 30_000..40_000, "${e.playedMs}")
         assertEquals(true, e.counted)
+    }
+
+    @Test fun aFailedRecordDoesNotStopTracking() = runTest {
+        val r = Rig(this); runCurrent()
+        r.failNext = true
+        r.play(); r.run(31_000); r.next(); runCurrent() // this record fails
+        r.run(31_000); r.next(); runCurrent()
+        assertEquals(1, r.recorded.size)
+        assertEquals(31_000, r.recorded.single().playedMs)
+    }
+
+    @Test fun nothingPlayedNothingRecorded() = runTest {
+        val r = Rig(this); runCurrent()
+        r.next(); runCurrent(); r.next(); runCurrent() // skipped while paused
+        assertEquals(0, r.recorded.size)
+    }
+
+    @Test fun ignoredWhilePreviewing() = runTest {
+        val r = Rig(this); runCurrent()
+        r.play(); r.run(40_000)
+        r.tracker.setIgnoring(true); runCurrent()
+        assertEquals(1, r.recorded.size) // the play before the preview is kept
+        r.next(); r.run(60_000); r.next(); runCurrent()
+        assertEquals(1, r.recorded.size)
+        r.tracker.setIgnoring(false); runCurrent()
+        r.run(35_000); r.next(); runCurrent()
+        assertEquals(2, r.recorded.size)
     }
 }

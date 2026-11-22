@@ -59,4 +59,6 @@
     <string name="wr_share">Share this card</string>
     <string name="wr_mute">Mute</string>
     <string name="wr_unmute">Unmute</string>
+    <string name="wr_save_title">Save Wrapped card</string>
+    <string name="wr_png_image">PNG image</string>
 </resources>

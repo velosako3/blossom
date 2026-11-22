@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–6 done (M6 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Tasks 7.1–7.4 and 8.1–8.2 done. Milestone 7 review received; its fix pass is next, then Task 8.3.
+Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–6 done (M6 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–7 done (M7 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Tasks 8.1–8.2 done. Next: Task 8.3 (sync backends).
 
 Hands-on testing rule: the owner is using this desktop, so never inject keyboard/mouse input or capture the screen.
 Desktop end-to-end checks run off-screen with the real graph: `./gradlew :composeApp:desktopTest -PliveTests=true -Proborazzi.test.record=true --tests "*DesktopEndToEnd*"`. `./gradlew :composeApp:run -Pblossom.debugPlay="query"` plays a search result at startup, for `playerctl` checks. Kill stray app instances by PID (`ps … | grep 'blossom\.MainKt'`), never with a `pkill -f` pattern that matches your own shell.
@@ -43,6 +43,20 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - Desktop `NetworkMonitor` checks for an up interface plus a DNS answer every 15 s (no request to any server); `-Dblossom.forceOffline=true` pins it offline for testing.
 
 ## Deviations from plan
+- Milestone 7 review fixes:
+  - Desktop Share no longer calls `invokeAndWait` from the event thread (it threw, and the error was swallowed).
+  - Moving past the last Wrapped card keeps its progress full (`lastCardStaysFullAfterNext`).
+  - Card progress resets inside the timer, so a stale value can't skip a card. Progress segments expose their progress to accessibility services and tests.
+  - Only the visible card is captured during a crossfade. Android shares carry ClipData for the read grant.
+  - Desktop export prefetches artwork and renders a few frames, so exported PNGs include it; no leaked frame images. The save-dialog strings are resources.
+  - Wrapped captures what was playing once, on entry; starts and restores run one after another on one job; the preview isn't tracked as a play (`PlayTracker.setIgnoring`). No navigation or exporter state is changed during composition.
+  - PlayTracker: a failed record never stops tracking and keeps the play as a checkpoint (`aFailedRecordDoesNotStopTracking`). It records first and clears the checkpoint after (safe: plays are keyed by ID). Plays with no listening time aren't recorded (`nothingPlayedNothingRecorded`).
+  - Wrapped album artwork matches by album key.
+  The WrappedScreen tests were written with the fixes; the first build failed on the new test tag, so they never ran against the old timer.
+- Milestone 7 review rulings (not changed):
+  - Seeking back to the start of the same song continues the same play (seeks add nothing, per spec).
+  - Export renders off the UI thread with `ImageComposeScene`, which the desktop export test exercises.
+  - The review's diff range missed 7.1–7.3's code; PlayTracker and Period were still reviewed at HEAD, but StatsCalculator and the Stats screen were not. The final review covers them.
 - Task 8.2: `SyncEngine` also takes the database (it inserts and projects each device's operations in one transaction) and a segment-size override for tests. Remote `SettingChanged` operations for keys outside `SyncedSettings.keys` are stored in the log but not applied. The Android hourly background sync comes with the backends (8.3) because it needs a configured backend.
 - Task 7.4:
   - `WrappedExporter` gained `palette` (the cards' artwork tuning) and `captureWith` (Android exports by capturing the card on screen and scaling it to 1080×1920; desktop renders off-screen at exactly that size). Android shares through a `FileProvider` (cache/wrapped); desktop saves through a save dialog.

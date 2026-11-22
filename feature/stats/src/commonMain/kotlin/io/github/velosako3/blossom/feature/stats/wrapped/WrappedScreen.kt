@@ -55,6 +55,12 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.collectLatest
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
 import io.github.velosako3.blossom.core.designsystem.components.GlassIconButton
 import io.github.velosako3.blossom.core.designsystem.theme.BlossomTheme
 import io.github.velosako3.blossom.feature.stats.resources.*
@@ -82,14 +88,18 @@ fun WrappedScreen(
     val focus = remember { FocusRequester() }
     val layer = rememberGraphicsLayer()
 
-    fun go(to: Int) { index = to.coerceIn(0, cards.lastIndex); scope.launch { progress.snapTo(0f) } }
+    fun go(to: Int) { index = to.coerceIn(0, cards.lastIndex) }
 
-    // 6 s per card, continuing from where a pause left it; the last card stays.
-    LaunchedEffect(index, paused) {
-        if (paused) return@LaunchedEffect
-        val left = ((1f - progress.value) * CARD_MS).toInt()
-        progress.animateTo(1f, tween(left, easing = LinearEasing))
-        if (index < cards.lastIndex) go(index + 1)
+    // 6 s per card, continuing from where a pause left it; the last card stays full. The reset happens here, keyed on
+    // the card, so the timer never reads the previous card's progress.
+    LaunchedEffect(index) {
+        progress.snapTo(0f)
+        snapshotFlow { paused }.collectLatest { isPaused ->
+            if (isPaused) return@collectLatest
+            val left = ((1f - progress.value) * CARD_MS).toInt()
+            progress.animateTo(1f, tween(left, easing = LinearEasing))
+            if (index < cards.lastIndex) go(index + 1)
+        }
     }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     DisposableEffect(layer) {
@@ -125,14 +135,19 @@ fun WrappedScreen(
             WrappedCardView(
                 cards[i],
                 Modifier.fillMaxHeight().widthIn(max = 600.dp).clip(RoundedCornerShape(16.dp))
-                    .drawWithContent { layer.record { this@drawWithContent.drawContent() }; drawLayer(layer) },
+                    // Only the card being shown is captured (during the crossfade both are drawn).
+                    .drawWithContent { if (i == index) { layer.record { this@drawWithContent.drawContent() }; drawLayer(layer) } else drawContent() },
             )
         }
         Column(Modifier.align(Alignment.TopCenter).fillMaxWidth().widthIn(max = 600.dp).windowInsetsPadding(WindowInsets.safeDrawing).padding(12.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 cards.indices.forEach { i ->
                     val fill = when { i < index -> 1f; i == index -> progress.value; else -> 0f }
-                    Box(Modifier.weight(1f).height(3.dp).clip(RoundedCornerShape(2.dp)).background(Color.White.copy(alpha = 0.3f))) {
+                    Box(
+                        Modifier.weight(1f).height(3.dp).clip(RoundedCornerShape(2.dp)).background(Color.White.copy(alpha = 0.3f))
+                            .testTag(STORY_SEGMENT_TAG)
+                            .semantics { progressBarRangeInfo = ProgressBarRangeInfo(fill, 0f..1f) },
+                    ) {
                         Box(Modifier.fillMaxWidth(fill).fillMaxHeight().background(Color.White))
                     }
                 }
@@ -149,3 +164,6 @@ fun WrappedScreen(
 }
 
 private const val CARD_MS = 6_000
+
+/** Test tag of each story progress segment (its progress is in the semantics). */
+const val STORY_SEGMENT_TAG = "wrapped_segment"

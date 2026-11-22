@@ -42,6 +42,8 @@ class PlayTracker(
 
     private val lock = Mutex()
     private var current: Current? = null
+    /** While on, nothing is tracked (Wrapped's preview of your top song is not a play). */
+    private var ignoring = false
 
     init {
         scope.launch {
@@ -59,7 +61,14 @@ class PlayTracker(
     /** Ends the play in progress (app shutdown). */
     suspend fun finish() = lock.withLock { current?.let { finalize(it) }; current = null }
 
+    /** Stops (true) or resumes (false) tracking; the play in progress when it stops is recorded. */
+    suspend fun setIgnoring(ignore: Boolean) = lock.withLock {
+        if (ignore) { current?.let { finalize(it) }; current = null }
+        ignoring = ignore
+    }
+
     private suspend fun onState(s: PlaybackState) {
+        if (ignoring) return
         val now = clock.now()
         val track = s.current
         current?.let { c ->
@@ -81,13 +90,28 @@ class PlayTracker(
 
     private fun listened(c: Current): Long = c.playedMs + (c.playingSince?.let { (clock.now() - it).inWholeMilliseconds } ?: 0)
 
+    /**
+     * Records the play, then clears its checkpoint (recording twice is harmless: plays are keyed by ID). A play with
+     * no listening at all (skipped while paused) isn't recorded. A failed record never stops tracking.
+     */
     private suspend fun finalize(c: Current, reachedEnd: Boolean = false) {
         val ms = listened(c)
+        if (ms > 0) {
+            try {
+                record(PlayEvent(c.id, c.track, c.startedAt, ms, counted = ms >= COUNT_MS || reachedEnd, deviceId = deviceId))
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // Kept as the checkpoint, recorded on the next start.
+                prefs.put(CHECKPOINT_KEY, OperationJson.encodeToString(PlayEvent.serializer(), PlayEvent(c.id, c.track, c.startedAt, ms, false, deviceId)))
+                return
+            }
+        }
         prefs.put(CHECKPOINT_KEY, null)
-        record(PlayEvent(c.id, c.track, c.startedAt, ms, counted = ms >= COUNT_MS || reachedEnd, deviceId = deviceId))
     }
 
     private fun checkpoint(c: Current) {
+        if (listened(c) == 0L) return
         val e = PlayEvent(c.id, c.track, c.startedAt, listened(c), counted = false, deviceId = deviceId)
         prefs.put(CHECKPOINT_KEY, OperationJson.encodeToString(PlayEvent.serializer(), e))
     }
@@ -96,7 +120,7 @@ class PlayTracker(
         val json = prefs.get(CHECKPOINT_KEY) ?: return
         prefs.put(CHECKPOINT_KEY, null)
         val e = runCatching { OperationJson.decodeFromString(PlayEvent.serializer(), json) }.getOrNull() ?: return
-        record(e.copy(counted = e.playedMs >= COUNT_MS))
+        if (e.playedMs > 0) runCatching { record(e.copy(counted = e.playedMs >= COUNT_MS)) }
     }
 
     companion object {

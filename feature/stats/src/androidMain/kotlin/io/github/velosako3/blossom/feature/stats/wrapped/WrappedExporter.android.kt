@@ -33,6 +33,8 @@ actual object WrappedExporter {
         }
         val uri = FileProvider.getUriForFile(ctx, ctx.packageName + ".files", file)
         val send = Intent(Intent.ACTION_SEND).setType("image/png").putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        // ClipData carries the read grant through the chooser to whichever app is picked.
+        send.clipData = android.content.ClipData.newRawUri(null, uri)
         ctx.startActivity(Intent.createChooser(send, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 

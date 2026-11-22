@@ -36,7 +36,7 @@ object WrappedDeckBuilder {
         val art = topSong?.item?.artworkUrl
         val minutes = stats.totalListeningMs / 60_000
         val artistArt = { a: ArtistRef -> stats.topTracks.firstOrNull { t -> t.item.artists.any { it.name == a.name } }?.item?.artworkUrl }
-        val albumArt = { a: AlbumRef -> stats.topTracks.firstOrNull { it.item.album?.title == a.title }?.item?.artworkUrl }
+        val albumArt = { a: AlbumRef -> stats.topTracks.firstOrNull { t -> t.item.album?.let(io.github.velosako3.blossom.feature.stats.StatsCalculator::albumKey) == io.github.velosako3.blossom.feature.stats.StatsCalculator.albumKey(a) }?.item?.artworkUrl }
         val peak = stats.byHourOfDayMs.indices.maxByOrNull { stats.byHourOfDayMs[it] } ?: 0
         return buildList {
             add(WrappedCard.Intro(stats.period, art))
