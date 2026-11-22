@@ -137,7 +137,8 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
             when (destination) {
                 Destination.Home -> {
                     HomeScreen(graph.home, { t, i -> play(t, i, false) }, openAlbum, openArtist, openPlaylist,
-                        onOpenSavedPlaylist = { navigator.navigate(Destination.Playlist(it)) })
+                        onOpenSavedPlaylist = { navigator.navigate(Destination.Playlist(it)) },
+                        banner = wrappedBanner(graph.stats.zoneId)?.let { (period, text) -> { WrappedBanner(text) { navigator.navigate(Destination.Wrapped(period.key)) } } })
                     true
                 }
                 Destination.Search -> {
@@ -261,6 +262,7 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
                         true
                     }
                 }
+                is Destination.Wrapped -> { WrappedRoute(graph, destination.period) { navigator.back() }; true }
                 Destination.Stats -> {
                     io.github.velosako3.blossom.feature.stats.ui.StatsScreen(graph.stats, onOpenWrapped = { p -> navigator.navigate(Destination.Wrapped(p.key)) })
                     true

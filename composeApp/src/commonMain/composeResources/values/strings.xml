@@ -36,4 +36,7 @@
     <string name="storage_paused_banner">Saving paused: the storage limit is reached.</string>
     <string name="saved_empty">Nothing saved yet. Save songs or playlists to listen without a connection.</string>
     <string name="menu_refresh_from_source">Refresh from source</string>
+    <string name="wrapped_banner_week">Your week in music is ready.</string>
+    <string name="wrapped_banner_month">Your %1$s in music is ready.</string>
+    <string name="wrapped_banner_year">Your %1$s in music is ready.</string>
 </resources>

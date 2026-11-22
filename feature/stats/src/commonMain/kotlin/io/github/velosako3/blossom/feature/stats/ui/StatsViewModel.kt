@@ -31,9 +31,12 @@ class StatsViewModel(private val repo: LibraryRepository, private val clock: Clo
     private val _period = MutableStateFlow<Period>(Period.weekContaining(clock.now(), zone))
     val period: StateFlow<Period> = _period
 
-    val state: StateFlow<StatsUi> = _period.flatMapLatest { p ->
+    val state: StateFlow<StatsUi> = _period.flatMapLatest { statsFor(it) }.stateIn(scope, SharingStarted.Eagerly, StatsUi.Loading)
+
+    /** Stats for any [p] (Wrapped uses this for the period it shows). */
+    fun statsFor(p: Period): kotlinx.coroutines.flow.Flow<StatsUi> {
         val prev = p.previous()
-        combine(repo.playEvents(p.start, p.endExclusive), repo.playEvents(prev.start, prev.endExclusive), repo.firstPlays()) { events, before, firsts ->
+        return combine(repo.playEvents(p.start, p.endExclusive), repo.playEvents(prev.start, prev.endExclusive), repo.firstPlays()) { events, before, firsts ->
             if (events.isEmpty()) StatsUi.Empty(p)
             else {
                 val firstByArtist = HashMap<String, Instant>()
@@ -44,7 +47,9 @@ class StatsViewModel(private val repo: LibraryRepository, private val clock: Clo
                 StatsUi.Loaded(StatsCalculator.compute(p, events, firstByArtist, before.sumOf { it.playedMs }))
             }
         }
-    }.stateIn(scope, SharingStarted.Eagerly, StatsUi.Loading)
+    }
+
+    val zoneId: TimeZone get() = zone
 
     fun select(kind: PeriodKind) {
         val anchor = clock.now()
