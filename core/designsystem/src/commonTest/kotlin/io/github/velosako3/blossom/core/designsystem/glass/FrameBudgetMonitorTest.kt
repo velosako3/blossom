@@ -40,4 +40,17 @@ class FrameBudgetMonitorTest {
         val results = m.feed(count = 4_000, frameMs = 25.0) // 100 s of slow frames
         assertEquals(listOf(GlassQuality.OFF), results.map { it.second })
     }
+
+    /** A device that takes seconds per frame (cold start on a weak GPU) can't wait for a 3 s window: it would ANR first. */
+    @Test fun aCatastrophicFrameStepsDownAtOnce() {
+        val m = FrameBudgetMonitor()
+        assertEquals(GlassQuality.REDUCED, m.onFrame(2_000.0, 2_000))
+        assertEquals(GlassQuality.OFF, m.onFrame(1_500.0, 3_500))
+        assertNull(m.onFrame(1_500.0, 5_000))
+    }
+
+    @Test fun oneHitchIsNotCatastrophic() {
+        val m = FrameBudgetMonitor()
+        assertNull(m.onFrame(120.0, 120)) // a GC pause or a slow image decode
+    }
 }

@@ -53,6 +53,7 @@ import kotlin.math.roundToInt
 /** Everything Settings shows. Rows for things a platform doesn't have are null/false and hidden. */
 data class SettingsUi(
     val theme: ThemeMode = ThemeMode.DARK,
+    val glass: io.github.velosako3.blossom.core.designsystem.glass.GlassPreference = io.github.velosako3.blossom.core.designsystem.glass.GlassPreference.AUTO,
     val reduceMotion: Boolean = false,
     /** Desktop only (null elsewhere). */
     val systemTitleBar: Boolean? = null,
@@ -78,6 +79,7 @@ data class SettingsUi(
 interface SettingsActions {
     fun theme(mode: ThemeMode)
     fun reduceMotion(on: Boolean)
+    fun glass(preference: io.github.velosako3.blossom.core.designsystem.glass.GlassPreference) {}
     fun systemTitleBar(on: Boolean) {}
     fun crossfade(seconds: Int)
     fun autoplay(on: Boolean)
@@ -124,6 +126,18 @@ fun SettingsScreen(state: SettingsUi, actions: SettingsActions, modifier: Modifi
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(ThemeMode.SYSTEM to Res.string.settings_theme_system, ThemeMode.LIGHT to Res.string.settings_theme_light, ThemeMode.DARK to Res.string.settings_theme_dark)
                             .forEach { (m, label) -> GlassChip(state.theme == m, { actions.theme(m) }, stringResource(label)) }
+                    }
+                }
+                Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(Res.string.settings_glass), style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(Res.string.settings_glass_hint), color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(
+                            io.github.velosako3.blossom.core.designsystem.glass.GlassPreference.AUTO to Res.string.settings_glass_auto,
+                            io.github.velosako3.blossom.core.designsystem.glass.GlassPreference.FULL to Res.string.settings_glass_full,
+                            io.github.velosako3.blossom.core.designsystem.glass.GlassPreference.REDUCED to Res.string.settings_glass_reduced,
+                            io.github.velosako3.blossom.core.designsystem.glass.GlassPreference.OFF to Res.string.settings_glass_off,
+                        ).forEach { (g, label) -> GlassChip(state.glass == g, { actions.glass(g) }, stringResource(label)) }
                     }
                 }
                 SwitchRow(Res.string.settings_reduce_motion, Res.string.settings_reduce_motion_hint, state.reduceMotion, actions::reduceMotion)

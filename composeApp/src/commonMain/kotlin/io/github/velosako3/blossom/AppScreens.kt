@@ -106,7 +106,6 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
         is io.github.velosako3.blossom.core.player.SleepState.Until ->
             stringResource(Res.string.sleep_timer_left, ((s.endsAt - kotlin.time.Clock.System.now()).inWholeSeconds / 60 + 1).toInt().coerceAtLeast(1))
     }
-    if (sleepDialog) SleepTimerDialog(graph.sleepTimer) { sleepDialog = false }
     val menu = listOfNotNull(
         PlayerMenuAction(addToPlaylist) { addTracks = listOf(it) },
         PlayerMenuAction(sleepLabel) { sleepDialog = true },
@@ -122,6 +121,8 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
     return ShellSlots(
         overlay = {
             if (fullScreenLyrics && hasTrack) FullScreenLyrics(graph, onClose = { fullScreenLyrics = false })
+            // GlassDialog draws in place: it must live in the overlay layer, above the screens.
+            if (sleepDialog) SleepTimerDialog(graph.sleepTimer) { sleepDialog = false }
             AddToPlaylistSheet(
                 visible = addTracks != null,
                 playlists = playlists.orEmpty(),

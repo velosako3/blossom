@@ -57,7 +57,7 @@ import kotlin.time.toJavaInstant
 fun StatsScreen(vm: StatsViewModel, onOpenWrapped: (Period) -> Unit, modifier: Modifier = Modifier) {
     val period by vm.period.collectAsState()
     val state by vm.state.collectAsState()
-    StatsContent(period, state, vm::select, vm::previous, vm::next, onOpenWrapped, modifier)
+    StatsContent(period, state, vm::select, vm::previous, vm::next, onOpenWrapped, modifier, hasNext = vm.hasNext(period))
 }
 
 /** The Stats screen for a [period] and its [state] (no logic; snapshot tests use it directly). */
@@ -71,6 +71,8 @@ fun StatsContent(
     onNext: () -> Unit,
     onOpenWrapped: (Period) -> Unit,
     modifier: Modifier = Modifier,
+    /** False on the period holding today: there's no future to step into. */
+    hasNext: Boolean = true,
 ) {
     val muted = BlossomTheme.colors.onSurfaceVariant
     Box(modifier.fillMaxSize()) {
@@ -87,7 +89,7 @@ fun StatsContent(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 GlassIconButton(onPrevious, Icons.Rounded.ChevronLeft, stringResource(Res.string.stats_previous), size = 40.dp)
                 Text(label(period), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
-                GlassIconButton(onNext, Icons.Rounded.ChevronRight, stringResource(Res.string.stats_next), size = 40.dp)
+                GlassIconButton(onNext, Icons.Rounded.ChevronRight, stringResource(Res.string.stats_next), size = 40.dp, enabled = hasNext)
             }
             when (state) {
                 StatsUi.Loading -> Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = BlossomTheme.colors.accent) }

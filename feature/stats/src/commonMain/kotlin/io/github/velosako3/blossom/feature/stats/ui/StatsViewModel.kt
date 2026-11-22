@@ -64,6 +64,9 @@ class StatsViewModel(private val repo: LibraryRepository, private val clock: Clo
 
     /** Never past the period holding today. */
     fun next() { _period.value.next().takeIf { it.start <= clock.now() }?.let { _period.value = it } }
+
+    /** Whether [next] can move from [p] (not into the future). */
+    fun hasNext(p: Period) = p.next().start <= clock.now()
 }
 
 val Period.kind: PeriodKind get() = when (this) { is Period.Week -> PeriodKind.WEEK; is Period.Month -> PeriodKind.MONTH; is Period.Year -> PeriodKind.YEAR }

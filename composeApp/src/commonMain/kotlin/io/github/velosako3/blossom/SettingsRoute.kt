@@ -31,6 +31,7 @@ fun SettingsRoute(graph: AppGraph, navigator: Navigator, topBar: @Composable () 
     var lastFmToken by remember { mutableStateOf<String?>(null) }
     val state = SettingsUi(
         theme = p.theme.state.collectAsState().value,
+        glass = p.glass.state.collectAsState().value,
         reduceMotion = p.reduceMotion.state.collectAsState().value ?: false,
         systemTitleBar = graph.systemTitleBar?.state?.collectAsState()?.value,
         crossfadeSeconds = p.crossfade.state.collectAsState().value,
@@ -49,6 +50,7 @@ fun SettingsRoute(graph: AppGraph, navigator: Navigator, topBar: @Composable () 
     val actions = object : SettingsActions {
         override fun theme(mode: ThemeMode) = p.theme.set(mode)
         override fun reduceMotion(on: Boolean) = p.reduceMotion.set(on)
+        override fun glass(preference: io.github.velosako3.blossom.core.designsystem.glass.GlassPreference) = p.glass.set(preference)
         override fun systemTitleBar(on: Boolean) { graph.systemTitleBar?.set(on) }
         override fun crossfade(seconds: Int) = p.crossfade.set(seconds)
         override fun autoplay(on: Boolean) = p.autoplay.set(on)

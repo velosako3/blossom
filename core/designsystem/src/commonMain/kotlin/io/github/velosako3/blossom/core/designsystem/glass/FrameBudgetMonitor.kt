@@ -6,7 +6,8 @@ package io.github.velosako3.blossom.core.designsystem.glass
  *
  * Once a full [windowMs] of frames has been seen, if the [percentile] frame time exceeds [thresholdMs] it returns
  * the next lower quality, then stays quiet for [QUIET_MS] and starts a fresh window. It never upgrades within a
- * session. Allocation-free per frame: a ring buffer plus a reusable sort scratch.
+ * session. A single frame over [PANIC_MS] steps down at once: a weak GPU cold-starting into a screen full of glass
+ * renders frames of several seconds and would hit an ANR long before a window filled. Allocation-free per frame: a ring buffer plus a reusable sort scratch.
  */
 class FrameBudgetMonitor(
     private val windowMs: Long = 3000,
@@ -26,7 +27,14 @@ class FrameBudgetMonitor(
     private var quietUntil = Long.MIN_VALUE
 
     fun onFrame(frameTimeMs: Double, nowMs: Long): GlassQuality? {
-        if (current == GlassQuality.OFF || nowMs < quietUntil) return null
+        if (current == GlassQuality.OFF) return null
+        if (frameTimeMs > PANIC_MS) {
+            current = GlassQuality.entries[current.ordinal - 1]
+            quietUntil = nowMs + QUIET_MS
+            size = 0; head = 0; windowStart = -1
+            return current
+        }
+        if (nowMs < quietUntil) return null
         if (windowStart < 0) windowStart = nowMs
         push(nowMs, frameTimeMs)
         while (size > 0 && times[head] < nowMs - windowMs) { head = (head + 1) % CAPACITY; size-- }
@@ -52,5 +60,6 @@ class FrameBudgetMonitor(
     private companion object {
         const val CAPACITY = 2048
         const val QUIET_MS = 10_000L
+        const val PANIC_MS = 250.0
     }
 }

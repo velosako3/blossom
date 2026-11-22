@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom
 
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -67,7 +69,8 @@ fun App(
     val activePalette = if (current != null) artworkPalette else palette
     val slots = if (graph != null) appSlots(graph, navigator, searchFocus, hasTrack = current != null, shellState = shellState, compact = compactLayout) else remember { ShellSlots() }
     val darkTheme = resolveDarkTheme(themeMode, isSystemInDarkTheme())
-    BlossomTheme(darkTheme = darkTheme, palette = activePalette, glassQuality = glassQuality, reduceMotion = reduceMotion) {
+    val glassPreference = graph?.preferences?.glass?.state?.collectAsState()?.value ?: io.github.velosako3.blossom.core.designsystem.glass.GlassPreference.AUTO
+    BlossomTheme(darkTheme = darkTheme, palette = activePalette, glassPreference = glassPreference, glassQuality = glassQuality, reduceMotion = reduceMotion) {
         Box(Modifier.fillMaxSize()) {
             BlossomBackground(activePalette, Modifier.fillMaxSize().glassBackdropSource())
             Column(Modifier.fillMaxSize()) {
@@ -100,7 +103,8 @@ fun App(
                     // First run: the welcome, over everything (skippable).
                     graph?.let { g ->
                         if (!g.preferences.onboarded.state.collectAsState().value) {
-                            Box(Modifier.fillMaxSize().zIndex(3f)) {
+                            // A scrim keeps the welcome card readable over a busy home feed.
+                            Box(Modifier.fillMaxSize().zIndex(3f).background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.55f))) {
                                 io.github.velosako3.blossom.feature.settings.onboarding.OnboardingFlow(
                                     g.preferences.theme.state.collectAsState().value, g.preferences.theme::set,
                                     onFinish = { extra ->
@@ -118,10 +122,14 @@ fun App(
                     }
                     val layout = WindowLayout.from(maxWidth.value)
                     compactLayout = layout == WindowLayout.COMPACT
-                    when (layout) {
-                        WindowLayout.COMPACT -> CompactShell(navigator, slots)
-                        WindowLayout.MEDIUM -> MediumShell(navigator, slots)
-                        WindowLayout.EXPANDED -> ExpandedShell(navigator, slots, shell = shellState)
+                    // While the welcome is up, screen readers see only it.
+                    val welcoming = graph != null && !graph.preferences.onboarded.state.collectAsState().value
+                    Box(if (welcoming) Modifier.fillMaxSize().clearAndSetSemantics {} else Modifier.fillMaxSize()) {
+                        when (layout) {
+                            WindowLayout.COMPACT -> CompactShell(navigator, slots)
+                            WindowLayout.MEDIUM -> MediumShell(navigator, slots)
+                            WindowLayout.EXPANDED -> ExpandedShell(navigator, slots, shell = shellState)
+                        }
                     }
                 }
             }

@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–6 done (M6 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–7 done (M7 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Tasks 8.1–8.5 done; the Milestone 8 review is running. Milestone 8 is wrapped up and its review fixed. Tasks 9.1–9.6 done. Next: Task 9.7 (onboarding, settings, accessibility, polish).
+Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–6 done (M6 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–7 done (M7 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Tasks 8.1–8.5 done; the Milestone 8 review is running. Milestone 8 is wrapped up and its review fixed. Tasks 9.1–9.6 done; 9.7 implemented, hands-on pass done. Next: commit 9.7, then 9.8 (installers on CI), final review.
 
 Hands-on testing rule: the owner is using this desktop, so never inject keyboard/mouse input or capture the screen.
 Desktop end-to-end checks run off-screen with the real graph: `./gradlew :composeApp:desktopTest -PliveTests=true -Proborazzi.test.record=true --tests "*DesktopEndToEnd*"`. `./gradlew :composeApp:run -Pblossom.debugPlay="query"` plays a search result at startup, for `playerctl` checks. Kill stray app instances by PID (`ps … | grep 'blossom\.MainKt'`), never with a `pkill -f` pattern that matches your own shell.
@@ -53,6 +53,34 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - Desktop `NetworkMonitor` checks for an up interface plus a DNS answer every 15 s (no request to any server); `-Dblossom.forceOffline=true` pins it offline for testing.
 
 ## Deviations from plan
+- Task 9.7:
+  - Settings is one scrolling page in sections, with links to the sub-screens: equalizer, storage, local files, sync, licenses and sign-in.
+  - Onboarding shows on first run only. It's skippable and comes back via Settings → About → "Show the welcome again". Tests skip it with `-Dblossom.skipOnboarding=true`.
+  - Accounts:
+    - Android signs in through web views ported from BitChord. YouTube Music keeps only the cookie. For Spotify, `sp_dc` plus the token is harvested by an offscreen web player.
+    - Desktop: YouTube Music takes a pasted Cookie header, since there's no embedded browser. Spotify sign-in is Android-only, as in BitChord; playlists imported there sync to desktop.
+  - Licenses come from the AboutLibraries Gradle plugin (`exportLibraryDefinitions` → `composeResources/files/aboutlibraries.json`, 234 libraries), shown in blossom's own list.
+  - Lyrics settings: an explanation and "Forget saved lyrics" (there are no lyrics options to choose).
+  - Accessibility:
+    - Every clickable control has a label (an audit test across 16 screens and both layouts).
+    - Switch rows toggle as a whole and are announced with their label.
+    - Tab order is nav → content → player bar, and Shift+Tab goes back (test).
+    - At 200 % text, nav labels no longer clip (the nav bar grows) and the offline notice is transient (6 s) instead of covering the player.
+    - Content behind the welcome is hidden from screen readers.
+  - Error and empty states: audited. Home, search, album and artist have retry; library, liked, playlist, local files and stats have empty-state guidance; lyrics say "none found"; offline lyrics no longer wait on network timeouts.
+  - Hands-on pass:
+    - Desktop: the real graph off-screen, 19 screens, in `docs/screenshots/m9/desktop/`.
+    - Android: emulator, 20 screens, in `docs/screenshots/m9/android/`.
+  - Fixed during the pass:
+    - The sleep timer dialog was drawn under the screens; it now lives in the overlay layer.
+    - The compact shell's bottom padding was a fixed guess; it's now measured, so content no longer ends under the mini player on Android.
+    - Onboarding gets a scrim.
+    - The Stats "next" arrow is disabled on the current period.
+  - An Android cold-start ANR found on the emulator:
+    - Starting straight into Home with full glass made the CPU-rendered GPU compile shaders for seconds per frame. The main thread waited on it, so the frame monitor never got to step down.
+    - Fixes: the monitor steps down at once after a frame over 250 ms; Android frame times come from `FrameMetrics` on a background thread; the emulator is capped to glass off; Settings → Appearance → Glass effects (Auto/Full/Reduced/Off) is new.
+    - Verified: two cold starts into Home now load.
+  - Not tested: the effect of the glass shaders on real low-end GPUs (no device).
 - Task 9.6:
   - The check runs at app start. The day's answer (tag and link) is kept in preferences, so there's at most one request a day.
   - A failed request (today's 404: the repo has no releases yet) shows nothing and is retried at the next start.

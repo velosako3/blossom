@@ -52,15 +52,9 @@ fun BlossomTheme(
     var monitorCap by remember { mutableStateOf<GlassQuality?>(null) }
     val monitorActive = glassQuality == null && glassPreference == GlassPreference.AUTO
     if (monitorActive) {
-        LaunchedEffect(Unit) {
-            val monitor = FrameBudgetMonitor()
-            var last = withFrameNanos { it }
-            while (true) {
-                val now = withFrameNanos { it }
-                monitor.onFrame((now - last) / 1_000_000.0, now / 1_000_000)?.let { monitorCap = it }
-                last = now
-            }
-        }
+        val monitor = remember { FrameBudgetMonitor() }
+        // Android reports from a background thread: one monitor, one reporting thread, state written through the snapshot.
+        io.github.velosako3.blossom.core.designsystem.glass.FrameTimes { ms, now -> synchronized(monitor) { monitor.onFrame(ms, now) }?.let { monitorCap = it } }
     }
     val backdrop = remember { HazeState() }
     val quality = glassQuality ?: resolveGlassQuality(GlassCapabilities.maxSupported(), glassPreference, monitorCap)

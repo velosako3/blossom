@@ -17,6 +17,8 @@ class PrefFlow<T>(private val prefs: PreferenceStore, private val key: String, p
 /** Appearance and playback preferences (device-specific; synced settings are separate). */
 class AppPreferences(prefs: PreferenceStore) {
     val theme = PrefFlow(prefs, "ui.theme", ThemeMode.DARK, { runCatching { ThemeMode.valueOf(it) }.getOrNull() }, { it.name })
+    val glass = PrefFlow(prefs, "ui.glass", io.github.velosako3.blossom.core.designsystem.glass.GlassPreference.AUTO,
+        { runCatching { io.github.velosako3.blossom.core.designsystem.glass.GlassPreference.valueOf(it) }.getOrNull() }, { it.name })
     /** Null: follow the system's "remove animations" setting. */
     val reduceMotion = PrefFlow<Boolean?>(prefs, "ui.reduceMotion", null, { it.toBooleanStrictOrNull() }, { it.toString() })
     val crossfade = PrefFlow(prefs, CROSSFADE_KEY, 0, { it.toIntOrNull()?.coerceIn(0, 12) })

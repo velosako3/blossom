@@ -109,4 +109,10 @@
     <string name="onb_import">Import a playlist from Spotify, YouTube Music or SoundCloud</string>
     <string name="onb_done">Start listening</string>
     <string name="onb_step">Step %1$d of %2$d</string>
+    <string name="settings_glass">Glass effects</string>
+    <string name="settings_glass_hint">Auto steps down when this device can't keep up.</string>
+    <string name="settings_glass_auto">Auto</string>
+    <string name="settings_glass_full">Full</string>
+    <string name="settings_glass_reduced">Reduced</string>
+    <string name="settings_glass_off">Off</string>
 </resources>
