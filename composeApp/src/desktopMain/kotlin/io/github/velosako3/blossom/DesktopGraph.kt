@@ -67,6 +67,8 @@ fun createDesktopGraph(): AppGraph {
     val offlineSettings = OfflineSettingsStore(prefs, defaultWifiOnly = false)
     val offline = offlineStore(db, File(dataDir, "offline"), secure, resolver, network, offlineSettings.settings, scope)
     val engine = DesktopPlaybackEngine(offlineReader = offline::openReader)
+    // The second engine plays the incoming track during a crossfade.
+    val fadeEngine = DesktopPlaybackEngine(offlineReader = offline::openReader)
     val player = DefaultBlossomPlayer(
         engine = engine,
         resolver = resolver,
@@ -75,6 +77,8 @@ fun createDesktopGraph(): AppGraph {
         scope = scope,
         radio = { ytm.radio(it.id) },
         localPath = localLibrary::pathFor,
+        fadeEngine = fadeEngine,
+        crossfadeSeconds = { prefs.get(CROSSFADE_KEY)?.toIntOrNull() ?: 0 },
     )
     SystemMediaControls(player, scope)
     // Debug hook for hands-on checks: search and play the first song at startup.
@@ -105,6 +109,7 @@ fun createDesktopGraph(): AppGraph {
         // The play in progress is recorded before the process ends.
         runCatching { kotlinx.coroutines.runBlocking { kotlinx.coroutines.withTimeoutOrNull(2_000) { graph.playTracker.finish() } } }
         runCatching { engine.release() }
+        runCatching { fadeEngine.release() }
     })
     return graph
 }

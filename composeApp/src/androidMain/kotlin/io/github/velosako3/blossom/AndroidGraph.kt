@@ -65,6 +65,8 @@ fun createAndroidGraph(context: Context): AppGraph {
     io.github.velosako3.blossom.core.offline.DownloadWorker.install(context, offline.manager)
     io.github.velosako3.blossom.feature.stats.wrapped.WrappedExporter.context = context.applicationContext
     val engine = Media3PlaybackEngine(context, offlineDataSource = io.github.velosako3.blossom.core.offline.EncryptedDataSource.Factory(offline))
+    // The second engine plays the incoming track during a crossfade.
+    val fadeEngine = Media3PlaybackEngine(context, offlineDataSource = io.github.velosako3.blossom.core.offline.EncryptedDataSource.Factory(offline))
     val player = DefaultBlossomPlayer(
         engine = engine,
         resolver = resolver,
@@ -73,6 +75,8 @@ fun createAndroidGraph(context: Context): AppGraph {
         scope = scope,
         radio = { ytm.radio(it.id) },
         localPath = localLibrary::pathFor,
+        fadeEngine = fadeEngine,
+        crossfadeSeconds = { prefs.get(CROSSFADE_KEY)?.toIntOrNull() ?: 0 },
     )
     PlayerHolder.engine = engine
     PlayerHolder.player = player

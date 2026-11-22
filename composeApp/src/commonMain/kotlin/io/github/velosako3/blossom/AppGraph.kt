@@ -41,6 +41,9 @@ import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+/** Crossfade length in seconds, 0–12 (0 = off, gapless). A device preference. */
+const val CROSSFADE_KEY = "player.crossfade"
+
 /** This device's stable sync identity, created once and kept in preferences. */
 @OptIn(ExperimentalUuidApi::class)
 fun PreferenceStore.deviceId(): String = get("device.id") ?: Uuid.random().toString().also { put("device.id", it) }

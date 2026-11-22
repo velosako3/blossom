@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–6 done (M6 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–7 done (M7 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Tasks 8.1–8.5 done. Next: Milestone 8 wrap-up.
+Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–6 done (M6 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–7 done (M7 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Tasks 8.1–8.5 done; the Milestone 8 review is running. Task 9.1 done. Next: Task 9.2 (equalizer).
 
 Hands-on testing rule: the owner is using this desktop, so never inject keyboard/mouse input or capture the screen.
 Desktop end-to-end checks run off-screen with the real graph: `./gradlew :composeApp:desktopTest -PliveTests=true -Proborazzi.test.record=true --tests "*DesktopEndToEnd*"`. `./gradlew :composeApp:run -Pblossom.debugPlay="query"` plays a search result at startup, for `playerctl` checks. Kill stray app instances by PID (`ps … | grep 'blossom\.MainKt'`), never with a `pkill -f` pattern that matches your own shell.
@@ -43,6 +43,15 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - Desktop `NetworkMonitor` checks for an up interface plus a DNS answer every 15 s (no request to any server); `-Dblossom.forceOffline=true` pins it offline for testing.
 
 ## Deviations from plan
+- Task 9.1:
+  - Crossfade lives in `DefaultBlossomPlayer`, not in the engines. Each platform builds a second engine (`fadeEngine`), and the two swap roles after each fade. Only the active engine's events count, so the outgoing track's end can't skip the new one.
+  - On Android, the media session follows `activeEngine` (`MediaSession.setPlayer`).
+  - A fade never runs past the end of the outgoing track; its length is clamped to the time left.
+  - Pause, seek or a track change finish a fade at once.
+  - "Gapless" at 0 s (and between album neighbours) means the next stream is resolved 20 s ahead, so it starts at once. It isn't sample-accurate: single-item loads leave a few milliseconds.
+  - "Consecutive on one album" means the queue's next track has the same album ID.
+  - The setting is stored under `player.crossfade` (0–12, default 0); its control comes with the settings screens in 9.7.
+  - Checked live (`DesktopCrossfadeLiveTest`, two libVLC engines, 8 s files, 3 s fade): the switch happened at 5.15 s and the second track kept playing.
 - Task 8.5:
   - The device list has one generic device icon. Manifests and pairing don't record each device's platform, so there's nothing to choose a platform icon from.
   - The QR code and the six words share one 40-bit one-time secret, so one pairing window works with either.

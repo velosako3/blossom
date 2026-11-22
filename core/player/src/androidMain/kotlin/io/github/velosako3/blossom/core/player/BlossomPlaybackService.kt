@@ -48,7 +48,25 @@ class BlossomPlaybackService : MediaSessionService() {
         val player = PlayerHolder.player
         if (engine == null || player == null) { stopSelf(); return }
         audioManager = getSystemService(AudioManager::class.java)
-        val forwarding = object : ForwardingPlayer(engine.exoPlayer) {
+        session = MediaSession.Builder(this, forwarding(engine, player)).build()
+        // Crossfade swaps engines: the notification and lock screen follow the one playing the current track.
+        (player as? DefaultBlossomPlayer)?.let { p ->
+            scope.launch {
+                p.activeEngine.collect { active ->
+                    val e = active as? Media3PlaybackEngine ?: return@collect
+                    session?.let { if ((it.player as? ForwardingPlayer)?.wrappedPlayer !== e.exoPlayer) it.player = forwarding(e, player) }
+                }
+            }
+        }
+        val filter = IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
+        if (android.os.Build.VERSION.SDK_INT >= 33) registerReceiver(noisy, filter, Context.RECEIVER_NOT_EXPORTED) else registerReceiver(noisy, filter)
+        scope.launch {
+            player.state.map { it.isPlaying }.distinctUntilChanged().collect { playing -> if (playing) { focusPolicy.onUserPlay(); requestFocus() } }
+        }
+    }
+
+    /** The engine's ExoPlayer as the session sees it, with transport commands routed to blossom's player. */
+    private fun forwarding(engine: Media3PlaybackEngine, player: BlossomPlayer) = object : ForwardingPlayer(engine.exoPlayer) {
             override fun getAvailableCommands(): Player.Commands = super.getAvailableCommands().buildUpon()
                 .add(Player.COMMAND_SEEK_TO_NEXT).add(Player.COMMAND_SEEK_TO_PREVIOUS)
                 .add(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM).add(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM).build()
@@ -61,13 +79,6 @@ class BlossomPlaybackService : MediaSessionService() {
             override fun pause() = player.pause()
             override fun setPlayWhenReady(playWhenReady: Boolean) = if (playWhenReady) player.play() else player.pause()
             override fun seekTo(positionMs: Long) = player.seekTo(positionMs)
-        }
-        session = MediaSession.Builder(this, forwarding).build()
-        val filter = IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
-        if (android.os.Build.VERSION.SDK_INT >= 33) registerReceiver(noisy, filter, Context.RECEIVER_NOT_EXPORTED) else registerReceiver(noisy, filter)
-        scope.launch {
-            player.state.map { it.isPlaying }.distinctUntilChanged().collect { playing -> if (playing) { focusPolicy.onUserPlay(); requestFocus() } }
-        }
     }
 
     private fun requestFocus() {
