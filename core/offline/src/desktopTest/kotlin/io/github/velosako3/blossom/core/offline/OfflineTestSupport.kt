@@ -32,6 +32,8 @@ class AudioServer(val sizes: Map<String, Int>) {
     val ranges: MutableList<String?> = Collections.synchronizedList(mutableListOf())
     @Volatile var dropFirstAt: Double? = null
     @Volatile var slowMs = 0L
+    /** When set, responses wait for it to open (lets a test observe DOWNLOADING without racing). */
+    @Volatile var gate: java.util.concurrent.CountDownLatch? = null
     /** Rejects (403) URLs whose token is older than this, like an expired signed stream URL. */
     @Volatile var minToken = 0
     /** Answers the next ranged request with a Content-Range that starts somewhere else. */
@@ -49,6 +51,7 @@ class AudioServer(val sizes: Map<String, Int>) {
             val id = ex.requestURI.path.removePrefix("/t/")
             val range = ex.requestHeaders.getFirst("Range")
             ranges += range
+            gate?.await(10, java.util.concurrent.TimeUnit.SECONDS)
             val token = ex.requestURI.query?.removePrefix("token=")?.toIntOrNull() ?: 0
             if (token < minToken) { ex.sendResponseHeaders(403, -1); ex.close(); return@createContext }
             resizeTo?.let { n -> resizeTo = null; resizeSeen[id] = n; resizeSeed[id] = 7; ex.sendResponseHeaders(416, -1); ex.close(); return@createContext }

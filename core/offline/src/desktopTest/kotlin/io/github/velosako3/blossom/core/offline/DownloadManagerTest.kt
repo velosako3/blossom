@@ -31,15 +31,21 @@ class DownloadManagerTest {
     }
 
     @Test fun savesAndDecrypts(): Unit = runBlocking {
-        h.server.slowMs = 5
+        val gate = java.util.concurrent.CountDownLatch(1).also { h.server.gate = it }
         val t = track("a")
-        val seen = mutableListOf<OfflineState>()
+        val seen = java.util.Collections.synchronizedList(mutableListOf<OfflineState>())
         val watcher = launch(Dispatchers.IO) { store.state(t.id).collect { if (seen.lastOrNull() != it) seen += it } }
         store.saveTrack(t, OfflineRef.Single(t.id))
+        withTimeout(10_000) { store.state(t.id).first { it == OfflineState.DOWNLOADING } }
+        gate.countDown()
         withTimeout(30_000) { store.state(t.id).first { it == OfflineState.SAVED } }
+        kotlinx.coroutines.delay(100)
         watcher.cancel()
-        val tail = seen.dropWhile { it == OfflineState.NOT_SAVED }
-        assertTrue(tail.first() in setOf(OfflineState.QUEUED, OfflineState.DOWNLOADING) && OfflineState.DOWNLOADING in tail && tail.last() == OfflineState.SAVED, "$seen")
+        // The states seen are in order QUEUED → DOWNLOADING → SAVED (QUEUED may be too brief to observe).
+        val order = listOf(OfflineState.QUEUED, OfflineState.DOWNLOADING, OfflineState.SAVED)
+        val tail = seen.toList().dropWhile { it == OfflineState.NOT_SAVED }
+        assertTrue(tail.all { it in order } && tail.zipWithNext().all { (x, y) -> order.indexOf(x) < order.indexOf(y) } && tail.last() == OfflineState.SAVED, "$seen")
+        assertTrue(OfflineState.DOWNLOADING in tail, "$seen")
         assertContentEquals(h.server.bytes("a"), decrypted("a"))
         assertEquals(1f, store.progress(t.id).first())
         assertTrue(store.usageBytes().first() >= 2_000_000)
