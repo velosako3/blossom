@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Tasks 6.1–6.6 and 7.1 done. Milestone 6 review running; Task 7.2 next.
+Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Tasks 6.1–6.6 and 7.1–7.3 done. Milestone 6 review received; its fix pass is next, then Task 7.4.
 
 Hands-on testing rule: the owner is using this desktop, so never inject keyboard/mouse input or capture the screen.
 Desktop end-to-end checks run off-screen with the real graph: `./gradlew :composeApp:desktopTest -PliveTests=true -Proborazzi.test.record=true --tests "*DesktopEndToEnd*"`. `./gradlew :composeApp:run -Pblossom.debugPlay="query"` plays a search result at startup, for `playerctl` checks. Kill stray app instances by PID (`ps … | grep 'blossom\.MainKt'`), never with a `pkill -f` pattern that matches your own shell.
@@ -43,6 +43,7 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - Desktop `NetworkMonitor` checks for an up interface plus a DNS answer every 15 s (no request to any server); `-Dblossom.forceOffline=true` pins it offline for testing.
 
 ## Deviations from plan
+- Task 7.3: `LibraryRepository.firstPlays()` (each track's first counted play) feeds "new artists". The view model reads the period's and the previous period's plays plus first plays, and never moves past the period holding today. `Destination.Wrapped` carries a compact period key (`week:2026-47`).
 - Task 7.1: `PlayTracker` takes the player's state flow, a `record` lambda (the app passes `LibraryCommands.recordPlay`) and device preferences for the checkpoint, not `BlossomPlayer` + `LibraryCommands`, so `core:player` doesn't depend on the database module. A track counts as having reached its natural end when its last position was within 1.5 s of the end; repeat-one restarts start a new play. Desktop records the play in progress on shutdown (2 s limit); Android relies on the 15 s checkpoint.
 - Task 6.6:
   - The destination is chosen when the import starts, not at the end: a new playlist named after the source unless the name field is filled, or "Add to existing playlist". The resumable runner needs a playlist to write into as it goes. At the end the screen offers Open playlist, plus Play now / Add to queue / Like for a single song.

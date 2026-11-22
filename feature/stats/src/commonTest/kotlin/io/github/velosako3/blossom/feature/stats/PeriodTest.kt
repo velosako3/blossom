@@ -39,4 +39,12 @@ class PeriodTest {
         assertEquals(Period.Month(2025, 12, london), jan.previous())
         assertEquals(Period.Year(2026, london), Period.yearContaining(local(2026, 6, 1, 0, 0), london))
     }
+
+    @Test fun keysRoundTrip() {
+        for (p in listOf(Period.Week(2026, 53, london), Period.Month(2026, 11, london), Period.Year(2026, london))) {
+            assertEquals(p, Period.fromKey(p.key, london))
+        }
+        assertEquals("week:2026-53", Period.Week(2026, 53, london).key)
+        assertEquals(null, Period.fromKey("nonsense", london))
+    }
 }

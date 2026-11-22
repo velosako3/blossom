@@ -50,6 +50,7 @@ kotlin {
                 implementation(projects.feature.lyrics)
                 implementation(projects.feature.settings)
                 implementation(projects.feature.importer)
+                implementation(projects.feature.stats)
                 implementation(projects.source.spotify)
                 implementation(projects.source.soundcloud)
                 implementation(projects.source.untitled)

@@ -35,6 +35,8 @@ interface LibraryRepository {
     fun liked(): Flow<List<Track>>
     fun isLiked(id: TrackId): Flow<Boolean>
     fun playEvents(from: Instant, to: Instant): Flow<List<PlayEvent>>
+    /** Each track's first counted play, all time (for "new artists"). */
+    fun firstPlays(): Flow<List<Pair<Track, Instant>>>
 }
 
 class SqlLibraryRepository(private val db: BlossomDatabase) : LibraryRepository {
@@ -81,6 +83,10 @@ class SqlLibraryRepository(private val db: BlossomDatabase) : LibraryRepository 
     override fun liked(): Flow<List<Track>> = q.likedTracks().asFlow().mapToList(io).map { rows -> rows.mapNotNull { decodeTrackOrNull(it.track_json) } }
 
     override fun isLiked(id: TrackId): Flow<Boolean> = q.isLiked(id.value).asFlow().mapToOneOrNull(io).map { it == 1L }
+
+    override fun firstPlays(): Flow<List<Pair<Track, Instant>>> = q.firstCountedPlays().asFlow().mapToList(io).map { rows ->
+        rows.mapNotNull { r -> r.first_at?.let { decodeTrackOrNull(r.track_json)?.let { t -> t to Instant.fromEpochMilliseconds(it) } } }
+    }
 
     override fun playEvents(from: Instant, to: Instant): Flow<List<PlayEvent>> =
         q.playsBetween(from.toEpochMilliseconds(), to.toEpochMilliseconds()).asFlow().mapToList(io).map { rows ->

@@ -135,6 +135,10 @@ class AppGraph(
     /** Every listening session, for stats and Wrapped (counted after 30 s or a natural end). */
     val playTracker = io.github.velosako3.blossom.core.player.PlayTracker(player.state, { commands.recordPlay(it) }, Clock.System, deviceId, prefs, scope)
 
+    val stats by lazy {
+        io.github.velosako3.blossom.feature.stats.ui.StatsViewModel(repo, Clock.System, kotlinx.datetime.TimeZone.currentSystemDefault(), scope)
+    }
+
     /** A link shared to blossom (Android share sheet, deep link); the app opens Import with it. */
     val pendingImport = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
 

@@ -50,7 +50,26 @@ sealed interface Period {
         override fun next() = Year(year + 1, zone)
     }
 
+    /** A compact form for navigation: `week:2026-47`, `month:2026-11`, `year:2026`. */
+    val key: String
+        get() = when (this) {
+            is Week -> "week:$isoYear-$isoWeek"
+            is Month -> "month:$year-$month"
+            is Year -> "year:$year"
+        }
+
     companion object {
+        fun fromKey(key: String, z: TimeZone): Period? = runCatching {
+            val (kind, value) = key.split(':', limit = 2)
+            val parts = value.split('-').map(String::toInt)
+            when (kind) {
+                "week" -> Week(parts[0], parts[1], z)
+                "month" -> Month(parts[0], parts[1], z)
+                "year" -> Year(parts[0], z)
+                else -> null
+            }
+        }.getOrNull()
+
         fun weekContaining(i: Instant, z: TimeZone): Week = week(localDate(i, z), z)
         fun monthContaining(i: Instant, z: TimeZone): Month = localDate(i, z).let { Month(it.year, it.monthValue, z) }
         fun yearContaining(i: Instant, z: TimeZone): Year = Year(localDate(i, z).year, z)

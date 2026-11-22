@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stats_title">Stats</string>
+    <string name="stats_week">Week</string>
+    <string name="stats_month">Month</string>
+    <string name="stats_year">Year</string>
+    <string name="stats_previous">Previous</string>
+    <string name="stats_next">Next</string>
+    <string name="stats_minutes">minutes listened</string>
+    <plurals name="stats_plays">
+        <item quantity="one">%1$d play</item>
+        <item quantity="other">%1$d plays</item>
+    </plurals>
+    <string name="stats_vs_previous">%1$s vs the period before</string>
+    <string name="stats_top_songs">Top songs</string>
+    <string name="stats_top_artists">Top artists</string>
+    <string name="stats_top_albums">Top albums</string>
+    <string name="stats_clock">Listening clock</string>
+    <string name="stats_days">By day of the week</string>
+    <string name="stats_new_artists">New artists</string>
+    <plurals name="stats_streak">
+        <item quantity="one">Longest streak: %1$d day</item>
+        <item quantity="other">Longest streak: %1$d days</item>
+    </plurals>
+    <string name="stats_open_wrapped">Open Wrapped</string>
+    <string name="stats_empty_week">No listening yet this week</string>
+    <string name="stats_empty_month">No listening yet this month</string>
+    <string name="stats_empty_year">No listening yet this year</string>
+</resources>

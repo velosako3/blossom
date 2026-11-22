@@ -261,6 +261,10 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
                         true
                     }
                 }
+                Destination.Stats -> {
+                    io.github.velosako3.blossom.feature.stats.ui.StatsScreen(graph.stats, onOpenWrapped = { p -> navigator.navigate(Destination.Wrapped(p.key)) })
+                    true
+                }
                 is Destination.Import -> {
                     androidx.compose.runtime.LaunchedEffect(destination.url) { destination.url?.let(graph.importVm::onTextChange) }
                     @Suppress("DEPRECATION") val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
