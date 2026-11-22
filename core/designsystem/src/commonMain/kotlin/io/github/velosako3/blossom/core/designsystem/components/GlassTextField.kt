@@ -36,6 +36,7 @@ fun GlassTextField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     enabled: Boolean = true,
+    visualTransformation: androidx.compose.ui.text.input.VisualTransformation = androidx.compose.ui.text.input.VisualTransformation.None,
 ) {
     val colors = BlossomTheme.colors
     val style = MaterialTheme.typography.bodyLarge.copy(color = colors.onSurface)
@@ -43,6 +44,7 @@ fun GlassTextField(
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
+            visualTransformation = visualTransformation,
             enabled = enabled,
             singleLine = true,
             textStyle = style,

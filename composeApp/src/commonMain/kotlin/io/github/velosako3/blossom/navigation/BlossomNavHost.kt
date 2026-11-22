@@ -51,6 +51,7 @@ fun Destination.titleRes(): StringResource = when (this) {
     is Destination.Wrapped -> Res.string.dest_wrapped
     Destination.Liked -> Res.string.dest_liked
     Destination.LocalFiles -> Res.string.dest_local_files
+    Destination.Sync, Destination.PairDevice -> Res.string.settings_sync
 }
 
 /**

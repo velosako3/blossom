@@ -71,6 +71,8 @@ class AppGraph(
     val sources: Map<SourceKind, io.github.velosako3.blossom.source.api.MusicSource> = emptyMap(),
     /** Reads a pasted/shared link's tracks, per service. */
     importers: Map<io.github.velosako3.blossom.feature.importer.ImportService, io.github.velosako3.blossom.source.api.PlaylistImporter> = emptyMap(),
+    /** Sync backends and LAN pairing (null in UI tests). */
+    syncSetup: SyncSetup? = null,
 ) {
     val search = SearchViewModel(ytm, RecentSearchStore(prefs), scope, network, offlineSearch = ::searchOffline)
     val hlc = HybridLogicalClock(deviceId, Clock.System)
@@ -164,6 +166,20 @@ class AppGraph(
         YouTubeLyricsApi.browse = { id, params -> ytm.client.browse(id, params) }
         YouTubeLyricsApi.transcript = ytm.client::transcript
     }
+    val syncController = syncSetup?.let { s ->
+        io.github.velosako3.blossom.feature.sync.ui.SyncController(db, opLog, projector, prefs, s.secure, deviceId, s.defaultName, scope, s.connect, s.discovery)
+    }
+    val syncKinds = syncSetup?.kinds.orEmpty()
+    val sync = syncController?.let { io.github.velosako3.blossom.feature.sync.ui.SyncViewModel(it, scope) }
+
+    init {
+        if (syncController != null && sync != null) {
+            scope.launch { runCatching { syncController.startLanIfPaired() } }
+            // At start, 10 s after the last local change, and every 15 minutes.
+            val changes = opLog.changes()
+            io.github.velosako3.blossom.feature.sync.SyncScheduler({ sync.syncAll() }, changes, scope).start()
+        }
+    }
 }
 
 /** Platform glue for local files: the library, the folders it watches, a folder picker and (Android) permission. */
@@ -177,6 +193,7 @@ class LocalFilesHost(
 ) {
     /** Streamed tracks are always "here"; local ones only when the file exists on this device. */
     fun isAvailable(track: Track): Boolean = track.id.kind != SourceKind.LOCAL || library.pathFor(track.id) != null
+
 }
 
 /** Folders kept as a JSON list in preferences (device-specific, never synced). */

@@ -24,6 +24,8 @@ sealed interface Destination {
     data class Wrapped(val period: String) : Destination
     data object Liked : Destination
     data object LocalFiles : Destination
+    data object Sync : Destination
+    data object PairDevice : Destination
 }
 
 /** A plain back stack: enough for blossom's flat hierarchy, no navigation library needed. */

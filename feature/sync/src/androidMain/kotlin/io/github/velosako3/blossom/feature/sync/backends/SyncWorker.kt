@@ -9,20 +9,19 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import io.github.velosako3.blossom.feature.sync.SyncEngine
 import java.util.concurrent.TimeUnit
 
 /** Hourly background sync on Android while a backend is set up. */
 class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
-        val engine = engine?.invoke() ?: return Result.success()
-        return if (runCatching { engine.syncOnce() }.isSuccess) Result.success() else Result.retry()
+        sync?.invoke() // reports its own errors in Settings → Sync; the next run is in an hour either way
+        return Result.success()
     }
 
     companion object {
         private const val WORK = "blossom-sync"
-        /** Set by the app graph: the engine for the configured backend, or null for none. */
-        @Volatile var engine: (() -> SyncEngine?)? = null
+        /** Set by the app graph: cloud and LAN sync (does nothing while neither is set up). */
+        @Volatile var sync: (suspend () -> Unit)? = null
 
         fun schedule(context: Context, enabled: Boolean) {
             val wm = WorkManager.getInstance(context.applicationContext)

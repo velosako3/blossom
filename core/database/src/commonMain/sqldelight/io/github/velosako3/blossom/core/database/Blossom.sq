@@ -378,3 +378,6 @@ UPDATE sync_peer SET last_seen = ? WHERE device_id = ?;
 
 deletePeer:
 DELETE FROM sync_peer WHERE device_id = ?;
+
+allOpsCount:
+SELECT count(*) FROM op_log;

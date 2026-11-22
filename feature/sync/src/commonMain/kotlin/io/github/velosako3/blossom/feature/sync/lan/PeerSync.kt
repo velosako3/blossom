@@ -30,9 +30,19 @@ class PeerSync(
     private val projector: LibraryProjector,
     private val secure: SecureStore,
     val deviceId: String,
-    val deviceName: String,
+    @Volatile var deviceName: String,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
+
+    /** Where each paired device was last reached or announced itself (host to sync port); learned, not stored. */
+    val addresses = java.util.concurrent.ConcurrentHashMap<String, Pair<String, Int>>()
+
+    /** This device's sync port, sent to peers so they can reach it back; 0 while not listening. */
+    @Volatile var listenPort: Int = 0
+
+    private val _paired = kotlinx.coroutines.flow.MutableSharedFlow<String>(extraBufferCapacity = 8)
+    /** The name of each device paired with, as it happens (either side). */
+    val paired: kotlinx.coroutines.flow.SharedFlow<String> = _paired
 
     suspend fun keyOf(peer: String): ByteArray? = secure.get("peer.$peer")?.let { Base64.getDecoder().decode(it) }
 
@@ -41,13 +51,19 @@ class PeerSync(
         withContext(Dispatchers.IO) {
             db.blossomQueries.upsertPeer(peer, name, PeerCrypto.sha256(key).joinToString("") { "%02x".format(it) }, System.currentTimeMillis())
         }
+        _paired.tryEmit(name)
     }
 
     /** Stops trusting [peer]. Its past changes stay merged. */
     suspend fun forget(peer: String) {
         secure.remove("peer.$peer")
+        addresses.remove(peer)
         withContext(Dispatchers.IO) { db.blossomQueries.deletePeer(peer) }
     }
+
+    /** Paired devices: ID, name, last seen. */
+    fun peerRows(): List<Triple<String, String, kotlin.time.Instant?>> =
+        db.blossomQueries.allPeers().executeAsList().map { Triple(it.device_id, it.name, it.last_seen?.let(kotlin.time.Instant::fromEpochMilliseconds)) }
 
     suspend fun seen(peer: String) = withContext(Dispatchers.IO) { db.blossomQueries.touchPeer(System.currentTimeMillis(), peer) }
 

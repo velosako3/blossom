@@ -29,6 +29,7 @@ class PeerServer(private val sync: PeerSync, private val scope: CoroutineScope, 
     @Volatile private var triesLeft = 0
 
     fun start() {
+        sync.listenPort = port
         job = scope.launch(Dispatchers.IO) {
             while (isActive) {
                 val client = runCatching { runInterruptible { socket.accept() } }.getOrNull() ?: break
@@ -50,15 +51,19 @@ class PeerServer(private val sync: PeerSync, private val scope: CoroutineScope, 
         s.soTimeout = 30_000
         FrameChannel(s).use { ch ->
             val hello = sync.decode(ch.receive())
-            when ((hello["type"] as? JsonPrimitive)?.content) {
+            val ok = when ((hello["type"] as? JsonPrimitive)?.content) {
                 "pair" -> pair(ch, hello)
                 "hello" -> session(ch, hello)
+                else -> false
             }
+            // Remember where an authenticated peer listens, so this side can start sessions too.
+            val back = (hello["port"] as? JsonPrimitive)?.content?.toIntOrNull()
+            if (ok && back != null && back in 1..65535) sync.addresses[hello.str("deviceId")] = s.inetAddress.hostAddress to back
         }
     }
 
-    private suspend fun pair(ch: FrameChannel, msg: JsonObject) {
-        val secret = pairingSecret ?: return ch.send(sync.encode(buildJsonObject { put("type", "reject") }))
+    private suspend fun pair(ch: FrameChannel, msg: JsonObject): Boolean {
+        val secret = pairingSecret ?: return false.also { ch.send(sync.encode(buildJsonObject { put("type", "reject") })) }
         val peerId = msg.str("deviceId"); val peerName = msg.str("deviceName")
         val theirPub = b64(msg.str("pub"))
         val mine = PeerCrypto.ephemeral()
@@ -71,16 +76,17 @@ class PeerServer(private val sync: PeerSync, private val scope: CoroutineScope, 
         if (!PeerCrypto.equal(b64(proof.str("mac")), PeerCrypto.hmac(secret, "C".toByteArray(), transcript))) {
             if (--triesLeft <= 0) pairingSecret = null
             ch.send(sync.encode(buildJsonObject { put("type", "reject") }))
-            return
+            return false
         }
         pairingSecret = null // single use
         sync.trust(peerId, peerName, PeerCrypto.hkdf(PeerCrypto.agree(mine, theirPub), transcript, "blossom-peer-key"))
         ch.send(sync.encode(buildJsonObject { put("type", "ok") }))
+        return true
     }
 
-    private suspend fun session(ch: FrameChannel, msg: JsonObject) {
+    private suspend fun session(ch: FrameChannel, msg: JsonObject): Boolean {
         val peer = msg.str("deviceId")
-        val key = sync.keyOf(peer) ?: return ch.send(sync.encode(buildJsonObject { put("type", "reject") }))
+        val key = sync.keyOf(peer) ?: return false.also { ch.send(sync.encode(buildJsonObject { put("type", "reject") })) }
         val theirNonce = b64(msg.str("nonce"))
         val nonce = PeerCrypto.randomBytes(32)
         ch.send(sync.encode(buildJsonObject {
@@ -88,7 +94,7 @@ class PeerServer(private val sync: PeerSync, private val scope: CoroutineScope, 
             put("mac", e64(PeerCrypto.hmac(key, "S".toByteArray(), theirNonce, nonce, peer.toByteArray(), sync.deviceId.toByteArray())))
         }))
         val proof = sync.decode(ch.receive())
-        if (!PeerCrypto.equal(b64(proof.str("mac")), PeerCrypto.hmac(key, "C".toByteArray(), nonce, theirNonce, sync.deviceId.toByteArray(), peer.toByteArray()))) return
+        if (!PeerCrypto.equal(b64(proof.str("mac")), PeerCrypto.hmac(key, "C".toByteArray(), nonce, theirNonce, sync.deviceId.toByteArray(), peer.toByteArray()))) return false
         ch.encrypt(PeerCrypto.hkdf(key, theirNonce + nonce, "blossom-session"), isClient = false)
         // Exchange: their wants → our newer ops and our wants → their newer ops.
         val want = sync.decode(ch.receive())
@@ -97,6 +103,7 @@ class PeerServer(private val sync: PeerSync, private val scope: CoroutineScope, 
         sync.receive(back.str("ops"))
         sync.seen(peer)
         ch.send(sync.encode(buildJsonObject { put("type", "done") })) // applied: the client may report success
+        return true
     }
 }
 

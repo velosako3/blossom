@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–6 done (M6 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–7 done (M7 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Tasks 8.1–8.4 done. Next: Task 8.5 (sync settings and pairing UI).
+Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–6 done (M6 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–7 done (M7 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Tasks 8.1–8.5 done. Next: Milestone 8 wrap-up.
 
 Hands-on testing rule: the owner is using this desktop, so never inject keyboard/mouse input or capture the screen.
 Desktop end-to-end checks run off-screen with the real graph: `./gradlew :composeApp:desktopTest -PliveTests=true -Proborazzi.test.record=true --tests "*DesktopEndToEnd*"`. `./gradlew :composeApp:run -Pblossom.debugPlay="query"` plays a search result at startup, for `playerctl` checks. Kill stray app instances by PID (`ps … | grep 'blossom\.MainKt'`), never with a `pkill -f` pattern that matches your own shell.
@@ -43,6 +43,19 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - Desktop `NetworkMonitor` checks for an up interface plus a DNS answer every 15 s (no request to any server); `-Dblossom.forceOffline=true` pins it offline for testing.
 
 ## Deviations from plan
+- Task 8.5:
+  - The device list has one generic device icon. Manifests and pairing don't record each device's platform, so there's nothing to choose a platform icon from.
+  - The QR code and the six words share one 40-bit one-time secret, so one pairing window works with either.
+  - "Enter a code" accepts six words or a pasted `blossom://pair` link.
+  - The LAN server starts only after this device has paired, or when the pairing screen opens.
+  - Peers learn each other's sync port during the authenticated handshake, and mDNS keeps it current.
+  - Android schedules the hourly `SyncWorker` always; a run with nothing set up does nothing.
+  - Settings is still the storage screen until 9.7; a "Sync" row at its top opens Settings → Sync.
+  - Step 4's two-instance check is `TwoInstanceSyncTest`. It runs two instances with separate data directories and database files.
+    - Phase 1: a shared folder; 5 likes merge both ways.
+    - Phase 2: cloud off, pairing over 127.0.0.1, then direct LAN sync in both directions; 7 likes on both.
+    - Phase 3: after "Remove device", the removed peer no longer syncs.
+  - The check runs in one JVM rather than two windows, because I don't drive the owner's display.
 - Task 8.4:
   - Transport (plan: Ktor over TLS with self-signed certificates): a small framed protocol over TCP, authenticated and encrypted with keys rather than certificates. Making X.509 certificates needs BouncyCastle, and on Android that's awkward.
   - Pairing runs an ephemeral ECDH (P-256) exchange, authenticated by HMACs over the transcript keyed with the one-time secret, server first. Both sides keep the derived long-term key in `SecureStore` (`peer.<id>`), with its SHA-256 in `sync_peer.cert_sha256`.

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.core.database
 
+import kotlinx.coroutines.flow.map
+import app.cash.sqldelight.coroutines.asFlow
 import io.github.velosako3.blossom.core.model.sync.Hlc
 import io.github.velosako3.blossom.core.model.sync.HybridLogicalClock
 import io.github.velosako3.blossom.core.model.sync.OpEnvelope
@@ -52,6 +54,9 @@ class SqlOpLog(
     suspend fun all(): List<OpEnvelope> = withContext(Dispatchers.IO) {
         q.allOps().executeAsList().map { decode(it.op_id, it.device_id, it.seq, it.hlc_wall, it.hlc_counter, it.payload) }
     }
+
+    /** Emits whenever the log changes (this device's or others' operations), for scheduling sync. */
+    fun changes(): kotlinx.coroutines.flow.Flow<Unit> = db.blossomQueries.allOpsCount().asFlow().map { }
 
     suspend fun knownDevices(): Map<String, Long> = withContext(Dispatchers.IO) {
         q.knownDevices().executeAsList().associate { it.device_id to (it.last_seq ?: 0L) }

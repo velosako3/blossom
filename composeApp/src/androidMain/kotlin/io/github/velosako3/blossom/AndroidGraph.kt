@@ -76,7 +76,8 @@ fun createAndroidGraph(context: Context): AppGraph {
     )
     PlayerHolder.engine = engine
     PlayerHolder.player = player
-    return AppGraph(player, db, prefs.deviceId(), ytm, prefs, network, scope, local, offline = offline, offlineSettings = offlineSettings,
+    val graph = AppGraph(player, db, prefs.deviceId(), ytm, prefs, network, scope, local, offline = offline, offlineSettings = offlineSettings,
+        syncSetup = androidSyncSetup(context, secure),
         sources = mapOf(SourceKind.YOUTUBE to youtube, SourceKind.SOUNDCLOUD to soundcloud, SourceKind.UNTITLED to untitled),
         importers = mapOf(
             io.github.velosako3.blossom.feature.importer.ImportService.SPOTIFY to io.github.velosako3.blossom.source.spotify.SpotifyImporter(auth = null),
@@ -89,6 +90,49 @@ fun createAndroidGraph(context: Context): AppGraph {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
     })
+    graph.sync?.let { vm ->
+        io.github.velosako3.blossom.feature.sync.backends.SyncWorker.sync = { vm.syncAll() }
+        // Hourly in the background; a run with nothing set up does nothing.
+        io.github.velosako3.blossom.feature.sync.backends.SyncWorker.schedule(context, enabled = true)
+    }
+    return graph
+}
+
+private fun androidSyncSetup(context: Context, secure: io.github.velosako3.blossom.core.platform.SecureStore): SyncSetup {
+    val dropboxKey = BlossomSecrets.DROPBOX_APP_KEY
+    val kinds = io.github.velosako3.blossom.feature.sync.ui.BackendKind.entries.filter {
+        when (it) {
+            // Drive needs an Android OAuth client (package + signing key), not configured yet.
+            io.github.velosako3.blossom.feature.sync.ui.BackendKind.GOOGLE_DRIVE -> false
+            io.github.velosako3.blossom.feature.sync.ui.BackendKind.DROPBOX -> dropboxKey.isNotEmpty()
+            else -> true
+        }
+    }
+    val name = runCatching { android.provider.Settings.Global.getString(context.contentResolver, android.provider.Settings.Global.DEVICE_NAME) }.getOrNull()
+        ?.takeIf { it.isNotBlank() } ?: android.os.Build.MODEL
+    return SyncSetup(
+        secure = secure,
+        defaultName = name,
+        kinds = kinds,
+        connect = { c ->
+            when (c.kind) {
+                io.github.velosako3.blossom.feature.sync.ui.BackendKind.FOLDER ->
+                    io.github.velosako3.blossom.feature.sync.backends.SafFolderBackend(context, android.net.Uri.parse(c.location))
+                io.github.velosako3.blossom.feature.sync.ui.BackendKind.WEBDAV ->
+                    io.github.velosako3.blossom.feature.sync.backends.WebDavBackend(c.location, c.username) { secure.get(io.github.velosako3.blossom.feature.sync.ui.SyncController.PASSWORD) }
+                io.github.velosako3.blossom.feature.sync.ui.BackendKind.DROPBOX -> {
+                    val o = io.github.velosako3.blossom.feature.sync.backends.OAuthClient(
+                        io.github.velosako3.blossom.feature.sync.backends.OAuthConfig.dropbox(dropboxKey), secure, "dropbox")
+                    if (o.tokens() == null) {
+                        io.github.velosako3.blossom.feature.sync.backends.AndroidOAuth.signIn(context, o, io.github.velosako3.blossom.feature.sync.backends.AndroidOAuth.dropboxRedirect(dropboxKey))
+                    }
+                    io.github.velosako3.blossom.feature.sync.backends.DropboxBackend(o)
+                }
+                io.github.velosako3.blossom.feature.sync.ui.BackendKind.GOOGLE_DRIVE -> null
+            }
+        },
+        discovery = { io.github.velosako3.blossom.feature.sync.lan.NsdDiscovery(context) },
+    )
 }
 
 /** Connecting a controller starts the media session service, which then runs the notification and lock screen. */

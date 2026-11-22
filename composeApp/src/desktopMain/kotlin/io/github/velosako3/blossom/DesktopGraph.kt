@@ -99,6 +99,7 @@ fun createDesktopGraph(): AppGraph {
             io.github.velosako3.blossom.feature.importer.ImportService.SOUNDCLOUD to io.github.velosako3.blossom.source.soundcloud.SoundCloudImporter(soundcloudClient),
             io.github.velosako3.blossom.feature.importer.ImportService.UNTITLED to io.github.velosako3.blossom.source.untitled.UntitledImporter(untitledClient),
         ),
+        syncSetup = desktopSyncSetup(secure),
     )
     Runtime.getRuntime().addShutdownHook(Thread {
         // The play in progress is recorded before the process ends.
@@ -106,4 +107,44 @@ fun createDesktopGraph(): AppGraph {
         runCatching { engine.release() }
     })
     return graph
+}
+
+private fun desktopSyncSetup(secure: io.github.velosako3.blossom.core.platform.SecureStore): SyncSetup {
+    val googleId = BlossomSecrets.GOOGLE_OAUTH_DESKTOP_CLIENT_ID
+    val dropboxKey = BlossomSecrets.DROPBOX_APP_KEY
+    val kinds = io.github.velosako3.blossom.feature.sync.ui.BackendKind.entries.filter {
+        when (it) {
+            io.github.velosako3.blossom.feature.sync.ui.BackendKind.GOOGLE_DRIVE -> googleId.isNotEmpty()
+            io.github.velosako3.blossom.feature.sync.ui.BackendKind.DROPBOX -> dropboxKey.isNotEmpty()
+            else -> true
+        }
+    }
+    return SyncSetup(
+        secure = secure,
+        defaultName = runCatching { java.net.InetAddress.getLocalHost().hostName }.getOrNull()?.takeIf { it.isNotBlank() && it != "localhost" } ?: System.getProperty("os.name"),
+        kinds = kinds,
+        connect = { c ->
+            when (c.kind) {
+                io.github.velosako3.blossom.feature.sync.ui.BackendKind.FOLDER -> io.github.velosako3.blossom.feature.sync.backends.LocalFolderBackend(File(c.location))
+                io.github.velosako3.blossom.feature.sync.ui.BackendKind.WEBDAV ->
+                    io.github.velosako3.blossom.feature.sync.backends.WebDavBackend(c.location, c.username) { secure.get(io.github.velosako3.blossom.feature.sync.ui.SyncController.PASSWORD) }
+                io.github.velosako3.blossom.feature.sync.ui.BackendKind.GOOGLE_DRIVE -> {
+                    val o = io.github.velosako3.blossom.feature.sync.backends.OAuthClient(
+                        io.github.velosako3.blossom.feature.sync.backends.OAuthConfig.googleDrive(googleId, BlossomSecrets.GOOGLE_OAUTH_DESKTOP_CLIENT_SECRET), secure, "gdrive")
+                    if (o.tokens() == null) io.github.velosako3.blossom.feature.sync.backends.DesktopOAuth.signIn(o)
+                    io.github.velosako3.blossom.feature.sync.backends.GoogleDriveBackend(o)
+                }
+                io.github.velosako3.blossom.feature.sync.ui.BackendKind.DROPBOX -> {
+                    val o = io.github.velosako3.blossom.feature.sync.backends.OAuthClient(
+                        io.github.velosako3.blossom.feature.sync.backends.OAuthConfig.dropbox(dropboxKey), secure, "dropbox")
+                    if (o.tokens() == null) {
+                        io.github.velosako3.blossom.feature.sync.backends.DesktopOAuth.signIn(o,
+                            io.github.velosako3.blossom.feature.sync.backends.DesktopOAuth.DROPBOX_PORT, io.github.velosako3.blossom.feature.sync.backends.DesktopOAuth.DROPBOX_PATH)
+                    }
+                    io.github.velosako3.blossom.feature.sync.backends.DropboxBackend(o)
+                }
+            }
+        },
+        discovery = { io.github.velosako3.blossom.feature.sync.lan.JmDnsDiscovery() },
+    )
 }

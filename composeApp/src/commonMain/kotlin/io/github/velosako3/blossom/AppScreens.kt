@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom
 
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.clickable
+import io.github.velosako3.blossom.composeApp.resources.settings_sync
+import io.github.velosako3.blossom.composeApp.resources.settings_sync_hint
 import io.github.velosako3.blossom.composeApp.resources.menu_refresh_from_source
 import androidx.compose.runtime.LaunchedEffect
 import io.github.velosako3.blossom.composeApp.resources.saved_empty
@@ -257,6 +261,35 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
                             usage, settings,
                             onChange = { change -> settingsStore.update(change); store.let { (it as? io.github.velosako3.blossom.core.offline.SqlOfflineStore)?.manager?.kick(retryPaused = true) } },
                             onRemoveAll = { graph.scope.launch { store.clearAll() } },
+                            topBar = {
+                                ScreenTopBar("", navigator)
+                                if (graph.sync != null) SettingsLink(stringResource(Res.string.settings_sync), stringResource(Res.string.settings_sync_hint)) { navigator.navigate(Destination.Sync) }
+                            },
+                        )
+                        true
+                    }
+                }
+                Destination.Sync -> {
+                    val vm = graph.sync
+                    if (vm == null) false else {
+                        val state by vm.state.collectAsState()
+                        io.github.velosako3.blossom.feature.sync.ui.SyncSettingsScreen(
+                            state, graph.syncKinds,
+                            onChoose = vm::choose, onDisconnect = vm::disconnect, onSyncNow = vm::syncNow, onRename = vm::rename,
+                            onRemoveDevice = vm::removeDevice, onPair = { navigator.navigate(Destination.PairDevice) },
+                            topBar = { ScreenTopBar("", navigator) },
+                        )
+                        true
+                    }
+                }
+                Destination.PairDevice -> {
+                    val vm = graph.sync
+                    if (vm == null) false else {
+                        androidx.compose.runtime.DisposableEffect(vm) { vm.startPairing(); onDispose { vm.stopPairing() } }
+                        val pair by vm.pair.collectAsState()
+                        io.github.velosako3.blossom.feature.sync.ui.PairDeviceScreen(
+                            pair, canScan = io.github.velosako3.blossom.feature.sync.ui.hasQrScanner,
+                            onScanned = vm::pairWith, onWords = vm::pairWith,
                             topBar = { ScreenTopBar("", navigator) },
                         )
                         true
@@ -288,4 +321,18 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
             }
         },
     )
+}
+
+/** A tappable settings row that opens another settings screen. */
+@Composable
+private fun SettingsLink(title: String, hint: String, onClick: () -> Unit) {
+    io.github.velosako3.blossom.core.designsystem.glass.GlassSurface(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+            .clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onClick),
+    ) {
+        androidx.compose.foundation.layout.Column(Modifier.padding(20.dp)) {
+            Text(title, style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
+            Text(hint, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = io.github.velosako3.blossom.core.designsystem.theme.BlossomTheme.colors.onSurfaceVariant)
+        }
+    }
 }
