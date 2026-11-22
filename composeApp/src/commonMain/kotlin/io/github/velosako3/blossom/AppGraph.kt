@@ -14,7 +14,7 @@ import io.github.velosako3.blossom.feature.lyrics.LocalLyricsSource
 import io.github.velosako3.blossom.feature.lyrics.LyricsResolver
 import io.github.velosako3.blossom.feature.lyrics.LyricsViewModel
 import io.github.velosako3.blossom.feature.lyrics.SqlLyricsCache
-import io.github.velosako3.blossom.feature.lyrics.onlineLyricsProviders
+import io.github.velosako3.blossom.feature.lyrics.bitChordLyrics
 import io.github.velosako3.blossom.feature.lyrics.providers.YouTubeLyricsApi
 import kotlinx.coroutines.flow.map
 import io.github.velosako3.blossom.core.platform.NetworkMonitor
@@ -168,12 +168,14 @@ class AppGraph(
     }
     val lyrics = LyricsViewModel(
         // Offline, the online providers fail at once instead of waiting out their timeouts.
-        LyricsResolver(onlineLyricsProviders().map { p ->
-            object : io.github.velosako3.blossom.feature.lyrics.LyricsProvider by p {
-                override suspend fun fetch(q: io.github.velosako3.blossom.feature.lyrics.LyricsQuery) =
-                    if (network.status.value.online) p.fetch(q) else throw java.io.IOException("offline")
-            }
-        }, localLyrics, SqlLyricsCache(db), Clock.System),
+        LyricsResolver(
+            bitChordLyrics().let { online ->
+                io.github.velosako3.blossom.feature.lyrics.OnlineLyrics { q ->
+                    if (network.status.value.online) online.lyrics(q) else throw java.io.IOException("offline")
+                }
+            },
+            localLyrics, SqlLyricsCache(db), Clock.System,
+        ),
         player.state.map { it.current },
         scope,
     )
@@ -181,6 +183,7 @@ class AppGraph(
     init {
         YouTubeLyricsApi.next = ytm.client::next
         YouTubeLyricsApi.browse = { id, params -> ytm.client.browse(id, params) }
+        YouTubeLyricsApi.browseMobile = { id, params -> ytm.client.browseMobile(id, params) }
         YouTubeLyricsApi.transcript = ytm.client::transcript
     }
     val sleepTimer = io.github.velosako3.blossom.core.player.SleepTimer(player, scope)

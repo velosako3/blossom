@@ -5,15 +5,14 @@ import io.github.velosako3.blossom.core.model.ArtistRef
 import io.github.velosako3.blossom.core.model.SourceKind
 import io.github.velosako3.blossom.core.model.Track
 import io.github.velosako3.blossom.core.model.TrackId
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
@@ -22,9 +21,15 @@ private class TestClock(var now: Instant = Instant.fromEpochSeconds(1_800_000_00
     fun advance(d: Duration) { now += d }
 }
 
-private class FakeProvider(override val name: String, override val priority: Int, private val delayMs: Long, private val result: Lyrics?) : LyricsProvider {
-    var calls = 0
-    override suspend fun fetch(q: LyricsQuery): Lyrics? { calls++; delay(delayMs); return result }
+/** Answers from [answers] in turn (the last one repeats); null answers mean "none found", [fail] throws. */
+private class FakeOnline(vararg answers: Lyrics?, private val fail: Boolean = false) : OnlineLyrics {
+    private val answers = answers.toList()
+    val queries = mutableListOf<LyricsQuery>()
+    override suspend fun lyrics(q: LyricsQuery): Lyrics? {
+        queries += q
+        if (fail) throw java.io.IOException("offline")
+        return answers.getOrNull(queries.size - 1) ?: answers.lastOrNull()
+    }
 }
 
 private class MemoryCache : LyricsCache {
@@ -37,82 +42,88 @@ private class FakeLocal(private val result: Lyrics?, private val fail: Boolean =
     override suspend fun lyrics(track: Track): Lyrics? = if (fail) throw java.io.IOException("unreadable") else result
 }
 
-private class FailingProvider(override val name: String, override val priority: Int) : LyricsProvider {
-    var calls = 0
-    override suspend fun fetch(q: LyricsQuery): Lyrics? { calls++; throw java.io.IOException("offline") }
-}
-
 class LyricsResolverTest {
-    private val track = Track(TrackId.of(SourceKind.YOUTUBE_MUSIC, "v1"), "Runaway", listOf(ArtistRef(null, "Kanye West")), null, 547_000, null)
+    private val track = Track(
+        TrackId.of(SourceKind.YOUTUBE_MUSIC, "v1"), "Runaway", listOf(ArtistRef(null, "Kanye West"), ArtistRef(null, "Pusha T")),
+        null, 547_000, null,
+    )
     private val localTrack = track.copy(id = TrackId.of(SourceKind.LOCAL, "abc"))
-    private val plain = Lyrics.Plain("words", "A")
-    private val wordSynced = Lyrics.WordSynced(listOf(LyricLine(0, 1000, "w", listOf(LyricWord("w", 0, 1000)))), "B")
+    private val plain = Lyrics.Plain("words", "Genius")
+    private val wordSynced = Lyrics.WordSynced(listOf(LyricLine(0, 1000, "w", listOf(LyricWord("w", 0, 1000)))), "lrc.red")
 
-    @Test fun richestWinsWithinTimeout() = runTest {
-        val r = LyricsResolver(listOf(FakeProvider("A", 1, 100, plain), FakeProvider("B", 2, 3_000, wordSynced)), FakeLocal(null), MemoryCache(), TestClock())
-        assertIs<Lyrics.WordSynced>(r.resolve(track))
+    @Test fun asksWithEveryArtistAndTheVideoId() = runTest {
+        val online = FakeOnline(wordSynced)
+        LyricsResolver(online, FakeLocal(null), MemoryCache(), TestClock()).resolve(track)
+        assertEquals(listOf("Kanye West", "Pusha T"), online.queries.single().artists)
+        assertEquals("v1", online.queries.single().videoId)
     }
 
-    @Test fun slowProviderIsDropped() = runTest {
-        val r = LyricsResolver(listOf(FakeProvider("A", 1, 100, plain), FakeProvider("B", 2, 6_000, wordSynced)), FakeLocal(null), MemoryCache(), TestClock())
+    @Test fun syncedLyricsAreCachedForGood() = runTest {
+        val clock = TestClock()
+        val online = FakeOnline(wordSynced)
+        val r = LyricsResolver(online, FakeLocal(null), MemoryCache(), clock)
+        assertEquals(wordSynced, r.resolve(track))
+        clock.advance(30.days)
+        assertEquals(wordSynced, r.resolve(track))
+        assertEquals(1, online.queries.size)
+    }
+
+    @Test fun plainLyricsAreRetriedAfterADayAndUpgraded() = runTest {
+        val clock = TestClock()
+        val online = FakeOnline(plain, wordSynced)
+        val r = LyricsResolver(online, FakeLocal(null), MemoryCache(), clock)
+        assertEquals(plain, r.resolve(track))
+        clock.advance(12.hours)
+        assertEquals(plain, r.resolve(track))
+        assertEquals(1, online.queries.size)
+        clock.advance(13.hours)
+        assertEquals(wordSynced, r.resolve(track))
+        assertEquals(2, online.queries.size)
+    }
+
+    @Test fun aFailedRetryKeepsThePlainCopy() = runTest {
+        val clock = TestClock()
+        val cache = MemoryCache().apply { map[track.id] = CachedLyrics(plain, clock.now() - 2.days) }
+        val r = LyricsResolver(FakeOnline(fail = true), FakeLocal(null), cache, clock)
         assertEquals(plain, r.resolve(track))
     }
 
-    @Test fun negativeCacheForSevenDays() = runTest {
+    @Test fun noneFoundIsCachedForADay() = runTest {
         val clock = TestClock()
-        val a = FakeProvider("A", 1, 10, null); val b = FakeProvider("B", 2, 10, null)
-        val cache = MemoryCache()
-        val r = LyricsResolver(listOf(a, b), FakeLocal(null), cache, clock)
+        val online = FakeOnline(null)
+        val r = LyricsResolver(online, FakeLocal(null), MemoryCache(), clock)
         assertNull(r.resolve(track))
-        assertEquals(true, cache.map.containsKey(track.id))
-        clock.advance(6.days)
+        clock.advance(23.hours)
         assertNull(r.resolve(track))
-        assertEquals(1, a.calls)
-        clock.advance(1.days + 1.seconds)
+        assertEquals(1, online.queries.size)
+        clock.advance(1.hours + 1.seconds)
         r.resolve(track)
-        assertEquals(2, a.calls)
+        assertEquals(2, online.queries.size)
+    }
+
+    @Test fun failuresCacheNothing() = runTest {
+        val cache = MemoryCache()
+        val r = LyricsResolver(FakeOnline(fail = true), FakeLocal(null), cache, TestClock())
+        assertNull(r.resolve(track))
+        assertEquals(false, cache.map.containsKey(track.id))
     }
 
     @Test fun sidecarWinsWithoutAskingOnline() = runTest {
-        val a = FakeProvider("A", 1, 10, wordSynced)
+        val online = FakeOnline(wordSynced)
         val local = Lyrics.LineSynced(listOf(LyricLine(0, 1000, "from lrc", emptyList())), "local")
-        val r = LyricsResolver(listOf(a), FakeLocal(local), MemoryCache(), TestClock())
-        assertEquals(local, r.resolve(localTrack))
-        assertEquals(0, a.calls)
-    }
-
-    @Test fun tieBrokenByPriority() = runTest {
-        val first = Lyrics.Plain("first", "A"); val second = Lyrics.Plain("second", "B")
-        val r = LyricsResolver(listOf(FakeProvider("B", 2, 10, second), FakeProvider("A", 1, 50, first)), FakeLocal(null), MemoryCache(), TestClock())
-        assertEquals(first, r.resolve(track))
-    }
-
-    @Test fun failuresAreNotCachedForAWeek() = runTest {
-        val clock = TestClock()
-        val down = FailingProvider("A", 1); val empty = FakeProvider("B", 2, 10, null)
-        val r = LyricsResolver(listOf(down, empty), FakeLocal(null), MemoryCache(), clock)
-        assertNull(r.resolve(track))
-        clock.advance(kotlin.time.Duration.parse("2h"))
-        r.resolve(track)
-        assertEquals(2, down.calls)
-    }
-
-    @Test fun allProvidersFailingCachesNothing() = runTest {
-        val cache = MemoryCache()
-        val r = LyricsResolver(listOf(FailingProvider("A", 1)), FakeLocal(null), cache, TestClock())
-        assertNull(r.resolve(track))
-        assertEquals(false, cache.map.containsKey(track.id))
+        assertEquals(local, LyricsResolver(online, FakeLocal(local), MemoryCache(), TestClock()).resolve(localTrack))
+        assertEquals(0, online.queries.size)
     }
 
     @Test fun localSidecarBeatsAStaleNegativeEntry() = runTest {
         val clock = TestClock()
         val cache = MemoryCache().apply { map[localTrack.id] = CachedLyrics(null, clock.now()) }
         val local = Lyrics.Plain("new sidecar", "local")
-        assertEquals(local, LyricsResolver(emptyList(), FakeLocal(local), cache, clock).resolve(localTrack))
+        assertEquals(local, LyricsResolver(FakeOnline(null), FakeLocal(local), cache, clock).resolve(localTrack))
     }
 
     @Test fun unreadableLocalFallsBackToOnline() = runTest {
-        val r = LyricsResolver(listOf(FakeProvider("A", 1, 10, plain)), FakeLocal(null, fail = true), MemoryCache(), TestClock())
+        val r = LyricsResolver(FakeOnline(plain), FakeLocal(null, fail = true), MemoryCache(), TestClock())
         assertEquals(plain, r.resolve(localTrack))
     }
 }

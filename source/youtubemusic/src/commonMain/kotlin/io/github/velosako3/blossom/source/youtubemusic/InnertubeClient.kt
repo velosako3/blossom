@@ -77,6 +77,16 @@ class InnertubeClient(
         params?.let { put("params", it) }
     }
 
+    /**
+     * [browse] as the YouTube Music Android app, anonymously. Only that client is answered with a lyrics page's
+     * `timedLyricsData`; the web client always gets the plain description shelf (BitChord's `browseMobile`).
+     */
+    suspend fun browseMobile(browseId: String, params: String? = null): JsonObject =
+        post("browse", clientId = "21", clientName = "ANDROID_MUSIC", clientVersion = "7.21.50") {
+            put("browseId", browseId)
+            params?.let { put("params", it) }
+        }
+
     suspend fun browseContinuation(token: String): JsonObject =
         post("browse", mapOf("ctoken" to token, "continuation" to token, "type" to "next")) { put("continuation", token) }
 
@@ -111,9 +121,13 @@ class InnertubeClient(
     private suspend fun post(
         endpoint: String,
         query: Map<String, String> = emptyMap(),
+        /** Which client to ask as; the web one unless a caller needs another. Other clients go without the cookie. */
+        clientId: String = WEB_REMIX_CLIENT_ID,
+        clientName: String = "WEB_REMIX",
+        clientVersion: String = WEB_REMIX_VERSION,
         body: JsonObjectBuilder.() -> Unit,
     ): JsonObject {
-        val cookie = cookie()
+        val cookie = if (clientName == "WEB_REMIX") cookie() else null
         val hl = language()
         val gl = region()
         val response = withRetry {
@@ -127,8 +141,8 @@ class InnertubeClient(
                 header("X-Origin", MUSIC_ORIGIN)
                 header("Origin", MUSIC_ORIGIN)
                 header("Referer", "$MUSIC_ORIGIN/")
-                header("X-YouTube-Client-Name", WEB_REMIX_CLIENT_ID)
-                header("X-YouTube-Client-Version", WEB_REMIX_VERSION)
+                header("X-YouTube-Client-Name", clientId)
+                header("X-YouTube-Client-Version", clientVersion)
                 visitorData?.let { header("X-Goog-Visitor-Id", it) }
                 cookie?.let { c ->
                     header("Cookie", c)
@@ -139,8 +153,8 @@ class InnertubeClient(
                     buildJsonObject {
                         putJsonObject("context") {
                             putJsonObject("client") {
-                                put("clientName", "WEB_REMIX")
-                                put("clientVersion", WEB_REMIX_VERSION)
+                                put("clientName", clientName)
+                                put("clientVersion", clientVersion)
                                 put("hl", hl)
                                 put("gl", gl)
                                 visitorData?.let { put("visitorData", it) }

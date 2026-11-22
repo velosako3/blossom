@@ -5,23 +5,16 @@ import io.github.velosako3.blossom.core.model.SourceKind
 import io.github.velosako3.blossom.core.model.Track
 import io.github.velosako3.blossom.core.model.TrackId
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
-import kotlin.time.Duration.Companion.hours
 import kotlin.time.Instant
 
 /** What providers are asked. [videoId] lets the YouTube sources match the exact upload. */
 data class LyricsQuery(val title: String, val artists: List<String>, val album: String?, val durationMs: Long, val videoId: String? = null)
 
-/** One lyrics site. Lower [priority] wins ties between equally rich results. */
-interface LyricsProvider {
-    val name: String
-    val priority: Int
-    suspend fun fetch(q: LyricsQuery): Lyrics?
+/** The online lookup. In the app it is BitChord's `LyricsRepository` (see [bitChordLyrics]). */
+fun interface OnlineLyrics {
+    suspend fun lyrics(q: LyricsQuery): Lyrics?
 }
 
 /** Sidecar `.lrc` files and embedded lyrics tags, for local files. */
@@ -37,12 +30,14 @@ interface LyricsCache {
 }
 
 /**
- * Local (sidecar, then embedded tags; local files only) → cache → every online provider in parallel, 5 s each →
- * the richest answer (word > line > plain), ties by provider priority. "None found" is cached for 7 days when every
- * provider answered, 1 hour when some failed, and not at all when all failed.
+ * Local (sidecar, then embedded tags; local files only) → cache → [online].
+ *
+ * Timed lyrics are kept for good. Plain ones are retried after [PLAIN_RETRY] (a synced source may have been down or
+ * slow), keeping the plain copy if the retry finds nothing better. "None found" is kept for [NEGATIVE_TTL]; a failed
+ * lookup (offline, an error) is not cached at all.
  */
 class LyricsResolver(
-    private val providers: List<LyricsProvider>,
+    private val online: OnlineLyrics,
     private val local: LocalLyricsSource,
     private val cache: LyricsCache,
     private val clock: Clock,
@@ -53,9 +48,12 @@ class LyricsResolver(
             val local = try { local.lyrics(track) } catch (e: CancellationException) { throw e } catch (_: Exception) { null }
             if (local != null) { cache.put(track.id, local, clock.now()); return local }
         }
-        cache.get(track.id)?.let { c ->
-            if (c.lyrics != null) return c.lyrics
-            if (clock.now() - c.fetchedAt < NEGATIVE_TTL) return null
+        val cached = cache.get(track.id)
+        val age = cached?.let { clock.now() - it.fetchedAt }
+        when {
+            cached == null -> Unit
+            cached.lyrics == null -> if (age!! < NEGATIVE_TTL) return null
+            cached.lyrics !is Lyrics.Plain || age!! < PLAIN_RETRY -> return cached.lyrics
         }
         val q = LyricsQuery(
             title = track.title,
@@ -64,33 +62,14 @@ class LyricsResolver(
             durationMs = track.durationMs,
             videoId = track.id.sourceId.takeIf { track.id.kind == SourceKind.YOUTUBE_MUSIC || track.id.kind == SourceKind.YOUTUBE },
         )
-        var failures = 0
-        val results = coroutineScope {
-            providers.map { p ->
-                async {
-                    val outcome = withTimeoutOrNull(PROVIDER_TIMEOUT_MS) {
-                        try { Result.success(p.fetch(q)) } catch (e: CancellationException) { throw e } catch (e: Exception) { Result.failure(e) }
-                    }
-                    if (outcome == null || outcome.isFailure) { synchronized(this@LyricsResolver) { failures++ }; null }
-                    else outcome.getOrNull()?.let { p to it }
-                }
-            }.awaitAll().filterNotNull()
-        }
-        val best = results.sortedWith(compareByDescending<Pair<LyricsProvider, Lyrics>> { it.second.richness }.thenBy { it.first.priority })
-            .firstOrNull()?.second
-        when {
-            best != null -> cache.put(track.id, best, clock.now())
-            failures == providers.size -> Unit // offline or everything broke: ask again next time
-            failures > 0 -> cache.put(track.id, null, clock.now() - NEGATIVE_TTL + RETRY_AFTER_FAILURE) // ponytail: short TTL by back-dating
-            else -> cache.put(track.id, null, clock.now())
-        }
-        return best
+        val found = try { online.lyrics(q) } catch (e: CancellationException) { throw e } catch (_: Exception) { return cached?.lyrics }
+        val keep = found ?: cached?.lyrics
+        cache.put(track.id, keep, clock.now())
+        return keep
     }
 
     private companion object {
-        const val PROVIDER_TIMEOUT_MS = 5_000L
-        val NEGATIVE_TTL = 7.days
-        /** "None found" while some providers failed (timeouts, errors) is only trusted this long. */
-        val RETRY_AFTER_FAILURE = 1.hours
+        val NEGATIVE_TTL = 1.days
+        val PLAIN_RETRY = 1.days
     }
 }
