@@ -26,7 +26,8 @@ class LyricsViewModel(private val resolver: LyricsResolver, current: Flow<Track?
         .transformLatest { t ->
             if (t == null) { emit(LyricsUi.Ready(null)); return@transformLatest }
             emit(LyricsUi.Loading)
-            emit(LyricsUi.Ready(runCatching { resolver.resolve(t) }.getOrNull()))
+            val lyrics = try { resolver.resolve(t) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
+            emit(LyricsUi.Ready(lyrics))
         }
-        .stateIn(scope, SharingStarted.WhileSubscribed(5_000), LyricsUi.Ready(null))
+        .stateIn(scope, SharingStarted.WhileSubscribed(5_000), LyricsUi.Loading)
 }

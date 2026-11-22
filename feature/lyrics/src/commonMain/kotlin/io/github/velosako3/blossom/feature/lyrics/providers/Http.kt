@@ -9,5 +9,7 @@ object Http {
     val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(5, TimeUnit.SECONDS)
         .readTimeout(8, TimeUnit.SECONDS)
+        // Bounds each blocking call, since the resolver's 5 s timeout can't interrupt a blocking read.
+        .callTimeout(5, TimeUnit.SECONDS)
         .build()
 }

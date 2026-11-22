@@ -5,6 +5,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class LrcParserTest {
     @Test fun lineSynced() {
@@ -49,5 +50,31 @@ class LrcParserTest {
         assertIs<Lyrics.Plain>(LrcParser.parse("Just words\nno stamps", "p", null))
         assertNull(LrcParser.parse("", "p", null))
         assertNull(LrcParser.parse("   \n ", "p", null))
+    }
+
+    @Test fun byteOrderMarkIgnored() {
+        val l = assertIs<Lyrics.LineSynced>(LrcParser.parse("\uFEFF[offset:+200]\n[00:10.00]A", "p", null))
+        assertEquals(9_800, l.lines[0].startMs)
+    }
+
+    @Test fun textBeforeFirstWordStampIsAWord() {
+        val l = assertIs<Lyrics.WordSynced>(LrcParser.parse("[00:01.00]Oh <00:01.50>yeah<00:02.00>", "p", null))
+        assertEquals(listOf("Oh ", "yeah"), l.lines[0].words.map { it.text })
+        assertEquals(1_000, l.lines[0].words[0].startMs)
+    }
+
+    @Test fun plainKeepsSectionLabels() {
+        val l = assertIs<Lyrics.Plain>(LrcParser.parse("[ar:Someone]\n[Chorus: x2]\nla la", "p", null))
+        assertEquals("[Chorus: x2]\nla la", l.text)
+    }
+
+    @Test fun negativeOffsetNeverEndsBeforeStart() {
+        val l = assertIs<Lyrics.LineSynced>(LrcParser.parse("[offset:+5000]\n[00:01.00]A\n[00:03.00]B\n[00:09.00]C", "p", null))
+        l.lines.forEach { assertTrue(it.endMs >= it.startMs, "$it") }
+    }
+
+    @Test fun lastWordWithoutClosingStampIsCapped() {
+        val l = assertIs<Lyrics.WordSynced>(LrcParser.parse("[00:01.00]<00:01.00>Hi <00:01.30>there\n[00:20.00]Next", "p", null))
+        assertTrue(l.lines[0].words.last().endMs <= 1_300 + 2_000)
     }
 }

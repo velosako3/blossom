@@ -10,6 +10,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -36,7 +37,7 @@ fun LyricsPanel(
     Box(modifier) {
         when (val u = ui) {
             LyricsUi.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center), color = color)
-            is LyricsUi.Ready -> LyricsView(u.lyrics, playback.positionMs, { player.seekTo(it) }, Modifier.fillMaxSize(), color)
+            is LyricsUi.Ready -> LyricsView(u.lyrics, playback.positionMs, remember(player) { { ms: Long -> player.seekTo(ms) } }, Modifier.fillMaxSize(), color)
         }
         if (onFullScreen != null) {
             GlassIconButton(onFullScreen, Icons.Rounded.Fullscreen, stringResource(Res.string.lyrics_full_screen), glass = false,

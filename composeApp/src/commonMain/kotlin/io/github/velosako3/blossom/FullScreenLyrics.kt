@@ -11,6 +11,11 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import io.github.velosako3.blossom.core.designsystem.background.BlossomBackground
 import io.github.velosako3.blossom.core.designsystem.components.GlassIconButton
@@ -25,7 +30,8 @@ import org.jetbrains.compose.resources.stringResource
 /** Desktop full-screen lyrics: lyrics centred over the artwork background, a small player at the bottom. */
 @Composable
 fun FullScreenLyrics(graph: AppGraph, onClose: () -> Unit) {
-    Box(Modifier.fillMaxSize()) {
+    androidx.compose.ui.backhandler.BackHandler(onBack = onClose)
+    Box(Modifier.fillMaxSize().onKeyEvent { e -> (e.type == KeyEventType.KeyUp && e.key == Key.Escape).also { if (it) onClose() } }) {
         BlossomBackground(BlossomTheme.palette, Modifier.fillMaxSize().glassBackdropSource())
         LyricsPanel(graph.lyrics, graph.player, Modifier.align(Alignment.Center).widthIn(max = 900.dp).fillMaxSize().padding(bottom = 96.dp))
         Box(Modifier.align(Alignment.BottomCenter).widthIn(max = 560.dp).fillMaxWidth().padding(16.dp)) {

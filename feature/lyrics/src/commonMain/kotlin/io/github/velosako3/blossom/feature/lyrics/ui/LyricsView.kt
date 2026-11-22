@@ -50,6 +50,7 @@ import io.github.velosako3.blossom.feature.lyrics.Lyrics
 import io.github.velosako3.blossom.feature.lyrics.resources.Res
 import io.github.velosako3.blossom.feature.lyrics.resources.lyrics_back_to_current
 import io.github.velosako3.blossom.feature.lyrics.resources.lyrics_none
+import io.github.velosako3.blossom.feature.lyrics.resources.lyrics_seek_here
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Clock
@@ -99,6 +100,10 @@ private fun SyncedLyrics(
     modifier: Modifier,
 ) {
     val items = remember(lines) { lyricsItems(lines) }
+    // One stable callback, so a new lambda from the caller on every position tick doesn't recompose every line.
+    val currentSeek by rememberUpdatedState(onSeek)
+    val seek: (Long) -> Unit = remember { { currentSeek(it) } }
+    val seekLabel = stringResource(Res.string.lyrics_seek_here)
     val pos = rememberUpdatedState(positionMs)
     val position = remember { { pos.value } }
     val active = activeItemIndex(items, positionMs)
@@ -150,7 +155,7 @@ private fun SyncedLyrics(
                 when (item) {
                     is LyricsItem.Line -> LyricLineView(
                         item, i, LineLook(active = i == active, past = active >= 0 && i < active, distance = distance), wordSynced,
-                        position, style, color, palette.vibrant, blurOn, motion, cascade, onSeek,
+                        position, style, color, palette.vibrant, blurOn, motion, cascade, seek, seekLabel,
                     )
                     is LyricsItem.Gap -> Box(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 14.dp)) {
                         InstrumentalDots(

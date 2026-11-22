@@ -2,6 +2,7 @@
 package io.github.velosako3.blossom.feature.lyrics.ui
 
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.runComposeUiTest
@@ -23,6 +24,7 @@ class LyricsUiTest {
                 LyricsView(Lyrics.LineSynced(lines, "t"), positionMs = 1_500, onSeek = { seek = it })
             }
         }
+        onNodeWithTag(lyricLineTag(3)).assert(androidx.compose.ui.test.SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.Role, androidx.compose.ui.semantics.Role.Button))
         onNodeWithTag(lyricLineTag(3)).performClick()
         assertEquals(lines[3].startMs, seek)
     }

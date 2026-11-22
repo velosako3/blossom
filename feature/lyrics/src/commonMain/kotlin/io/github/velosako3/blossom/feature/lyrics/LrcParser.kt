@@ -3,14 +3,18 @@ package io.github.velosako3.blossom.feature.lyrics
 
 /**
  * LRC and enhanced LRC. `[mm:ss.xx]` / `[mm:ss.xxx]` line stamps (several per line allowed), `<mm:ss.xx>` word
- * stamps, `[offset:±ms]` (positive = lyrics earlier), metadata tags ignored. A line ends where the next begins; the
- * last ends at the track's end, or 5 s later when the duration is unknown.
+ * stamps, `[offset:±ms]` (positive = lyrics earlier), standard tags (`[ar:…]`, `[ti:…]`, …) ignored. A line ends
+ * where the next begins; the last ends at the track's end, or 5 s later when the duration is unknown.
  */
 object LrcParser {
     private val LINE_STAMP = Regex("""\[(\d{1,3}):(\d{1,2})(?:[.:](\d{1,3}))?]""")
     private val WORD_STAMP = Regex("""<(\d{1,3}):(\d{1,2})(?:[.:](\d{1,3}))?>""")
-    private val META = Regex("""^\[([a-zA-Z#]+):(.*)]\s*$""")
+    private val TAG = Regex("""^\[(ar|ti|al|au|by|re|ve|la|id|length|offset|tool|#)\s*:(.*)]\s*$""", RegexOption.IGNORE_CASE)
     private const val LAST_LINE_MS = 5_000L
+    /** A last word with no closing stamp is sung for at most this long. */
+    private const val LAST_WORD_MS = 2_000L
+    /** Marks text before the first word stamp: it starts with the line. */
+    private const val AT_LINE_START = Long.MIN_VALUE
 
     private fun ms(m: MatchResult): Long {
         val (min, sec, frac) = m.destructured
@@ -21,14 +25,15 @@ object LrcParser {
     private data class Raw(val start: Long, val text: String, val words: List<Pair<Long, String>>, val closing: Long?)
 
     fun parse(text: String, provider: String, trackDurationMs: Long?): Lyrics? {
-        if (text.isBlank()) return null
+        val source = text.removePrefix("﻿")
+        if (source.isBlank()) return null
         var offset = 0L
         val raws = mutableListOf<Raw>()
         var stamped = false
-        for (rawLine in text.lines()) {
+        for (rawLine in source.lines()) {
             val line = rawLine.trim()
-            META.matchEntire(line)?.let { m ->
-                if (m.groupValues[1].lowercase() == "offset") offset = m.groupValues[2].trim().removePrefix("+").toLongOrNull() ?: 0
+            TAG.matchEntire(line)?.let { m ->
+                if (m.groupValues[1].equals("offset", ignoreCase = true)) offset = m.groupValues[2].trim().removePrefix("+").toLongOrNull() ?: 0
                 continue
             }
             val stamps = mutableListOf<Long>()
@@ -43,6 +48,7 @@ object LrcParser {
             var closing: Long? = null
             val wordMatches = WORD_STAMP.findAll(rest).toList()
             val plain = if (wordMatches.isEmpty()) rest.trim() else {
+                rest.substring(0, wordMatches[0].range.first).takeIf { it.isNotBlank() }?.let { words += AT_LINE_START to it.trimStart() }
                 wordMatches.forEachIndexed { i, m ->
                     val end = wordMatches.getOrNull(i + 1)?.range?.first ?: rest.length
                     val w = rest.substring(m.range.last + 1, end)
@@ -50,21 +56,23 @@ object LrcParser {
                 }
                 WORD_STAMP.replace(rest, "").trim()
             }
-            stamps.forEach { s -> raws += Raw(s, plain, words, closing) }
+            stamps.forEach { s -> raws += Raw(s, plain, words.map { (t, w) -> (if (t == AT_LINE_START) s else t) to w }, closing) }
         }
         if (!stamped) {
-            val plain = text.lines().filterNot { META.matches(it.trim()) }.joinToString("\n").trim()
+            val plain = source.lines().filterNot { TAG.matches(it.trim()) }.joinToString("\n").trim()
             return if (plain.isEmpty()) null else Lyrics.Plain(plain, provider)
         }
-        // [offset] may appear anywhere in the file; it applies to every stamp.
-        val sorted = raws.map { r -> r.copy(start = r.start - offset, words = r.words.map { (t, w) -> (t - offset) to w }, closing = r.closing?.minus(offset)) }
+        // [offset] may appear anywhere in the file; it applies to every stamp. Times never go below 0.
+        fun shift(t: Long) = (t - offset).coerceAtLeast(0)
+        val sorted = raws.map { r -> r.copy(start = shift(r.start), words = r.words.map { (t, w) -> shift(t) to w }, closing = r.closing?.let(::shift)) }
             .sortedBy { it.start }
         val lines = sorted.mapIndexed { i, r ->
-            val end = sorted.getOrNull(i + 1)?.start ?: trackDurationMs?.takeIf { it > r.start } ?: (r.start + LAST_LINE_MS)
+            val end = maxOf(r.start, sorted.getOrNull(i + 1)?.start ?: trackDurationMs?.takeIf { it > r.start } ?: (r.start + LAST_LINE_MS))
             val words = r.words.mapIndexed { j, (t, w) ->
-                LyricWord(w, t, r.words.getOrNull(j + 1)?.first ?: r.closing ?: end)
+                val wordEnd = r.words.getOrNull(j + 1)?.first ?: r.closing ?: minOf(end, t + LAST_WORD_MS)
+                LyricWord(w, t, maxOf(t, wordEnd))
             }
-            LyricLine(r.start.coerceAtLeast(0), end, r.text, words)
+            LyricLine(r.start, end, r.text, words)
         }
         return if (lines.any { it.words.isNotEmpty() }) Lyrics.WordSynced(lines, provider) else Lyrics.LineSynced(lines, provider)
     }

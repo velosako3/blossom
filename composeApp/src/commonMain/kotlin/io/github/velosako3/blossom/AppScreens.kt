@@ -63,6 +63,7 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
     var addTracks by remember { mutableStateOf<List<Track>?>(null) }
     var creatingWith by remember { mutableStateOf<List<Track>?>(null) }
     var fullScreenLyrics by remember { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(hasTrack) { if (!hasTrack) fullScreenLyrics = false }
     val playlists by graph.library.playlists.collectAsState()
     val current = graph.player.state.collectAsState().value.current
     val liked by (current?.let { graph.repo.isLiked(it.id) } ?: flowOf(false)).collectAsState(false)
@@ -102,7 +103,7 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
             )
         },
         queuePanel = { QueueView(graph.player, Modifier.fillMaxSize()) },
-        lyricsPanel = { LyricsPanel(graph.lyrics, graph.player, Modifier.fillMaxSize(), onFullScreen = { fullScreenLyrics = true }, color = io.github.velosako3.blossom.core.designsystem.theme.BlossomTheme.colors.onSurface) },
+        lyricsPanel = { LyricsPanel(graph.lyrics, graph.player, Modifier.fillMaxSize(), onFullScreen = if (graph.desktop) ({ fullScreenLyrics = true }) else null, color = io.github.velosako3.blossom.core.designsystem.theme.BlossomTheme.colors.onSurface) },
         screen = { destination ->
             when (destination) {
                 Destination.Home -> { HomeScreen(graph.home, { t, i -> play(t, i, false) }, openAlbum, openArtist, openPlaylist); true }

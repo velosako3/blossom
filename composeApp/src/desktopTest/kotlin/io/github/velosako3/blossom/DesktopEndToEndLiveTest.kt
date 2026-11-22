@@ -24,7 +24,7 @@ import kotlin.time.Duration.Companion.minutes
 @OptIn(ExperimentalTestApi::class)
 class DesktopEndToEndLiveTest {
     @Test fun searchPlaySeekNext() = runDesktopComposeUiTest(1440, 900, testTimeout = 5.minutes) {
-        System.getProperty("blossom.dataDir")?.let { java.io.File(it).deleteRecursively() }
+        resetTestDataDir()
         val graph = createDesktopGraph()
         val navigator = Navigator()
         setContent { App(navigator = navigator, graph = graph, glassQuality = GlassQuality.FULL, reduceMotion = true) }

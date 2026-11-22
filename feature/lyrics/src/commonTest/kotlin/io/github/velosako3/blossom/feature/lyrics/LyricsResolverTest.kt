@@ -33,8 +33,13 @@ private class MemoryCache : LyricsCache {
     override suspend fun put(id: TrackId, lyrics: Lyrics?, at: Instant) { map[id] = CachedLyrics(lyrics, at) }
 }
 
-private class FakeLocal(private val result: Lyrics?) : LocalLyricsSource {
-    override suspend fun lyrics(track: Track): Lyrics? = result
+private class FakeLocal(private val result: Lyrics?, private val fail: Boolean = false) : LocalLyricsSource {
+    override suspend fun lyrics(track: Track): Lyrics? = if (fail) throw java.io.IOException("unreadable") else result
+}
+
+private class FailingProvider(override val name: String, override val priority: Int) : LyricsProvider {
+    var calls = 0
+    override suspend fun fetch(q: LyricsQuery): Lyrics? { calls++; throw java.io.IOException("offline") }
 }
 
 class LyricsResolverTest {
@@ -80,5 +85,34 @@ class LyricsResolverTest {
         val first = Lyrics.Plain("first", "A"); val second = Lyrics.Plain("second", "B")
         val r = LyricsResolver(listOf(FakeProvider("B", 2, 10, second), FakeProvider("A", 1, 50, first)), FakeLocal(null), MemoryCache(), TestClock())
         assertEquals(first, r.resolve(track))
+    }
+
+    @Test fun failuresAreNotCachedForAWeek() = runTest {
+        val clock = TestClock()
+        val down = FailingProvider("A", 1); val empty = FakeProvider("B", 2, 10, null)
+        val r = LyricsResolver(listOf(down, empty), FakeLocal(null), MemoryCache(), clock)
+        assertNull(r.resolve(track))
+        clock.advance(kotlin.time.Duration.parse("2h"))
+        r.resolve(track)
+        assertEquals(2, down.calls)
+    }
+
+    @Test fun allProvidersFailingCachesNothing() = runTest {
+        val cache = MemoryCache()
+        val r = LyricsResolver(listOf(FailingProvider("A", 1)), FakeLocal(null), cache, TestClock())
+        assertNull(r.resolve(track))
+        assertEquals(false, cache.map.containsKey(track.id))
+    }
+
+    @Test fun localSidecarBeatsAStaleNegativeEntry() = runTest {
+        val clock = TestClock()
+        val cache = MemoryCache().apply { map[localTrack.id] = CachedLyrics(null, clock.now()) }
+        val local = Lyrics.Plain("new sidecar", "local")
+        assertEquals(local, LyricsResolver(emptyList(), FakeLocal(local), cache, clock).resolve(localTrack))
+    }
+
+    @Test fun unreadableLocalFallsBackToOnline() = runTest {
+        val r = LyricsResolver(listOf(FakeProvider("A", 1, 10, plain)), FakeLocal(null, fail = true), MemoryCache(), TestClock())
+        assertEquals(plain, r.resolve(localTrack))
     }
 }

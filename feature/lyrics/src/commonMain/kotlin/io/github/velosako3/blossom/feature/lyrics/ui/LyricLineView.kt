@@ -96,20 +96,21 @@ internal fun LyricLineView(
     motion: Boolean,
     cascade: Cascade,
     onSeek: (Long) -> Unit,
+    seekLabel: String,
 ) {
     val line = item.line
     val scale by animateFloatAsState(
         if (look.active && motion) 1.04f else 1f,
         spring(BlossomTokens.springDampingRatio, BlossomTokens.springStiffness),
     )
-    val alpha by animateFloatAsState(
-        when {
-            look.active -> 1f
-            look.past -> PAST_ALPHA
-            else -> INACTIVE_ALPHA
-        },
-        if (motion) tween(200) else tween(0),
-    )
+    // Line-synced: the active line brightens 45% → 100% over 200 ms; others settle at 35% (past lines 25%).
+    val alphaAnim = remember { Animatable(if (look.active) 1f else if (look.past) PAST_ALPHA else INACTIVE_ALPHA) }
+    LaunchedEffect(look.active, look.past, motion) {
+        val target = if (look.active) 1f else if (look.past) PAST_ALPHA else INACTIVE_ALPHA
+        if (!motion) { alphaAnim.snapTo(target); return@LaunchedEffect }
+        if (look.active && !wordSynced && alphaAnim.value < UNSUNG_ALPHA) alphaAnim.snapTo(UNSUNG_ALPHA)
+        alphaAnim.animateTo(target, tween(200))
+    }
     val offset = remember { Animatable(0f) }
     if (motion) LaunchedEffect(cascade) {
         var first = true
@@ -126,13 +127,14 @@ internal fun LyricLineView(
     val currentWord by remember(line, sweep) {
         derivedStateOf { if (!sweep) -1 else line.words.indexOfLast { it.startMs <= position() } }
     }
-    val text = remember(line, currentWord, motion) {
+    val glowPx = with(androidx.compose.ui.platform.LocalDensity.current) { 12.dp.toPx() }
+    val text = remember(line, currentWord, motion, glowPx) {
         buildAnnotatedString {
             val r = item.wordRanges.getOrNull(currentWord)
             if (r == null || !motion || r.isEmpty()) append(line.text)
             else {
                 append(line.text.substring(0, r.first))
-                withStyle(SpanStyle(shadow = Shadow(glow.copy(alpha = 0.35f), Offset.Zero, 12f * 2))) { append(line.text.substring(r.first, r.last + 1)) }
+                withStyle(SpanStyle(shadow = Shadow(glow.copy(alpha = 0.35f), Offset.Zero, glowPx))) { append(line.text.substring(r.first, r.last + 1)) }
                 append(line.text.substring(r.last + 1))
             }
         }
@@ -148,14 +150,19 @@ internal fun LyricLineView(
         modifier = Modifier
             .fillMaxWidth()
             .testTag(lyricLineTag(item.index))
-            .clickable(remember { MutableInteractionSource() }, indication = null) { onSeek(line.startMs) }
+            .clickable(
+                remember { MutableInteractionSource() },
+                indication = null,
+                role = androidx.compose.ui.semantics.Role.Button,
+                onClickLabel = seekLabel,
+            ) { onSeek(line.startMs) }
             .padding(horizontal = 24.dp, vertical = 10.dp)
             .then(if (blurRadius > 0.dp) Modifier.blur(blurRadius) else Modifier)
             .graphicsLayer {
                 scaleX = scale; scaleY = scale
                 transformOrigin = TransformOrigin(0f, 0.5f)
                 translationY = offset.value
-                this.alpha = alpha
+                this.alpha = alphaAnim.value
                 if (sweep) compositingStrategy = CompositingStrategy.Offscreen
             }
             .then(if (sweep) Modifier.drawWithContent { drawContent(); layout?.let { sweepMask(it, item, position()) } } else Modifier),

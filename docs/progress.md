@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 review received; its fix pass is next, then Task 5.3.
+Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Next: Task 5.3 (playing from the encrypted cache).
 
 Hands-on testing rule: the owner is using this desktop, so never inject keyboard/mouse input or capture the screen.
 Desktop end-to-end checks run off-screen with the real graph: `./gradlew :composeApp:desktopTest -PliveTests=true -Proborazzi.test.record=true --tests "*DesktopEndToEnd*"`. `./gradlew :composeApp:run -Pblossom.debugPlay="query"` plays a search result at startup, for `playerctl` checks. Kill stray app instances by PID (`ps … | grep 'blossom\.MainKt'`), never with a `pkill -f` pattern that matches your own shell.
@@ -43,6 +43,27 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - Desktop `NetworkMonitor` checks for an up interface plus a DNS answer every 15 s (no request to any server); `-Dblossom.forceOffline=true` pins it offline for testing.
 
 ## Deviations from plan
+- Milestone 4 review fixes, each covered by a test that failed first:
+  - Provider errors and timeouts no longer cache "no lyrics" for 7 days. "None found" is cached for 7 days only when every provider answered; for 1 hour when some failed; not at all when all failed.
+  - Local files check their sidecar/tag before the cache, and unreadable local lyrics fall back to online providers.
+  - Blank provider lines survive as gap markers, so instrumental dots show for provider lyrics.
+  - Parser: strips the BOM, turns text before the first word stamp into a word, keeps `[Chorus: …]`-style lines in plain lyrics (only standard tags are dropped), never produces an end before a start after a negative offset, and caps a last word with no closing stamp at 2 s.
+  - The lyrics view model starts in Loading (no "No lyrics found" flash) and rethrows cancellation. An unreadable cache row counts as a miss.
+  - Lines are buttons for accessibility ("Play from this line").
+  - UI fixes without new tests:
+    - A stable seek callback, so position ticks no longer recompose every line.
+    - Glow is 12 dp.
+    - Line-synced brighten starts at 45%.
+    - The lyrics HTTP client has a 5 s call timeout.
+    - Full-screen lyrics is desktop-only, closes with Esc/Back, and resets when playback stops.
+    - Live tests refuse to wipe a data folder outside `build/`.
+- Milestone 4 review rulings (not changed):
+  - The word sweep stays under reduce motion: it's the reading position, not decoration; scale, blur, glow and scroll animation are off.
+  - Draw-phase gradient allocation: 1 small object per frame on the singing row only; revisit if profiling shows GC churn.
+  - `YouTubeLyricsApi` stays a process-wide hook set once by the app graph.
+  - Vendored BitChord files stay GPL-3.0-only inside the AGPL app, as GPLv3 §13 allows combining with AGPLv3.
+  - `lyrics_cache` has no migration because no build with a database has shipped.
+  - Embedded SYLT (synced) tags aren't read: jaudiotagger exposes only USLT through `FieldKey.LYRICS`; sidecar `.lrc` covers synced lyrics for local files.
 - Task 5.2:
   - `DownloadManager` takes a `resolve: suspend (Track) -> StreamInfo` lambda, not `StreamResolver`, so `core:offline` doesn't depend on `core:player` (the player will read from the offline store in 5.3).
   - Downloads encrypt as bytes arrive (`ChunkedEncryptor`). One chunk is held back, so every chunk on disk is final, and a broken download resumes from the last whole chunk with `Range: bytes=<n>-`.

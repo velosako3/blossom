@@ -4,7 +4,7 @@ package io.github.velosako3.blossom.feature.lyrics.ui
 import io.github.velosako3.blossom.feature.lyrics.LyricLine
 
 /** What the synced view lays out: a sung line, or an instrumental gap of more than 5 s. */
-internal sealed interface LyricsItem {
+sealed interface LyricsItem {
     val startMs: Long
     data class Line(val index: Int, val line: LyricLine, val wordRanges: List<IntRange>) : LyricsItem { override val startMs get() = line.startMs }
     data class Gap(override val startMs: Long, val endMs: Long) : LyricsItem
@@ -12,7 +12,7 @@ internal sealed interface LyricsItem {
 
 internal const val GAP_MS = 5_000L
 
-internal fun lyricsItems(lines: List<LyricLine>): List<LyricsItem> {
+fun lyricsItems(lines: List<LyricLine>): List<LyricsItem> {
     val out = mutableListOf<LyricsItem>()
     val first = lines.firstOrNull { it.text.isNotBlank() } ?: return out
     if (first.startMs > GAP_MS) out += LyricsItem.Gap(0, first.startMs)

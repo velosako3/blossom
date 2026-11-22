@@ -26,7 +26,7 @@ import kotlin.time.Duration.Companion.minutes
 @OptIn(ExperimentalTestApi::class)
 class DesktopLyricsLiveTest {
     @Test fun lyricsPanelFollowsPlayback() = runDesktopComposeUiTest(1440, 900, testTimeout = 5.minutes) {
-        System.getProperty("blossom.dataDir")?.let { java.io.File(it).deleteRecursively() }
+        resetTestDataDir()
         val graph = createDesktopGraph()
         setContent { App(navigator = Navigator(), graph = graph, glassQuality = GlassQuality.FULL, reduceMotion = false) }
         fun shot(name: String) = onRoot().captureRoboImage("src/desktopTest/snapshots/e2e/$name.png")

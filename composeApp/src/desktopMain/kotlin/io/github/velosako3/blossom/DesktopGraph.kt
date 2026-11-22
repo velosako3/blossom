@@ -80,5 +80,6 @@ fun createDesktopGraph(): AppGraph {
         player, fileDatabase(File(dataDir, "blossom.db")), prefs.deviceId(), ytm, prefs, network, scope, local,
         shareLink = { link -> Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(link), null) },
         localLyrics = io.github.velosako3.blossom.feature.lyrics.FileLocalLyricsSource(localLibrary::pathFor),
+        desktop = true,
     )
 }

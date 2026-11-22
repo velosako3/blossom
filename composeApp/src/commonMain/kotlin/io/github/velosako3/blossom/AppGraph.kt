@@ -53,6 +53,8 @@ class AppGraph(
     val shareLink: (String) -> Unit,
     /** Sidecar `.lrc` / embedded lyrics for local files (desktop); none on Android. */
     localLyrics: LocalLyricsSource = LocalLyricsSource { null },
+    /** Desktop-only extras (full-screen lyrics). */
+    val desktop: Boolean = false,
 ) {
     val search = SearchViewModel(ytm, RecentSearchStore(prefs), scope)
     val hlc = HybridLogicalClock(deviceId, Clock.System)

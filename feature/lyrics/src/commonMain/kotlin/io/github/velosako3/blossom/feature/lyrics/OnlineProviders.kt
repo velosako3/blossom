@@ -42,17 +42,17 @@ fun onlineLyricsProviders(): List<LyricsProvider> {
     )
 }
 
-/** BitChord lines → blossom lyrics. Gap lines (empty text) only end the line before them. */
+/** BitChord lines → blossom lyrics. Gap lines (empty text) stay as empty lines: the view shows long ones as dots. */
 fun List<BcLine>.toLyrics(provider: String, durationMs: Long): Lyrics? {
     val sorted = sortedBy { it.timeMs }
     val texts = sorted.filter { it.text.isNotBlank() }
     if (texts.isEmpty()) return null
     val timed = texts.any { it.timeMs > 0 } || texts.any { it.words.isNotEmpty() }
     if (!timed) return Lyrics.Plain(texts.joinToString("\n") { it.text }, provider)
-    val lines = texts.map { line ->
+    val lines = sorted.map { line ->
         val next = sorted.firstOrNull { it.timeMs > line.timeMs }?.timeMs
-        val end = line.sungUntilMs?.takeIf { it > line.timeMs } ?: next ?: durationMs.takeIf { it > line.timeMs } ?: (line.timeMs + 5_000)
-        LyricLine(line.timeMs, maxOf(end, next ?: end), line.text, line.words.map { LyricWord(it.text, it.startMs, it.endMs) })
+        val end = next ?: durationMs.takeIf { it > line.timeMs } ?: (line.timeMs + 5_000)
+        LyricLine(line.timeMs, end, line.text.trim(), line.words.map { LyricWord(it.text, it.startMs, it.endMs) })
     }
     return if (lines.any { it.words.isNotEmpty() }) Lyrics.WordSynced(lines, provider) else Lyrics.LineSynced(lines, provider)
 }
