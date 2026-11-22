@@ -47,6 +47,8 @@ const val CROSSFADE_KEY = "player.crossfade"
 /** The equalizer, encoded by [io.github.velosako3.blossom.core.player.eq.EqSettings.encode]. A device preference. */
 const val EQ_KEY = "player.eq"
 
+const val DISCORD_KEY = "integrations.discord"
+
 /** This device's stable sync identity, created once and kept in preferences. */
 @OptIn(ExperimentalUuidApi::class)
 fun PreferenceStore.deviceId(): String = get("device.id") ?: Uuid.random().toString().also { put("device.id", it) }
@@ -176,6 +178,11 @@ class AppGraph(
         YouTubeLyricsApi.transcript = ytm.client::transcript
     }
     val sleepTimer = io.github.velosako3.blossom.core.player.SleepTimer(player, scope)
+
+    private val _discord = MutableStateFlow(prefs.get(DISCORD_KEY) == "true")
+    /** Discord Rich Presence (desktop only): off by default. */
+    val discordEnabled: StateFlow<Boolean> = _discord
+    fun setDiscord(on: Boolean) { _discord.value = on; prefs.put(DISCORD_KEY, on.toString()) }
 
     private val _eq = MutableStateFlow(io.github.velosako3.blossom.core.player.eq.EqSettings.decode(prefs.get(EQ_KEY)))
     /** The equalizer: saved per device and applied to the player at once. */

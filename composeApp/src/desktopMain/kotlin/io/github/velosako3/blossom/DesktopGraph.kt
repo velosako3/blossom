@@ -106,6 +106,7 @@ fun createDesktopGraph(): AppGraph {
         syncSetup = desktopSyncSetup(secure),
         secure = secure,
     )
+    DiscordPresence(player.state, graph.discordEnabled, scope)
     Runtime.getRuntime().addShutdownHook(Thread {
         // The play in progress is recorded before the process ends.
         runCatching { kotlinx.coroutines.runBlocking { kotlinx.coroutines.withTimeoutOrNull(2_000) { graph.playTracker.finish() } } }

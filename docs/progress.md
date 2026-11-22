@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–6 done (M6 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–7 done (M7 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Tasks 8.1–8.5 done; the Milestone 8 review is running. Milestone 8 is wrapped up and its review fixed. Tasks 9.1–9.4 done. Next: Task 9.5 (Discord Rich Presence).
+Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Milestones 0–5 done (M5 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–6 done (M6 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Milestones 0–7 done (M7 wrap-up: review fixed, `./gradlew check` + `verifyRoborazziDesktop` green, pushed). Tasks 8.1–8.5 done; the Milestone 8 review is running. Milestone 8 is wrapped up and its review fixed. Tasks 9.1–9.5 done. Next: Task 9.6 (update check).
 
 Hands-on testing rule: the owner is using this desktop, so never inject keyboard/mouse input or capture the screen.
 Desktop end-to-end checks run off-screen with the real graph: `./gradlew :composeApp:desktopTest -PliveTests=true -Proborazzi.test.record=true --tests "*DesktopEndToEnd*"`. `./gradlew :composeApp:run -Pblossom.debugPlay="query"` plays a search result at startup, for `playerctl` checks. Kill stray app instances by PID (`ps … | grep 'blossom\.MainKt'`), never with a `pkill -f` pattern that matches your own shell.
@@ -53,6 +53,12 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - Desktop `NetworkMonitor` checks for an up interface plus a DNS answer every 15 s (no request to any server); `-Dblossom.forceOffline=true` pins it offline for testing.
 
 ## Deviations from plan
+- Task 9.5:
+  - The IPC client is built on JDK 16+ Unix-domain sockets (Linux/macOS: runtime/temp dirs, Flatpak and Snap paths) and a `RandomAccessFile` named pipe (Windows), with no extra library.
+  - The activity has type 2 ("Listening to"), and the artwork URL is used as the large image when it's https.
+  - Updates go out on a track change, play/pause or a seek, at most one every 5 s.
+  - The setting is `integrations.discord`, off by default; its toggle comes in Settings → Integrations (9.7).
+  - Tested against a fake Discord socket (handshake + `SET_ACTIVITY`). Not run against a real Discord, because that would change your account's visible status (Open questions).
 - Task 9.4:
   - New module `feature/integrations`. The Last.fm and ListenBrainz clients speak the same protocol as BitChord's (signed `api_sig` POSTs; the ListenBrainz `Token` header), but they're written for OkHttp, because BitChord's use Ktor/Android logging. So they carry blossom's AGPL header.
   - The queue lives in preferences (`scrobble.queue`, at most 5,000 items) and records which services still need each item, so a retry never double-sends. Items go oldest first; there are 5 tries with backoff (30 s, 2 min, 10 min, 30 min), then the item is dropped.
@@ -285,6 +291,7 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - **No remote `main` branch.** `github.com/velosako3/blossom` has no commits, so `dev` starts from an empty history and the `dev → main` PR can't be opened until `main` exists (see open questions). Pushing to `main` is not allowed for this run.
 
 ## Open questions for owner
+- Discord Rich Presence is tested against a fake Discord socket only. To check it: run Discord, turn on Settings → Integrations → Discord, and play a song.
 - Scrobbling: the Last.fm key and signing are verified live, but scrobbling into an account needs you to sign in: Settings → Integrations → Last.fm (and paste a ListenBrainz token). I don't sign in to your accounts.
 - Sync backends: Google Drive (desktop) and Dropbox sign-in are built and tested against mocked endpoints, but haven't been run against the real services. That needs signing in with an account, which I don't do with yours. To check: Settings → Sync → Google Drive / Dropbox → sign in on two devices. For Drive on Android, create an Android OAuth client in Google Cloud Console (package `io.github.velosako3.blossom` plus the release key's SHA-1) and put its ID in `GOOGLE_OAUTH_ANDROID_CLIENT_ID`.
 - The desktop packaging plugin `vlcj-bundler` (from Spotube) downloads the base libVLC packages over plain HTTP without checksums. blossom's own extra-plugin task now verifies its downloads; vendoring and hardening the bundler (HTTPS + SHA256) would close the rest. Should blossom fork it?
