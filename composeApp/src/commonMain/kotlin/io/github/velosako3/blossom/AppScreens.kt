@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom
 
+import androidx.compose.runtime.LaunchedEffect
 import io.github.velosako3.blossom.composeApp.resources.saved_empty
 import io.github.velosako3.blossom.core.offline.OfflineRef
 import io.github.velosako3.blossom.core.offline.OfflineState
@@ -74,6 +75,7 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
     var addTracks by remember { mutableStateOf<List<Track>?>(null) }
     var creatingWith by remember { mutableStateOf<List<Track>?>(null) }
     var fullScreenLyrics by remember { mutableStateOf(false) }
+    var replaceFor by remember { mutableStateOf<io.github.velosako3.blossom.core.model.PlaylistEntry?>(null) }
     androidx.compose.runtime.LaunchedEffect(hasTrack) { if (!hasTrack) fullScreenLyrics = false }
     val playlists by graph.library.playlists.collectAsState()
     val current = graph.player.state.collectAsState().value.current
@@ -216,7 +218,18 @@ fun appSlots(graph: AppGraph, navigator: Navigator, searchFocus: FocusRequester,
                             }
                         },
                         rowBadge = { e -> e.track?.let { savedBadge(it) } },
+                        onUnavailableClick = { replaceFor = it },
                     )
+                    // Links that can vanish (untitled, SoundCloud) are rechecked when the playlist opens, at most daily.
+                    val loadedEntries = vm.state.collectAsState().value.playlist?.entries
+                    LaunchedEffect(pid, loadedEntries != null) {
+                        loadedEntries?.filter { it.track?.id?.kind in setOf(SourceKind.UNTITLED, SourceKind.SOUNDCLOUD) }
+                            ?.forEach { graph.deadLinks.recheckIfDue(pid, it) }
+                    }
+                    io.github.velosako3.blossom.feature.importer.FindReplacementSheet(replaceFor, graph.findReplacement, onDismiss = { replaceFor = null }) { picked ->
+                        replaceFor?.let { entry -> graph.scope.launch { graph.findReplacement.choose(pid, entry, picked) } }
+                        replaceFor = null
+                    }
                     true
                 }
                 Destination.Liked -> {

@@ -42,6 +42,8 @@ fun createAndroidGraph(context: Context): AppGraph {
     val youtube = YouTubeSource(streams)
     val soundcloudClient = io.github.velosako3.blossom.source.soundcloud.SoundCloudClient()
     val soundcloud = io.github.velosako3.blossom.source.soundcloud.SoundCloudSource(soundcloudClient)
+    val untitledClient = io.github.velosako3.blossom.source.untitled.UntitledClient()
+    val untitled = io.github.velosako3.blossom.source.untitled.UntitledSource(untitledClient)
     val trees = prefs.folderList("local.trees")
     val permission = MutableStateFlow(!AndroidLocalBridge.hasAudioPermission(context))
     val localLibrary = MediaStoreLibrary(context, trees, scope) { AndroidLocalBridge.hasAudioPermission(context) }
@@ -56,7 +58,7 @@ fun createAndroidGraph(context: Context): AppGraph {
     AndroidLocalBridge.onFolderPicked = { uri -> prefs.setFolderList("local.trees", (trees.value + uri).distinct(), trees) }
     AndroidLocalBridge.onPermissionResult = { permission.value = !it; scope.launch { localLibrary.rescan() } }
     val db = androidDatabase(context)
-    val resolver = StreamResolver(mapOf(SourceKind.YOUTUBE_MUSIC to ytm, SourceKind.YOUTUBE to youtube, SourceKind.SOUNDCLOUD to soundcloud), Clock.System)
+    val resolver = StreamResolver(mapOf(SourceKind.YOUTUBE_MUSIC to ytm, SourceKind.YOUTUBE to youtube, SourceKind.SOUNDCLOUD to soundcloud, SourceKind.UNTITLED to untitled), Clock.System)
     // filesDir, not cacheDir: Android may purge the cache folder, and saved songs must stay.
     val offlineSettings = OfflineSettingsStore(prefs, defaultWifiOnly = true)
     val offline = offlineStore(db, java.io.File(context.filesDir, "offline"), secure, resolver, network, offlineSettings.settings, scope)
@@ -73,7 +75,8 @@ fun createAndroidGraph(context: Context): AppGraph {
     )
     PlayerHolder.engine = engine
     PlayerHolder.player = player
-    return AppGraph(player, db, prefs.deviceId(), ytm, prefs, network, scope, local, offline = offline, offlineSettings = offlineSettings, shareLink = { link ->
+    return AppGraph(player, db, prefs.deviceId(), ytm, prefs, network, scope, local, offline = offline, offlineSettings = offlineSettings,
+        sources = mapOf(SourceKind.YOUTUBE to youtube, SourceKind.SOUNDCLOUD to soundcloud, SourceKind.UNTITLED to untitled), shareLink = { link ->
         context.startActivity(
             Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, link), null)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),

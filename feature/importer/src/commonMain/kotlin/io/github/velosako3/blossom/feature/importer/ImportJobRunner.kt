@@ -50,6 +50,8 @@ class ImportJobRunner(
     private val clock: Clock = Clock.System,
     /** Test hook: total items written so far, after each batch commits. */
     private val onBatchWritten: (Int) -> Unit = {},
+    /** After each batch commits: the native tracks it wrote (untitled auto-save uses this). */
+    private val onWritten: suspend (ImportService, List<Track>) -> Unit = { _, _ -> },
 ) {
     private val q get() = db.blossomQueries
     private val io = Dispatchers.IO
@@ -142,6 +144,7 @@ class ImportJobRunner(
                 }
                 written += window.size
                 onBatchWritten(written)
+                onWritten(ImportService.valueOf(job.service), results.mapNotNull { it.track.takeIf { _ -> it.status == EntryStatus.MATCHED } })
             }
             withContext(io) { q.importJobSetState(ImportJobState.DONE.name, id.value) }
         } catch (e: CancellationException) {

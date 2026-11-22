@@ -34,8 +34,12 @@ abstract class AddVlcPluginsTask : DefaultTask() {
 
     private fun linux(target: File) {
         val plugin = File(target, "plugins/access/libimem_plugin.so")
+        // es: the demuxer for plain MP3/AAC/AC-3 streams (untitled, SoundCloud progressive, local .mp3 files).
+        val es = File(target, "plugins/demux/libes_plugin.so")
+        // skiptags: skips ID3v2/APE tags in front of the audio, which es can't probe past (most MP3s have them).
+        val skiptags = File(target, "plugins/stream_filter/libskiptags_plugin.so")
         val libs = listOf("libebml.so.5", "libmatroska.so.7")
-        if (!target.isDirectory || (plugin.isFile && libs.all { File(target, it).isFile })) return
+        if (!target.isDirectory || (plugin.isFile && es.isFile && skiptags.isFile && libs.all { File(target, it).isFile })) return
         val mirror = "http://archive.ubuntu.com/ubuntu"
         val wanted = setOf("vlc-plugin-base", "libebml5", "libmatroska7")
         val index = HashMap<String, String>()
@@ -64,6 +68,12 @@ abstract class AddVlcPluginsTask : DefaultTask() {
         plugin.parentFile.mkdirs()
         src.copyTo(plugin, overwrite = true)
         exec(plugin.parentFile, "patchelf", "--set-rpath", "\$ORIGIN/../..", plugin.absolutePath)
+        for ((dest, dir) in listOf(es to "plugins/demux", skiptags to "plugins/stream_filter")) {
+            val src = work.walkTopDown().first { it.name == dest.name && it.path.contains(dir) }
+            dest.parentFile.mkdirs()
+            src.copyTo(dest, overwrite = true)
+            exec(dest.parentFile, "patchelf", "--set-rpath", "\$ORIGIN/../..", dest.absolutePath)
+        }
         // libebml/libmatroska: needed by the bundled mkv demuxer (YouTube's Opus streams are WebM).
         for (lib in libs) {
             val file = work.walkTopDown().first { it.name == lib }
@@ -75,18 +85,20 @@ abstract class AddVlcPluginsTask : DefaultTask() {
     }
 
     private fun windows(target: File) {
-        val wanted = setOf("libimem_plugin.dll")
-        if (!target.isDirectory || wanted.all { File(target, "plugins/access/$it").isFile }) return
+        // imem (callback media) and es (plain MP3/AAC streams), each in its plugin folder.
+        val wanted = mapOf("libimem_plugin.dll" to "access", "libes_plugin.dll" to "demux", "libskiptags_plugin.dll" to "stream_filter")
+        if (!target.isDirectory || wanted.all { (n, dir) -> File(target, "plugins/$dir/$n").isFile }) return
         var added = 0
         val url = "https://download.videolan.org/pub/videolan/vlc/3.0.23/win64/vlc-3.0.23-win64.zip"
         ZipInputStream(URI(url).toURL().openStream()).use { zip ->
             var e = zip.nextEntry
             while (e != null) {
                 val name = e.name.substringAfterLast('/')
-                if (e.name.contains("plugins/access/") && name in wanted) {
-                    val dest = File(target, "plugins/access/$name").apply { parentFile.mkdirs() }
+                val dir = wanted[name]
+                if (dir != null && e.name.contains("plugins/$dir/")) {
+                    val dest = File(target, "plugins/$dir/$name").apply { parentFile.mkdirs() }
                     FileOutputStream(dest).use { zip.copyTo(it) }
-                    if (++added == wanted.size) { logger.lifecycle("Added ${wanted.joinToString()}"); return }
+                    if (++added == wanted.size) { logger.lifecycle("Added ${wanted.keys.joinToString()}"); return }
                 }
                 e = zip.nextEntry
             }

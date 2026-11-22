@@ -66,6 +66,8 @@ class AppGraph(
     /** The encrypted offline cache (null in UI tests that don't need it). */
     val offline: io.github.velosako3.blossom.core.offline.OfflineStore? = null,
     val offlineSettings: OfflineSettingsStore? = null,
+    /** Every playable source by kind (YouTube Music is [ytm]). */
+    val sources: Map<SourceKind, io.github.velosako3.blossom.source.api.MusicSource> = emptyMap(),
 ) {
     val search = SearchViewModel(ytm, RecentSearchStore(prefs), scope, network, offlineSearch = ::searchOffline)
     val hlc = HybridLogicalClock(deviceId, Clock.System)
@@ -96,6 +98,18 @@ class AppGraph(
                 lists.filter { it.id in savedIds }.map { OfflinePlaylistCard(it.id.value, it.name, it.artworkUrls) },
                 recent.ifEmpty { saved }.take(20),
             )
+        }
+    }
+
+    /** Plain YouTube uploads and SoundCloud: where re-uploads of vanished songs usually are. */
+    val findReplacement = io.github.velosako3.blossom.feature.importer.FindReplacement(listOfNotNull(sources[SourceKind.YOUTUBE], sources[SourceKind.SOUNDCLOUD]), commands)
+
+    /** untitled and SoundCloud links can disappear; checked when a playlist opens, at most daily per entry. */
+    val deadLinks = io.github.velosako3.blossom.feature.importer.DeadLinkRechecker(Clock.System, commands) { t ->
+        if (!network.status.value.online) null
+        else when (t.id.kind) {
+            SourceKind.UNTITLED, SourceKind.SOUNDCLOUD -> sources[t.id.kind]?.track(t.id) != null
+            else -> null
         }
     }
 

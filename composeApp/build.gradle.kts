@@ -52,6 +52,7 @@ kotlin {
                 implementation(projects.feature.importer)
                 implementation(projects.source.spotify)
                 implementation(projects.source.soundcloud)
+                implementation(projects.source.untitled)
                 implementation(projects.core.database)
                 implementation(projects.core.offline)
                 implementation(libs.okhttp)

@@ -95,6 +95,8 @@ fun PlaylistScreen(
     menuActions: List<PlaylistMenuAction> = emptyList(),
     headerExtras: @Composable () -> Unit = {},
     rowBadge: @Composable (PlaylistEntry) -> Unit = {},
+    /** Tapping an unavailable entry ("Find replacement"). */
+    onUnavailableClick: ((PlaylistEntry) -> Unit)? = null,
 ) {
     val state by vm.state.collectAsState()
     val playlist = state.playlist
@@ -169,7 +171,13 @@ fun PlaylistScreen(
                             modifier = Modifier
                                 .background(if (selected) colors.accent.copy(alpha = 0.18f) else androidx.compose.ui.graphics.Color.Transparent, CircleShape.let { androidx.compose.foundation.shape.RoundedCornerShape(12.dp) })
                                 .combinedClickable(
-                                    onClick = { if (state.selected.isNotEmpty()) vm.toggleSelected(entry.entryId) else if (!unavailable && !missing) playFrom(entry, false) },
+                                    onClick = {
+                                        when {
+                                            state.selected.isNotEmpty() -> vm.toggleSelected(entry.entryId)
+                                            unavailable -> onUnavailableClick?.invoke(entry)
+                                            !missing -> playFrom(entry, false)
+                                        }
+                                    },
                                     onLongClick = { vm.toggleSelected(entry.entryId) },
                                 )
                                 .focusable()

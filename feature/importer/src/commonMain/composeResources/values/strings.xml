@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="replace_title">Find a replacement</string>
+    <string name="replace_subtitle">For “%1$s”. Pick an upload to put in its place.</string>
+    <string name="replace_none">Nothing found on YouTube or SoundCloud.</string>
+    <string name="replace_source_youtube">YouTube</string>
+    <string name="replace_source_soundcloud">SoundCloud</string>
+</resources>
