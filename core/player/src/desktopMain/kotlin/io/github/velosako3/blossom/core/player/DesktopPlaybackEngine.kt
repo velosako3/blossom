@@ -27,6 +27,17 @@ class DesktopPlaybackEngine(
     private val offlineReader: (TrackId) -> DecryptingReader? = { null },
 ) : PlaybackEngine {
     @Volatile private var reader: ByteSource? = null
+    /** The current HLS stream, which seeks by restarting at a segment; positions add [hlsOffsetMs]. */
+    @Volatile private var hls: HlsReader? = null
+    @Volatile private var hlsOffsetMs = 0L
+    /** Whether libVLC reports a slice's time from its own start (MPEG-TS) or as the stream's time (fragmented MP4). */
+    @Volatile private var hlsRelative: Boolean? = null
+
+    private fun hlsTime(vlcTime: Long): Long {
+        if (hls == null || hlsOffsetMs == 0L) return vlcTime
+        val relative = hlsRelative ?: (vlcTime < hlsOffsetMs - 2_000).also { hlsRelative = it }
+        return if (relative) vlcTime + hlsOffsetMs else vlcTime
+    }
     @Volatile override var mediaId: Long = 0
         private set
     /** The id of the media libVLC is actually reporting on; switches in `mediaChanged`, in order with its events. */
@@ -50,7 +61,7 @@ class DesktopPlaybackEngine(
     init {
         mediaPlayer.events().addMediaPlayerEventListener(object : MediaPlayerEventAdapter() {
             override fun timeChanged(mediaPlayer: MediaPlayer, newTime: Long) {
-                _events.tryEmit(EngineEvent.Position(newTime, mediaPlayer.status().length().coerceAtLeast(0), eventsId))
+                _events.tryEmit(EngineEvent.Position(hlsTime(newTime), hls?.durationMs ?: mediaPlayer.status().length().coerceAtLeast(0), eventsId))
             }
             override fun buffering(mediaPlayer: MediaPlayer, newCache: Float) {
                 _events.tryEmit(EngineEvent.Buffering(newCache < 100f, eventsId))
@@ -71,8 +82,17 @@ class DesktopPlaybackEngine(
         when (input) {
             // libVLC's own HTTP client fails its second (seek) connection inside the JVM, so remote bytes come from
             // our ranged OkHttp reader through vlcj callback media; libVLC never opens a socket.
-            is MediaInput.Remote -> prepare(HttpRangeReader(input.stream).asSource(), options)
-            is MediaInput.LocalFile -> { reader = null; mediaPlayer.media().prepare(input.path, *options) }
+            is MediaInput.Remote -> if (input.stream.mimeType.contains("mpegurl", ignoreCase = true)) {
+                // HLS (SoundCloud): the playlist and segment sizes are fetched up front, off the caller's thread.
+                val stream = try {
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { HlsReader(input.stream) }
+                } catch (e: java.io.IOException) {
+                    _events.tryEmit(EngineEvent.Error(null, e, mediaId)); return
+                }
+                hls = stream
+                startHlsAt(stream, startPositionMs)
+            } else { hls = null; hlsOffsetMs = 0; prepare(HttpRangeReader(input.stream).asSource(), options) }
+            is MediaInput.LocalFile -> { hls = null; hlsOffsetMs = 0; reader = null; mediaPlayer.media().prepare(input.path, *options) }
             is MediaInput.Offline -> {
                 val r = try { offlineReader(input.trackId) } catch (e: Exception) { null }
                 if (r == null) {
@@ -80,6 +100,7 @@ class DesktopPlaybackEngine(
                     _events.tryEmit(EngineEvent.Error(null, CacheCorruptedException("saved file missing or unreadable"), mediaId))
                     return
                 }
+                hls = null; hlsOffsetMs = 0
                 prepare(DecryptingCursor(r).asSource(), options)
             }
         }
@@ -95,7 +116,29 @@ class DesktopPlaybackEngine(
 
     override fun play() { mediaPlayer.submit { mediaPlayer.controls().play() } }
     override fun pause() { mediaPlayer.submit { mediaPlayer.controls().setPause(true) } }
-    override fun seekTo(ms: Long) { mediaPlayer.submit { mediaPlayer.controls().setTime(ms) } }
+    override fun seekTo(ms: Long) {
+        val stream = hls
+        if (stream == null) { mediaPlayer.submit { mediaPlayer.controls().setTime(ms) }; return }
+        // libVLC can't seek concatenated HLS segments by bytes: restart at the segment that holds [ms].
+        mediaPlayer.submit {
+            val playing = mediaPlayer.status().isPlaying
+            startHlsAt(stream, ms)
+            if (playing) mediaPlayer.controls().play()
+        }
+    }
+
+    /**
+     * Starts [stream] at the segment boundary nearest [ms] (libVLC ignores `:start-time` on these slices; SoundCloud
+     * segments are ~10 s, so a seek lands within ~5 s).
+     */
+    private fun startHlsAt(stream: HlsReader, ms: Long) {
+        var segment = stream.segmentAt(ms)
+        val next = stream.segmentStartMs(segment + 1)
+        if (next - ms < ms - stream.segmentStartMs(segment) && next < stream.durationMs) segment++
+        hlsOffsetMs = stream.segmentStartMs(segment)
+        hlsRelative = null
+        prepare(stream.from(segment).asSource(), emptyArray())
+    }
     override fun setVolume(v: Float) { mediaPlayer.submit { mediaPlayer.audio().setVolume((v * 100).toInt().coerceIn(0, 200)) } }
 
     override fun release() {
@@ -117,6 +160,13 @@ private interface ByteSource {
 
 private fun HttpRangeReader.asSource() = object : ByteSource {
     override val lastStatus: Int? get() = this@asSource.lastStatus
+    override fun size() = this@asSource.size()
+    override fun read(buffer: ByteArray, length: Int) = this@asSource.read(buffer, length)
+    override fun seek(offset: Long) = this@asSource.seek(offset)
+    override fun close() = this@asSource.close()
+}
+
+private fun HlsReader.asSource() = object : ByteSource {
     override fun size() = this@asSource.size()
     override fun read(buffer: ByteArray, length: Int) = this@asSource.read(buffer, length)
     override fun seek(offset: Long) = this@asSource.seek(offset)

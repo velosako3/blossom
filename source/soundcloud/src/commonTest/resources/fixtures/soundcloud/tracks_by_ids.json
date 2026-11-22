@@ -1,0 +1,182 @@
+[
+ {
+  "id": 1290137131,
+  "kind": "track",
+  "title": "\u00f8neheart x reidenshi - snowfall (slowed reverb)",
+  "duration": 138559,
+  "full_duration": 138553,
+  "policy": "MONETIZE",
+  "artwork_url": "https://i1.sndcdn.com/artworks-ogGBoDgZvOyKq0ah-NrFpZQ-large.jpg",
+  "permalink_url": "https://soundcloud.com/vezal/oneheart-x-reidenshi-snowfall-slowed-reverb",
+  "publisher_metadata": {
+   "artist": "Vezal, Reidenshi",
+   "isrc": "QZS652210697"
+  },
+  "user": {
+   "id": 611786085,
+   "username": "Vezal",
+   "avatar_url": "https://i1.sndcdn.com/avatars-sdw2IgQruVVopNn5-eTCBuA-large.jpg",
+   "permalink_url": "https://soundcloud.com/vezal"
+  },
+  "media": {
+   "transcodings": [
+    {
+     "url": "{API}/media/soundcloud:tracks:1290137131/de7a2f03-35cf-4968-a17c-1cea0345f502/stream/hls",
+     "preset": "aac_96k",
+     "duration": 138559,
+     "snipped": false,
+     "format": {
+      "protocol": "hls",
+      "mime_type": "audio/mp4; codecs=\"mp4a.40.2\""
+     },
+     "quality": "lq",
+     "is_legacy_transcoding": false
+    },
+    {
+     "url": "{API}/media/soundcloud:tracks:1290137131/8d90c455-461e-4884-8afb-3ebb9bfa37e5/stream/hls",
+     "preset": "abr_sq",
+     "duration": 138559,
+     "snipped": false,
+     "format": {
+      "protocol": "hls",
+      "mime_type": "audio/mpegurl"
+     },
+     "quality": "sq",
+     "is_legacy_transcoding": false
+    }
+   ]
+  },
+  "track_authorization": "FAKE_TRACK_AUTH",
+  "streamable": true,
+  "urn": "soundcloud:tracks:1290137131",
+  "monetization_model": "AD_SUPPORTED"
+ },
+ {
+  "id": 1367563483,
+  "kind": "track",
+  "title": "daniel.mp3 - green to blue (slowed & reverb)",
+  "duration": 223077,
+  "full_duration": 223060,
+  "policy": "MONETIZE",
+  "artwork_url": "https://i1.sndcdn.com/artworks-t0ezz8ecnFPNhzD4-41HMog-large.jpg",
+  "permalink_url": "https://soundcloud.com/butareyou_ok/green-to-blue-slowed-reverb",
+  "publisher_metadata": {
+   "artist": "but are you ok?",
+   "isrc": "QZMHM2439037"
+  },
+  "user": {
+   "id": 1100733898,
+   "username": "but are you ok?",
+   "avatar_url": "https://i1.sndcdn.com/avatars-NkiffPD0zBYnxalX-bLB17w-large.jpg",
+   "permalink_url": "https://soundcloud.com/butareyou_ok"
+  },
+  "media": {
+   "transcodings": [
+    {
+     "url": "{API}/media/soundcloud:tracks:1367563483/f5765782-cdec-433e-bbed-6f3bc0dd544d/stream/hls",
+     "preset": "aac_160k",
+     "duration": 223077,
+     "snipped": false,
+     "format": {
+      "protocol": "hls",
+      "mime_type": "audio/mp4; codecs=\"mp4a.40.2\""
+     },
+     "quality": "sq",
+     "is_legacy_transcoding": false
+    },
+    {
+     "url": "{API}/media/soundcloud:tracks:1367563483/e4856688-40bd-4a90-aadd-5c591ccb87bd/stream/hls",
+     "preset": "aac_96k",
+     "duration": 223077,
+     "snipped": false,
+     "format": {
+      "protocol": "hls",
+      "mime_type": "audio/mp4; codecs=\"mp4a.40.2\""
+     },
+     "quality": "lq",
+     "is_legacy_transcoding": false
+    },
+    {
+     "url": "{API}/media/soundcloud:tracks:1367563483/fc29d01f-322b-4e81-a46b-f91a086e72d1/stream/hls",
+     "preset": "abr_sq",
+     "duration": 223077,
+     "snipped": false,
+     "format": {
+      "protocol": "hls",
+      "mime_type": "audio/mpegurl"
+     },
+     "quality": "sq",
+     "is_legacy_transcoding": false
+    }
+   ]
+  },
+  "track_authorization": "FAKE_TRACK_AUTH",
+  "streamable": true,
+  "urn": "soundcloud:tracks:1367563483",
+  "monetization_model": "AD_SUPPORTED"
+ },
+ {
+  "id": 1318314739,
+  "kind": "track",
+  "title": "watching the stars",
+  "duration": 99192,
+  "full_duration": 99187,
+  "policy": "MONETIZE",
+  "artwork_url": "https://i1.sndcdn.com/artworks-PBgUOr5ibBbeGOhS-TkhdLg-large.jpg",
+  "permalink_url": "https://soundcloud.com/oneheartisok/watchingthestars",
+  "publisher_metadata": {
+   "artist": "\u00d8neheart",
+   "isrc": "US3DF2279439"
+  },
+  "user": {
+   "id": 369953741,
+   "username": "\u00d8neheart",
+   "avatar_url": "https://i1.sndcdn.com/avatars-wRsCKf0B3SzEgqAe-Yyz9UQ-large.jpg",
+   "permalink_url": "https://soundcloud.com/oneheartisok"
+  },
+  "media": {
+   "transcodings": [
+    {
+     "url": "{API}/media/soundcloud:tracks:1318314739/bd78fe67-a4d8-4961-bd86-f74a37782295/stream/hls",
+     "preset": "aac_160k",
+     "duration": 99192,
+     "snipped": false,
+     "format": {
+      "protocol": "hls",
+      "mime_type": "audio/mp4; codecs=\"mp4a.40.2\""
+     },
+     "quality": "sq",
+     "is_legacy_transcoding": false
+    },
+    {
+     "url": "{API}/media/soundcloud:tracks:1318314739/f31e9680-ea70-4e0e-986d-77b9dd0b23be/stream/hls",
+     "preset": "aac_96k",
+     "duration": 99192,
+     "snipped": false,
+     "format": {
+      "protocol": "hls",
+      "mime_type": "audio/mp4; codecs=\"mp4a.40.2\""
+     },
+     "quality": "lq",
+     "is_legacy_transcoding": false
+    },
+    {
+     "url": "{API}/media/soundcloud:tracks:1318314739/4ec7f417-f117-4c11-82a7-a47635ef6652/stream/hls",
+     "preset": "abr_sq",
+     "duration": 99192,
+     "snipped": false,
+     "format": {
+      "protocol": "hls",
+      "mime_type": "audio/mpegurl"
+     },
+     "quality": "sq",
+     "is_legacy_transcoding": false
+    }
+   ]
+  },
+  "track_authorization": "FAKE_TRACK_AUTH",
+  "streamable": true,
+  "urn": "soundcloud:tracks:1318314739",
+  "monetization_model": "AD_SUPPORTED"
+ }
+]

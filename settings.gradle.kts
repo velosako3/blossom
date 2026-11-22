@@ -30,5 +30,5 @@ dependencyResolutionManagement {
 
 include(":composeApp", ":androidApp")
 include(":core:designsystem", ":core:model", ":core:platform", ":core:player", ":core:database", ":core:offline")
-include(":source:api", ":source:youtubemusic", ":source:spotify")
+include(":source:api", ":source:youtubemusic", ":source:spotify", ":source:soundcloud")
 include(":feature:home", ":feature:search", ":feature:album", ":feature:artist", ":feature:nowplaying", ":feature:library", ":feature:lyrics", ":feature:settings", ":feature:importer")

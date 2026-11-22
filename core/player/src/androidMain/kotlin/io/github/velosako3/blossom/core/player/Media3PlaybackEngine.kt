@@ -118,7 +118,12 @@ class Media3PlaybackEngine(
             is MediaInput.Offline -> offlineUri(input.trackId)
         }
         mediaId++
-        exoPlayer.setMediaItem(MediaItem.Builder().setUri(uri).setMediaMetadata(metadata).build(), startPositionMs)
+        // HLS (SoundCloud) has no telltale extension in its signed URLs, so say what it is.
+        val hls = (input as? MediaInput.Remote)?.stream?.mimeType?.contains("mpegurl", ignoreCase = true) == true
+        exoPlayer.setMediaItem(
+            MediaItem.Builder().setUri(uri).setMediaMetadata(metadata).apply { if (hls) setMimeType(androidx.media3.common.MimeTypes.APPLICATION_M3U8) }.build(),
+            startPositionMs,
+        )
         exoPlayer.prepare()
     }
 

@@ -94,7 +94,7 @@ class HttpRangeReader(
         chunkEnd = -1
     }
 
-    private companion object {
+    internal companion object {
         val sharedClient: OkHttpClient = OkHttpClient.Builder().connectTimeout(15, TimeUnit.SECONDS).readTimeout(30, TimeUnit.SECONDS).build()
     }
 }

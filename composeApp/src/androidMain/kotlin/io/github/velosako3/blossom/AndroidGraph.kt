@@ -40,6 +40,8 @@ fun createAndroidGraph(context: Context): AppGraph {
     val streams = YouTubeStreams({ secure.get(YtmSource.COOKIE_KEY) }, context.cacheDir)
     val ytm = YtmSource(secure, context.cacheDir, streams = streams)
     val youtube = YouTubeSource(streams)
+    val soundcloudClient = io.github.velosako3.blossom.source.soundcloud.SoundCloudClient()
+    val soundcloud = io.github.velosako3.blossom.source.soundcloud.SoundCloudSource(soundcloudClient)
     val trees = prefs.folderList("local.trees")
     val permission = MutableStateFlow(!AndroidLocalBridge.hasAudioPermission(context))
     val localLibrary = MediaStoreLibrary(context, trees, scope) { AndroidLocalBridge.hasAudioPermission(context) }
@@ -54,7 +56,7 @@ fun createAndroidGraph(context: Context): AppGraph {
     AndroidLocalBridge.onFolderPicked = { uri -> prefs.setFolderList("local.trees", (trees.value + uri).distinct(), trees) }
     AndroidLocalBridge.onPermissionResult = { permission.value = !it; scope.launch { localLibrary.rescan() } }
     val db = androidDatabase(context)
-    val resolver = StreamResolver(mapOf(SourceKind.YOUTUBE_MUSIC to ytm, SourceKind.YOUTUBE to youtube), Clock.System)
+    val resolver = StreamResolver(mapOf(SourceKind.YOUTUBE_MUSIC to ytm, SourceKind.YOUTUBE to youtube, SourceKind.SOUNDCLOUD to soundcloud), Clock.System)
     // filesDir, not cacheDir: Android may purge the cache folder, and saved songs must stay.
     val offlineSettings = OfflineSettingsStore(prefs, defaultWifiOnly = true)
     val offline = offlineStore(db, java.io.File(context.filesDir, "offline"), secure, resolver, network, offlineSettings.settings, scope)

@@ -43,6 +43,8 @@ fun createDesktopGraph(): AppGraph {
     val streams = YouTubeStreams({ secure.get(YtmSource.COOKIE_KEY) }, cacheDir)
     val ytm = YtmSource(secure, cacheDir, streams = streams)
     val youtube = YouTubeSource(streams)
+    val soundcloudClient = io.github.velosako3.blossom.source.soundcloud.SoundCloudClient()
+    val soundcloud = io.github.velosako3.blossom.source.soundcloud.SoundCloudSource(soundcloudClient)
     val folders = prefs.folderList("local.folders")
     val localLibrary = FolderLocalLibrary(folders.map { l -> l.map(::File) }.stateIn(scope, SharingStarted.Eagerly, folders.value.map(::File)), File(cacheDir, "artwork"), scope)
     val local = LocalFilesHost(
@@ -59,7 +61,7 @@ fun createDesktopGraph(): AppGraph {
         removeFolder = { f -> prefs.setFolderList("local.folders", folders.value - f, folders) },
     )
     val db = fileDatabase(File(dataDir, "blossom.db"))
-    val resolver = StreamResolver(mapOf(SourceKind.YOUTUBE_MUSIC to ytm, SourceKind.YOUTUBE to youtube), Clock.System)
+    val resolver = StreamResolver(mapOf(SourceKind.YOUTUBE_MUSIC to ytm, SourceKind.YOUTUBE to youtube, SourceKind.SOUNDCLOUD to soundcloud), Clock.System)
     val offlineSettings = OfflineSettingsStore(prefs, defaultWifiOnly = false)
     val offline = offlineStore(db, File(dataDir, "offline"), secure, resolver, network, offlineSettings.settings, scope)
     val engine = DesktopPlaybackEngine(offlineReader = offline::openReader)
