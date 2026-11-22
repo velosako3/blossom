@@ -172,6 +172,8 @@ class AppGraph(
         YouTubeLyricsApi.browse = { id, params -> ytm.client.browse(id, params) }
         YouTubeLyricsApi.transcript = ytm.client::transcript
     }
+    val sleepTimer = io.github.velosako3.blossom.core.player.SleepTimer(player, scope)
+
     private val _eq = MutableStateFlow(io.github.velosako3.blossom.core.player.eq.EqSettings.decode(prefs.get(EQ_KEY)))
     /** The equalizer: saved per device and applied to the player at once. */
     val eq: StateFlow<io.github.velosako3.blossom.core.player.eq.EqSettings> = _eq

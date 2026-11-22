@@ -55,6 +55,8 @@ class DefaultBlossomPlayer(
     private var fadeJob: Job? = null
     private var fadingOut: PlaybackEngine? = null
     private var preloadedFor: Int = -1
+    private val _stopAfterCurrent = MutableStateFlow(false)
+    override val stopAfterCurrent: StateFlow<Boolean> = _stopAfterCurrent.asStateFlow()
 
     private val queue = QueueManager()
     private val mutex = Mutex()
@@ -135,6 +137,8 @@ class DefaultBlossomPlayer(
         if (fadeJob?.isActive != true) engine.setVolume(this.volume)
     }
 
+    override fun setStopAfterCurrent(enabled: Boolean) { _stopAfterCurrent.value = enabled }
+
     /** Both engines, so a crossfade keeps the same sound. */
     override fun setEqualizer(settings: io.github.velosako3.blossom.core.player.eq.EqSettings) = listOfNotNull(primary, fadeEngine).forEach { it.setEqualizer(settings) }
 
@@ -154,7 +158,12 @@ class DefaultBlossomPlayer(
                 approachingEnd(event.durationMs - event.positionMs)
             }
             is EngineEvent.Buffering -> _state.update { it.copy(isBuffering = event.buffering) }
-            is EngineEvent.Ended -> advance(userInitiated = false)
+            is EngineEvent.Ended -> if (_stopAfterCurrent.compareAndSet(true, false)) {
+                wantPlaying = false
+                engine.pause()
+                _state.update { it.copy(isPlaying = false) }
+                publish()
+            } else advance(userInitiated = false)
             is EngineEvent.Error -> onError(event)
         }
     }
@@ -209,7 +218,7 @@ class DefaultBlossomPlayer(
 
     /** Near the end: start the crossfade, or resolve the next stream ahead so it starts at once. */
     private suspend fun approachingEnd(remainingMs: Long) {
-        if (remainingMs <= 0 || fadeJob?.isActive == true || !wantPlaying) return
+        if (remainingMs <= 0 || fadeJob?.isActive == true || !wantPlaying || _stopAfterCurrent.value) return
         val current = queue.current ?: return
         val next = upNext() ?: return
         val seconds = crossfadeSeconds()

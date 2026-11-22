@@ -23,4 +23,7 @@ interface BlossomPlayer {
     fun removeFromQueue(index: Int)
     fun setVolume(volume: Float)
     fun setEqualizer(settings: io.github.velosako3.blossom.core.player.eq.EqSettings) {}
+    /** Pause when the current track ends instead of moving on (sleep timer "end of track"); clears itself then. */
+    fun setStopAfterCurrent(enabled: Boolean) {}
+    val stopAfterCurrent: kotlinx.coroutines.flow.StateFlow<Boolean> get() = kotlinx.coroutines.flow.MutableStateFlow(false)
 }

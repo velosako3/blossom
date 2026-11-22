@@ -73,5 +73,5 @@ repository has no `main` branch (see `docs/progress.md` → Open questions); pas
   - both criticals: offline guessing of the pairing secret plus try and window bypasses; ops lost after a read error
   - all 4 important: LAN DoS limits, sign-in only on choose with timeouts handled, sync work off the UI thread, camera released
   - 2 minors: a blank WebDAV password wiped the stored one; peers could write this device's own history
-  - Deferred: 4 minors (see `docs/progress.md`).
+  - The other minors are deferred (see `docs/progress.md`).
 
