@@ -53,6 +53,13 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - Desktop `NetworkMonitor` checks for an up interface plus a DNS answer every 15 s (no request to any server); `-Dblossom.forceOffline=true` pins it offline for testing.
 
 ## Deviations from plan
+- Task 9.8:
+  - The plan's `:composeApp:assembleRelease` is `:androidApp:assembleRelease` here (AGP 9 keeps the app module separate).
+  - R8 and desktop ProGuard are off for now: NewPipe, InnerTubeX and vlcj use reflection and would need keep rules first. The APK is ~25 MB.
+  - The AppImage is made on CI from the release app image with appimagetool 1.9.1, pinned by SHA-256. The Windows portable zip is the app image folder.
+  - App icons: one blossom mark (`composeApp/icons/blossom.svg`), rendered to PNG/ICO for the installers and the window, plus an Android adaptive vector icon (with monochrome).
+  - Verified locally: all four APKs, the release app image (libVLC plus 51 plugins bundled) and the AppImage. There's no `dpkg-deb` on this machine, so the `.deb` and the Windows MSI are verified only on CI. I didn't open the packaged app's window on the owner's display.
+  - `actionlint` isn't installed; the workflow was reviewed by hand and parses as YAML.
 - Task 9.7:
   - Settings is one scrolling page in sections, with links to the sub-screens: equalizer, storage, local files, sync, licenses and sign-in.
   - Onboarding shows on first run only. It's skippable and comes back via Settings → About → "Show the welcome again". Tests skip it with `-Dblossom.skipOnboarding=true`.

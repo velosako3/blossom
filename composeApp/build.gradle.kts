@@ -119,6 +119,8 @@ compose.desktop {
         jvmArgs += listOf("blossom.debugPlay", "blossom.forceOffline", "blossom.dataDir", "blossom.vlcLog").mapNotNull { key ->
             providers.gradleProperty(key).orNull?.let { "-D$key=$it" }
         }
+        // ponytail: no ProGuard; NewPipe, InnerTubeX and vlcj use reflection and would need keep rules first.
+        buildTypes.release.proguard { isEnabled.set(false) }
         nativeDistributions {
             appResourcesRootDir.set(vlcjBundler.vlcNativesDirectory)
             targetFormats(TargetFormat.Msi, TargetFormat.Deb, TargetFormat.AppImage)
@@ -127,8 +129,12 @@ compose.desktop {
             description = "blossom music player"
             vendor = "blossom"
             licenseFile.set(rootProject.file("LICENSE"))
-            linux { packageName = "blossom" }
+            linux {
+                packageName = "blossom"
+                iconFile.set(project.file("icons/blossom.png"))
+            }
             windows {
+                iconFile.set(project.file("icons/blossom.ico"))
                 menuGroup = "blossom"
                 upgradeUuid = "6b1f0d0e-5c8e-4f0a-9a43-b10550a1b10d"
             }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.window
 
+import io.github.velosako3.blossom.composeApp.resources.blossom_icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -54,6 +55,7 @@ fun ApplicationScope.BlossomWindow(
         onCloseRequest = close,
         state = state,
         title = BlossomBuildInfo.APP_NAME,
+        icon = org.jetbrains.compose.resources.painterResource(io.github.velosako3.blossom.composeApp.resources.Res.drawable.blossom_icon),
         undecorated = !saved.systemTitleBar,
         onPreviewKeyEvent = onPreviewKeyEvent,
         onKeyEvent = onKeyEvent,

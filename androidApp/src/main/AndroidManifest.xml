@@ -8,6 +8,7 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <application
+        android:icon="@mipmap/ic_launcher"
         android:name=".BlossomApplication"
         android:label="@string/app_name"
         android:supportsRtl="true"

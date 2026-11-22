@@ -1,0 +1,126 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Installer builds, uploaded as workflow artifacts (no tags, no releases). Manual runs always build; pushes to dev
+# only when the commit message contains [build], to keep CI minutes low on a private repo.
+name: installers
+on:
+  workflow_dispatch:
+  push:
+    branches: [dev]
+
+concurrency:
+  group: installers-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Optional client IDs: an empty one hides that option in the app.
+  GOOGLE_OAUTH_DESKTOP_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_DESKTOP_CLIENT_ID }}
+  GOOGLE_OAUTH_DESKTOP_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_DESKTOP_CLIENT_SECRET }}
+  GOOGLE_OAUTH_ANDROID_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_ANDROID_CLIENT_ID }}
+  DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
+  LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+  LASTFM_API_SECRET: ${{ secrets.LASTFM_API_SECRET }}
+  DISCORD_APPLICATION_ID: ${{ secrets.DISCORD_APPLICATION_ID }}
+
+jobs:
+  android:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[build]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+            echo "SUFFIX=" >> "$GITHUB_ENV"
+          else
+            echo "SUFFIX=-test-build" >> "$GITHUB_ENV"
+          fi
+      - name: Build
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew :androidApp:assembleRelease --console=plain
+      - name: Name and checksum
+        run: |
+          VER=$(grep '^blossom.version=' gradle.properties | cut -d= -f2)
+          mkdir out
+          for abi in arm64-v8a armeabi-v7a x86_64 universal; do
+            cp "androidApp/build/outputs/apk/release/androidApp-$abi-release.apk" "out/blossom-$VER-android-$abi$SUFFIX.apk"
+          done
+          (cd out && sha256sum * > SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: out/
+
+  windows:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[build]')
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build
+        run: ./gradlew :composeApp:packageReleaseMsi :composeApp:createReleaseDistributable --console=plain
+      - name: Name and checksum
+        shell: bash
+        run: |
+          VER=$(grep '^blossom.version=' gradle.properties | cut -d= -f2)
+          mkdir out
+          cp composeApp/build/compose/binaries/main-release/msi/*.msi "out/blossom-$VER-windows-x64.msi"
+          (cd composeApp/build/compose/binaries/main-release/app && 7z a -tzip "$GITHUB_WORKSPACE/out/blossom-$VER-windows-x64-portable.zip" blossom > /dev/null)
+          (cd out && sha256sum * > SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: out/
+
+  linux:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[build]')
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build
+        run: ./gradlew :composeApp:packageReleaseDeb :composeApp:createReleaseDistributable --console=plain
+      - name: AppImage
+        run: |
+          # appimagetool 1.9.1, pinned by checksum.
+          curl -sSL -o appimagetool https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+          echo "ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0  appimagetool" | sha256sum -c -
+          chmod +x appimagetool
+          APPDIR=blossom.AppDir
+          cp -r composeApp/build/compose/binaries/main-release/app/blossom "$APPDIR"
+          printf '#!/bin/sh\nexec "$(dirname "$(readlink -f "$0")")/bin/blossom" "$@"\n' > "$APPDIR/AppRun"
+          chmod +x "$APPDIR/AppRun"
+          printf '[Desktop Entry]\nType=Application\nName=blossom\nComment=Music player\nExec=blossom\nIcon=blossom\nCategories=AudioVideo;Audio;Player;\n' > "$APPDIR/blossom.desktop"
+          cp composeApp/icons/blossom.png "$APPDIR/blossom.png"
+          VER=$(grep '^blossom.version=' gradle.properties | cut -d= -f2)
+          ARCH=x86_64 ./appimagetool --appimage-extract-and-run "$APPDIR" "blossom-$VER-linux-x86_64.AppImage"
+      - name: Name and checksum
+        run: |
+          VER=$(grep '^blossom.version=' gradle.properties | cut -d= -f2)
+          mkdir out
+          cp composeApp/build/compose/binaries/main-release/deb/*.deb "out/blossom_${VER}_amd64.deb"
+          mv "blossom-$VER-linux-x86_64.AppImage" out/
+          (cd out && sha256sum * > SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: out/

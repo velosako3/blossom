@@ -15,7 +15,10 @@ copyright headers are kept on every copied file, and modified files carry a
   Taken: the YouTube Music Innertube client, its parser and stream resolution
   (source/youtubemusic); the lyrics providers and the LRC/enhanced LRC/TTML
   parsers (feature/lyrics); Spotify public-playlist and library reading
-  (source/spotify); the Last.fm and ListenBrainz clients (feature/integrations).
+  (source/spotify); the Android YouTube Music and Spotify sign-in web views and
+  the Spotify web-player token harvest (composeApp androidMain). The Last.fm and
+  ListenBrainz clients follow BitChord's protocol handling but were rewritten
+  for OkHttp (feature/integrations).
 
 - Spotube — https://github.com/KRTirtho/spotube — AGPL-3.0-or-later
   Tag v6.0.0, commit 8925b1b9351c3af2fd672db898d8d899badc1cb9.
