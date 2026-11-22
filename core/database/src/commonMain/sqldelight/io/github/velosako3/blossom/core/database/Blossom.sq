@@ -365,3 +365,16 @@ UPDATE offline_item SET state = 'PAUSED_NETWORK' WHERE state IN ('QUEUED', 'DOWN
 
 offlineAllIds:
 SELECT track_id FROM offline_item;
+
+-- LAN peers (keys live in the secure store, not here)
+allPeers:
+SELECT * FROM sync_peer ORDER BY name;
+
+upsertPeer:
+INSERT OR REPLACE INTO sync_peer(device_id, name, cert_sha256, last_seen) VALUES (?, ?, ?, ?);
+
+touchPeer:
+UPDATE sync_peer SET last_seen = ? WHERE device_id = ?;
+
+deletePeer:
+DELETE FROM sync_peer WHERE device_id = ?;

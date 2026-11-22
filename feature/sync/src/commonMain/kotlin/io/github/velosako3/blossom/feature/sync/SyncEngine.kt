@@ -105,16 +105,21 @@ class SyncEngine(
                     }
                 }
             }
-            val applied = withContext(Dispatchers.IO) {
-                db.transactionWithResult {
-                    val inserted = opLog.insertRemoteInTransaction(ops)
-                    // Device-specific or unknown setting keys never cross devices.
-                    projector.applyInTransaction(inserted.filterNot { (it.op as? Operation.SettingChanged)?.key?.let { k -> k !in SyncedSettings.keys } == true })
-                    inserted.size
-                }
-            }
+            val applied = applyRemote(db, opLog, projector, ops)
             pulled += applied
         }
         return pulled to manifests
+    }
+}
+
+/**
+ * Stores other devices' operations and projects the new ones, in one transaction; returns how many were new.
+ * Device-specific or unknown setting keys never cross devices (stored, not applied). Shared by cloud and LAN sync.
+ */
+suspend fun applyRemote(db: BlossomDatabase, opLog: SqlOpLog, projector: LibraryProjector, ops: List<OpEnvelope>): Int = withContext(Dispatchers.IO) {
+    db.transactionWithResult {
+        val inserted = opLog.insertRemoteInTransaction(ops)
+        projector.applyInTransaction(inserted.filterNot { (it.op as? Operation.SettingChanged)?.key?.let { k -> k !in SyncedSettings.keys } == true })
+        inserted.size
     }
 }

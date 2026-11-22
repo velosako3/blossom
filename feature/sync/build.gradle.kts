@@ -12,6 +12,9 @@ kotlin {
             api(projects.core.platform)
             implementation(libs.okhttp)
         }
+        getByName("desktopMain").dependencies {
+            implementation(libs.jmdns)
+        }
         androidMain.dependencies {
             implementation(libs.androidx.work)
         }
