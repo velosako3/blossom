@@ -1,11 +1,12 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# Installer builds, uploaded as workflow artifacts (no tags, no releases). Manual runs always build; pushes to dev
-# only when the commit message contains [build], to keep CI minutes low on a private repo.
+# Installer builds, uploaded as workflow artifacts. Manual runs always build; pushes to dev only when the commit message
+# contains [build], to keep CI minutes low on a private repo. Pushing a tag like v0.1.0 also publishes a GitHub release.
 name: installers
 on:
   workflow_dispatch:
   push:
     branches: [dev]
+    tags: ['v*']
 
 concurrency:
   group: installers-${{ github.ref }}
@@ -23,7 +24,7 @@ env:
 
 jobs:
   android:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[build]')
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') || contains(github.event.head_commit.message, '[build]')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -63,7 +64,7 @@ jobs:
           path: out/
 
   windows:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[build]')
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') || contains(github.event.head_commit.message, '[build]')
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -88,7 +89,7 @@ jobs:
           path: out/
 
   linux:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[build]')
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') || contains(github.event.head_commit.message, '[build]')
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -124,3 +125,20 @@ jobs:
         with:
           name: linux
           path: out/
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [android, windows, linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for d in android windows linux; do mv "out/$d/SHA256SUMS" "out/$d/SHA256SUMS-$d.txt"; done
+          gh release create "$GITHUB_REF_NAME" out/*/* --repo "$GITHUB_REPOSITORY" --generate-notes

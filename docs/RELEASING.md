@@ -1,7 +1,7 @@
 # Releasing blossom
 
-Installers are built by `.github/workflows/release.yml` and uploaded as **workflow artifacts**: there are no tags and
-no GitHub releases yet.
+Installers are built by `.github/workflows/release.yml` and uploaded as **workflow artifacts**. Pushing a tag like
+`v0.1.0` also publishes them as a GitHub release.
 
 - **Manual runs** (Actions → installers → Run workflow) always build.
 - **Pushes to `dev`** build only when the commit message contains `[build]`.
@@ -16,6 +16,10 @@ Each run produces three artifacts, each with a `SHA256SUMS` file:
 > repository public first (Settings → General → Danger zone → Change visibility).
 
 ## Android signing
+
+A release key is set up: the keystore and its password are in a `blossom-signing` folder in the owner's home folder
+(outside the repo, never committed), and the four secrets below are set on GitHub. Back that folder up; GitHub
+secrets can't be read back.
 
 Without a keystore, the APKs are signed with the debug key and named `...-test-build.apk`. Such builds can't be
 updated by a properly signed build later (Android requires the same key), so set up a real key once:
@@ -54,14 +58,12 @@ that option in the app:
 `blossom.version` in `gradle.properties` is the single source: the app name, `versionName`/`versionCode`, the
 installer file names and the update check all read it.
 
-## Turning builds into GitHub releases later
+## Publishing a GitHub release
 
-When you want public releases:
+The `release` job in `release.yml` runs on tags `v*`: it waits for the three builds, then creates the release with all
+installers and their checksum files (`SHA256SUMS-android.txt` and so on) and generated notes.
 
-1. Make the repository public (AGPL).
-2. Add a `release` job to `release.yml` that runs on tags (`on: push: tags: ['v*']`). It needs the three build jobs
-   and `permissions: contents: write`, downloads their artifacts (`actions/download-artifact@v4`) and publishes them
-   with `gh release create "$GITHUB_REF_NAME" out/* --generate-notes`.
-3. Tag a commit: `git tag v1.0.0 && git push origin v1.0.0`.
-
-The app's update check already reads `releases/latest`, so it shows the "Update" chip once a release exists.
+1. Make the repository public first (AGPL). The app's update check reads `releases/latest` without signing in, so it
+   only sees releases of a public repository.
+2. Set `blossom.version` in `gradle.properties`, commit, and push.
+3. Tag that commit: `git tag v0.1.0 && git push origin v0.1.0`.

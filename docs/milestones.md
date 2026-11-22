@@ -1,7 +1,6 @@
 # Milestone summaries
 
-These are the PR comments for the `dev → main` pull request ("blossom 1.0"). The PR can't be opened yet because the
-repository has no `main` branch (see `docs/progress.md` → Open questions); paste them once it exists.
+These are the PR comments for the `dev → main` pull request ("blossom 1.0").
 
 ## Milestone 0: Foundation and research
 - KMP project (Kotlin 2.4.21, Compose Multiplatform 1.12.2, AGP 9.5.2, Gradle 9.9.2), convention plugins, CI (`./gradlew check`).
@@ -115,7 +114,7 @@ repository has no `main` branch (see `docs/progress.md` → Open questions); pas
 | Extras | `CrossfadeController`, EQ, `SleepTimer`, scrobbling, Discord, `UpdateChecker` | `CrossfadeControllerTest`, `EqBandMapperTest`, `SleepTimerTest`, `ScrobbleQueueTest`, `PresenceBuilderTest`, `SemVerTest` |
 | Accessibility | labels, focus order, large text | `AccessibilityAuditTest`, `KeyboardNavigationTest`, `AccessibilitySnapshotTest` |
 
-### For the dev → main pull request (when `main` exists)
+### For the dev → main pull request
 - **Before sharing any installer, make the repository public (AGPL).**
 - The owner's to-do list is "Open questions for owner" in `docs/progress.md`.
 
