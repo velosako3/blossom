@@ -167,7 +167,13 @@ class AppGraph(
         else -> offline?.isSaved(track.id) == true
     }
     val lyrics = LyricsViewModel(
-        LyricsResolver(onlineLyricsProviders(), localLyrics, SqlLyricsCache(db), Clock.System),
+        // Offline, the online providers fail at once instead of waiting out their timeouts.
+        LyricsResolver(onlineLyricsProviders().map { p ->
+            object : io.github.velosako3.blossom.feature.lyrics.LyricsProvider by p {
+                override suspend fun fetch(q: io.github.velosako3.blossom.feature.lyrics.LyricsQuery) =
+                    if (network.status.value.online) p.fetch(q) else throw java.io.IOException("offline")
+            }
+        }, localLyrics, SqlLyricsCache(db), Clock.System),
         player.state.map { it.current },
         scope,
     )

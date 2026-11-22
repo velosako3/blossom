@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DeleteOutline
@@ -102,14 +103,17 @@ fun StorageScreen(
                 }
             }
             GlassSurface(Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.toggleable(settings.wifiOnly, role = Role.Switch) { on -> onChange { it.copy(wifiOnly = on) } }.padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Column(Modifier.weight(1f)) {
                         Text(stringResource(Res.string.storage_wifi_only), style = MaterialTheme.typography.titleMedium)
                         Text(stringResource(Res.string.storage_wifi_only_hint), color = muted, style = MaterialTheme.typography.bodyMedium)
                     }
                     Switch(
                         checked = settings.wifiOnly,
-                        onCheckedChange = { on -> onChange { it.copy(wifiOnly = on) } },
+                        onCheckedChange = null,
                         colors = SwitchDefaults.colors(checkedTrackColor = BlossomTheme.colors.accent, checkedThumbColor = BlossomTheme.colors.onAccent),
                     )
                 }

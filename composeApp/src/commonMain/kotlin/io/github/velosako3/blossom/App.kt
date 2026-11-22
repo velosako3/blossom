@@ -77,13 +77,20 @@ fun App(
                     }
                     graph?.let { g ->
                         val online = g.network.status.collectAsState().value.online
+                        // A notice, not a fixture: shown for a few seconds after going offline, so it never sits over
+                        // the player. Screens say themselves what offline changes (Home, Search).
+                        var offlineNotice by remember { mutableStateOf(false) }
+                        androidx.compose.runtime.LaunchedEffect(online) {
+                            offlineNotice = !online
+                            if (!online) { kotlinx.coroutines.delay(OFFLINE_NOTICE_MS); offlineNotice = false }
+                        }
                         val storagePaused = androidx.compose.runtime.remember(g.offline) { g.offline?.pausedForStorage() ?: kotlinx.coroutines.flow.flowOf(false) }.collectAsState(false).value
                         androidx.compose.foundation.layout.Column(
                             Modifier.align(androidx.compose.ui.Alignment.BottomCenter).padding(bottom = 112.dp).zIndex(1f),
                             verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
                             horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
                         ) {
-                            if (!online) OfflineBanner()
+                            if (offlineNotice) OfflineBanner()
                             if (storagePaused) StoragePausedBanner()
                         }
                     }
@@ -99,3 +106,5 @@ fun App(
         }
     }
 }
+
+private const val OFFLINE_NOTICE_MS = 6_000L

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
@@ -48,7 +49,7 @@ fun GlassNavBar(
 ) {
     GlassSurface(modifier.fillMaxWidth(), shape = CircleShape) {
         Row(
-            Modifier.fillMaxWidth().height(64.dp).padding(6.dp).selectableGroup(),
+            Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(6.dp).selectableGroup(), // grows with large text
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             items.forEachIndexed { i, item ->

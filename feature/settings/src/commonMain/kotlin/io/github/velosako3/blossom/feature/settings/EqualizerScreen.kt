@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -61,12 +63,16 @@ fun EqualizerScreen(settings: EqSettings, onChange: (EqSettings) -> Unit, modifi
         Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(stringResource(Res.string.eq_title), style = MaterialTheme.typography.headlineLarge)
             GlassSurface(Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                // The whole row is the switch, so it's announced with its label.
+                Row(
+                    Modifier.toggleable(settings.enabled, role = Role.Switch) { onChange(settings.copy(enabled = it)) }.padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Column(Modifier.weight(1f)) {
                         Text(stringResource(Res.string.eq_enabled), style = MaterialTheme.typography.titleMedium)
                         Text(stringResource(Res.string.eq_enabled_hint), color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                     }
-                    Switch(settings.enabled, { onChange(settings.copy(enabled = it)) },
+                    Switch(settings.enabled, null,
                         colors = SwitchDefaults.colors(checkedTrackColor = colors.accent, checkedThumbColor = colors.onAccent))
                 }
             }
