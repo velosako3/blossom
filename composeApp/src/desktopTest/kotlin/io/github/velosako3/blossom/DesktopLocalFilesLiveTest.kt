@@ -39,8 +39,8 @@ class DesktopLocalFilesLiveTest {
         onAllNodesWithText("Local files")[0].performClick()
         pump(1500)
         kotlinx.coroutines.runBlocking { graph.player.setQueue(tracks, 0); graph.player.play() }
-        waitFor("local playback") { graph.player.state.value.positionMs > 300 }
-        println("local playing: ${graph.player.state.value.current?.title} at ${graph.player.state.value.positionMs} ms")
+        waitFor("local playback") { graph.player.progress.value.positionMs > 300 }
+        println("local playing: ${graph.player.state.value.current?.title} at ${graph.player.progress.value.positionMs} ms")
         pump(500)
         onRoot().captureRoboImage("src/desktopTest/snapshots/e2e/07_local_files.png")
     }

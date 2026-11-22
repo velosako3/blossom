@@ -16,7 +16,6 @@ sealed interface PlaybackError {
 data class PlaybackState(
     val queue: List<Track> = emptyList(),
     val currentIndex: Int = -1,
-    val positionMs: Long = 0,
     val durationMs: Long = 0,
     val isPlaying: Boolean = false,
     val isBuffering: Boolean = false,
@@ -26,3 +25,17 @@ data class PlaybackState(
 ) {
     val current: Track? get() = queue.getOrNull(currentIndex)
 }
+
+/**
+ * Where playback is, kept out of [PlaybackState] on purpose (as BitChord's `PlaybackPosition`): it ticks four times a
+ * second, and everything that watches [PlaybackState] would redraw with it. Only the scrubbers and the lyrics read it.
+ *
+ * [sampledAtNanos] is when [positionMs] was read off the engine ([System.nanoTime]); [seeks] counts deliberate jumps
+ * (a seek, a skip, a new track), so the lyrics can tell a jump from a late reading.
+ */
+data class PlaybackProgress(
+    val positionMs: Long = 0,
+    val durationMs: Long = 0,
+    val sampledAtNanos: Long = 0,
+    val seeks: Int = 0,
+)

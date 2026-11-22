@@ -33,8 +33,11 @@ Reference: `../_upstream/BitChord` at `21356206` (kushagrasinghx/BitChord, GPL-3
   timeouts raised from 5 s to BitChord-like values, YouTube Music timed lyrics via the mobile client, cache keyed `v2:`
   so the old resolver's rows are ignored. Live (desktop): 6/6 test songs word-synced in 0.8–3.2 s. Still converted to
   blossom's old `Lyrics` model for the current view; task 2 keeps BitChord lines end to end.
-- [ ] **2. Lyrics view.** Port `PlayerLyrics`, `LyricClock`, `LyricFocus`, `SyncedLyricsPanel` and their helpers;
+- [x] **2. Lyrics view.** Port `PlayerLyrics`, `LyricClock`, `LyricFocus`, `SyncedLyricsPanel` and their helpers;
   feed them blossom's player position. Snapshot + clock tests.
+  Done: BitChord's panel (translation, romanization and the one-line strip left out) on BitChord's lines end to end,
+  cache stores the full lines (`v3:`). The player's position moved out of `PlaybackState` into `BlossomPlayer.progress`
+  (BitChord's `PlaybackPosition` reasoning): a tick no longer recomposes everything that watches the player.
 - [ ] **3. Liquid glass.** Kyant0 `backdrop` 2.0.1 for glass surfaces (FULL = lens + blur + highlight, REDUCED = blur,
   OFF = tint), lighter tint, BitChord's floating tab bar look; now-playing backdrop from `ArtworkMeshBackdrop`.
   Snapshot test proving the three settings render differently.

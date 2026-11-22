@@ -107,7 +107,7 @@ fun createDesktopGraph(): AppGraph {
         syncSetup = desktopSyncSetup(secure),
         secure = secure,
     )
-    DiscordPresence(player.state, graph.discordEnabled, scope)
+    DiscordPresence(player.state, player.progress, graph.discordEnabled, scope)
     // "Use the system title bar" lives in the window state file, which the window reads at start.
     val windows = io.github.velosako3.blossom.window.WindowStateStore()
     graph.systemTitleBar = PrefFlow(

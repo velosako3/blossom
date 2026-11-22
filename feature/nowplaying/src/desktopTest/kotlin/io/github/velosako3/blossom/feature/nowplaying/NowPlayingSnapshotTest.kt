@@ -29,8 +29,9 @@ import io.github.velosako3.blossom.core.player.RepeatMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.test.Test
 
-class FakePlayer(state: PlaybackState) : BlossomPlayer {
+class FakePlayer(state: PlaybackState, positionMs: Long = 0) : BlossomPlayer {
     override val state = MutableStateFlow(state)
+    override val progress = MutableStateFlow(io.github.velosako3.blossom.core.player.PlaybackProgress(positionMs, state.durationMs))
     override suspend fun setQueue(tracks: List<Track>, startIndex: Int, startPositionMs: Long) {}
     override fun play() {}
     override fun pause() {}
@@ -50,7 +51,7 @@ class FakePlayer(state: PlaybackState) : BlossomPlayer {
 private val sample = (1..6).map {
     Track(TrackId("ytm:v$it"), if (it == 1) "Pink + White" else "Song $it", listOf(ArtistRef("UC1", "Frank Ocean")), AlbumRef("MPRE1", "Blonde"), 184_000, null)
 }
-private val playing = FakePlayer(PlaybackState(queue = sample, currentIndex = 0, positionMs = 61_000, durationMs = 184_000, isPlaying = true, shuffle = true, repeat = RepeatMode.ALL))
+private val playing = FakePlayer(PlaybackState(queue = sample, currentIndex = 0, durationMs = 184_000, isPlaying = true, shuffle = true, repeat = RepeatMode.ALL), positionMs = 61_000)
 private val palette = ArtworkPalette.Default
 
 @OptIn(ExperimentalTestApi::class)

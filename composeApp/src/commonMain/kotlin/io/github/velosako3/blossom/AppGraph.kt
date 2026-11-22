@@ -146,7 +146,7 @@ class AppGraph(
 
     /** Every listening session, for stats and Wrapped (counted after 30 s or a natural end). */
     val scrobbling = secure?.let { Scrobbling(it, prefs, player.state, network, scope) }
-    val playTracker = io.github.velosako3.blossom.core.player.PlayTracker(player.state, { commands.recordPlay(it); scrobbling?.onPlay(it) }, Clock.System, deviceId, prefs, scope)
+    val playTracker = io.github.velosako3.blossom.core.player.PlayTracker(player.state, player.progress.map { it.positionMs }, { commands.recordPlay(it); scrobbling?.onPlay(it) }, Clock.System, deviceId, prefs, scope)
 
     val stats by lazy {
         io.github.velosako3.blossom.feature.stats.ui.StatsViewModel(repo, Clock.System, kotlinx.datetime.TimeZone.currentSystemDefault(), scope)

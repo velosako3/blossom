@@ -46,19 +46,19 @@ class DesktopEndToEndLiveTest {
         pump(2000); shot("02_search")
 
         onAllNodes(hasText("One More Time", substring = true))[1].performClick()
-        waitFor(what = "playback") { graph.player.state.value.positionMs > 3_000 }
+        waitFor(what = "playback") { graph.player.progress.value.positionMs > 3_000 }
         val playing = graph.player.state.value
-        println("e2e playing: ${playing.current?.title} – ${playing.current?.artistNames} at ${playing.positionMs} ms")
+        println("e2e playing: ${playing.current?.title} – ${playing.current?.artistNames} at ${graph.player.progress.value.positionMs} ms")
         pump(1000); shot("03_playing")
 
         graph.player.seekTo(120_000)
-        waitFor(what = "seek") { graph.player.state.value.positionMs in 120_000..140_000 }
-        println("e2e after seek: ${graph.player.state.value.positionMs} ms")
+        waitFor(what = "seek") { graph.player.progress.value.positionMs in 120_000..140_000 }
+        println("e2e after seek: ${graph.player.progress.value.positionMs} ms")
 
         val before = graph.player.state.value.currentIndex
         graph.player.next()
-        waitFor(what = "next track") { graph.player.state.value.currentIndex == before + 1 && graph.player.state.value.positionMs in 2_000..20_000 }
-        println("e2e next: ${graph.player.state.value.current?.title} at ${graph.player.state.value.positionMs} ms")
+        waitFor(what = "next track") { graph.player.state.value.currentIndex == before + 1 && graph.player.progress.value.positionMs in 2_000..20_000 }
+        println("e2e next: ${graph.player.state.value.current?.title} at ${graph.player.progress.value.positionMs} ms")
         navigator.navigate(io.github.velosako3.blossom.navigation.Destination.NowPlaying)
         pump(2000); shot("04_now_playing")
         graph.player.pause()

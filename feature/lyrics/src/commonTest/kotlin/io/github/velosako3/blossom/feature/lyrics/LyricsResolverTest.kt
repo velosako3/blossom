@@ -5,6 +5,8 @@ import io.github.velosako3.blossom.core.model.ArtistRef
 import io.github.velosako3.blossom.core.model.SourceKind
 import io.github.velosako3.blossom.core.model.Track
 import io.github.velosako3.blossom.core.model.TrackId
+import io.github.velosako3.blossom.feature.lyrics.providers.LyricLine
+import io.github.velosako3.blossom.feature.lyrics.providers.LyricWord
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -49,7 +51,7 @@ class LyricsResolverTest {
     )
     private val localTrack = track.copy(id = TrackId.of(SourceKind.LOCAL, "abc"))
     private val plain = Lyrics.Plain("words", "Genius")
-    private val wordSynced = Lyrics.WordSynced(listOf(LyricLine(0, 1000, "w", listOf(LyricWord("w", 0, 1000)))), "lrc.red")
+    private val wordSynced = Lyrics.WordSynced(listOf(LyricLine(0, "w", listOf(LyricWord(0, 1000, "w")))), "lrc.red")
 
     @Test fun asksWithEveryArtistAndTheVideoId() = runTest {
         val online = FakeOnline(wordSynced)
@@ -110,7 +112,7 @@ class LyricsResolverTest {
 
     @Test fun sidecarWinsWithoutAskingOnline() = runTest {
         val online = FakeOnline(wordSynced)
-        val local = Lyrics.LineSynced(listOf(LyricLine(0, 1000, "from lrc", emptyList())), "local")
+        val local = Lyrics.LineSynced(listOf(LyricLine(1000, "from lrc")), "local")
         assertEquals(local, LyricsResolver(online, FakeLocal(local), MemoryCache(), TestClock()).resolve(localTrack))
         assertEquals(0, online.queries.size)
     }

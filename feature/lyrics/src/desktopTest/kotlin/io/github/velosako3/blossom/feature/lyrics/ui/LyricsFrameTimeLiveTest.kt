@@ -12,9 +12,9 @@ import androidx.compose.ui.unit.Density
 import io.github.velosako3.blossom.core.designsystem.color.ArtworkPalette
 import io.github.velosako3.blossom.core.designsystem.glass.GlassQuality
 import io.github.velosako3.blossom.core.designsystem.theme.BlossomTheme
-import io.github.velosako3.blossom.feature.lyrics.LyricLine
-import io.github.velosako3.blossom.feature.lyrics.LyricWord
-import io.github.velosako3.blossom.feature.lyrics.Lyrics
+import io.github.velosako3.blossom.feature.lyrics.providers.LyricLine
+import io.github.velosako3.blossom.feature.lyrics.ui.panel.SyncedLyricsPanel
+import io.github.velosako3.blossom.feature.lyrics.providers.LyricWord
 import kotlin.test.Test
 
 /**
@@ -26,14 +26,13 @@ class LyricsFrameTimeLiveTest {
         val lines = (0 until 80).map { k ->
             val start = 1_000L + 3_000L * k
             var t = start
-            val words = "Every window burning gold tonight".split(" ").mapIndexed { i, w -> LyricWord(if (i == 0) w else " $w", t, t + 500).also { t += 500 } }
-            LyricLine(start, start + 3_000, "Every window burning gold tonight", words)
+            val words = "Every window burning gold tonight".split(" ").mapIndexed { i, w -> LyricWord(t, t + 500, if (i == 0) w else " $w").also { t += 500 } }
+            LyricLine(start, "Every window burning gold tonight", words)
         }
-        val lyrics = Lyrics.WordSynced(lines, "bench")
         for ((label, reduce, show) in listOf(Triple("empty", false, false), Triple("reduceMotion", true, true), Triple("motionReducedGlass", false, true), Triple("full", false, true))) {
             val times = measure(1440, 900, 300) { pos ->
                 BlossomTheme(true, ArtworkPalette.Default, glassQuality = if (label == "motionReducedGlass") GlassQuality.REDUCED else GlassQuality.FULL, reduceMotion = reduce) {
-                    Box(Modifier.fillMaxSize().background(Color(0xFF2A1B3D))) { if (show) LyricsView(lyrics, pos, {}) }
+                    Box(Modifier.fillMaxSize().background(Color(0xFF2A1B3D))) { if (show) SyncedLyricsPanel(lines, "bench", positionAt(pos), looking = false, isPlaying = false, onSeekToLine = {}) }
                 }
             }
             fun p(q: Double) = times[((times.size - 1) * q).toInt()]

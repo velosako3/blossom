@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.StateFlow
 /** The one player the whole app talks to. */
 interface BlossomPlayer {
     val state: StateFlow<PlaybackState>
+    /** The playhead, apart from [state]; see [PlaybackProgress]. */
+    val progress: StateFlow<PlaybackProgress>
     suspend fun setQueue(tracks: List<Track>, startIndex: Int, startPositionMs: Long = 0)
     fun play()
     fun pause()

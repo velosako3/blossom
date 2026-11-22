@@ -17,15 +17,15 @@ class DesktopSoundCloudLiveTest {
         val song = SoundCloudSource(SoundCloudClient()).search("lofi study beats").songs.first { it.durationMs > 120_000 }
         graph.player.setQueue(listOf(song), 0)
         graph.player.play()
-        withTimeout(60_000) { graph.player.state.first { it.positionMs > 3_000 } }
-        println("soundcloud playing: ${song.title} – ${song.artistNames} at ${graph.player.state.value.positionMs} ms")
+        withTimeout(60_000) { graph.player.progress.first { it.positionMs > 3_000 } }
+        println("soundcloud playing: ${song.title} – ${song.artistNames} at ${graph.player.progress.value.positionMs} ms")
         graph.player.seekTo(95_000)
-        withTimeout(30_000) { graph.player.state.first { it.positionMs in 90_000..115_000 } }
+        withTimeout(30_000) { graph.player.progress.first { it.positionMs in 90_000..115_000 } }
         delay(2_000)
-        val after = graph.player.state.value.positionMs
+        val after = graph.player.progress.value.positionMs
         check(after in 90_000..105_000) { "seek landed at $after" }
         delay(2_000)
-        println("soundcloud after seek: ${graph.player.state.value.positionMs} ms, error=${graph.player.state.value.error}")
+        println("soundcloud after seek: ${graph.player.progress.value.positionMs} ms, error=${graph.player.state.value.error}")
         graph.player.pause()
     }
 }

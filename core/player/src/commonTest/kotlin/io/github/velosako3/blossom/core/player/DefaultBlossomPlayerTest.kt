@@ -66,6 +66,25 @@ class DefaultBlossomPlayerTest {
         assertEquals(null, p.state.value.error)
     }
 
+    @Test fun positionTicksMoveProgressNotState() = runTest {
+        val engine = FakeEngine()
+        val p = player(engine)
+        p.setQueue(tracks(3), 0)
+        p.play()
+        runCurrent()
+        val before = p.state.value
+        engine.events.emit(EngineEvent.Position(10_000, 200_000)); runCurrent()
+        engine.events.emit(EngineEvent.Position(10_250, 200_000)); runCurrent()
+        // The whole app watches [state]; a tick there redraws every screen four times a second.
+        assertTrue(p.state.value === before, "a position tick changed the player state")
+        assertEquals(10_250, p.progress.value.positionMs)
+        assertEquals(200_000, p.progress.value.durationMs)
+        val seeks = p.progress.value.seeks
+        p.seekTo(50_000); runCurrent()
+        assertEquals(50_000, p.progress.value.positionMs)
+        assertEquals(seeks + 1, p.progress.value.seeks)
+    }
+
     @Test fun threeFailuresSurfaceErrorAndSkip() = runTest {
         val engine = FakeEngine()
         val p = player(engine)
@@ -93,7 +112,7 @@ class DefaultBlossomPlayerTest {
         engine.events.emit(EngineEvent.Ended(mediaId = oldId))
         runCurrent()
         assertEquals(1, p.state.value.currentIndex)
-        assertEquals(0, p.state.value.positionMs)
+        assertEquals(0, p.progress.value.positionMs)
     }
 
     @Test fun repeatOneDeadStreamStillSkips() = runTest {

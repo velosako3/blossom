@@ -44,9 +44,9 @@ class SystemMediaControls(private val player: BlossomPlayer, scope: CoroutineSco
                 }
             }
             scope.launch {
-                player.state.map { (if (it.current == null) MediaPlaybackStatus.STOPPED else if (it.isPlaying) MediaPlaybackStatus.PLAYING else MediaPlaybackStatus.PAUSED) to it.positionMs / 1000 }
+                kotlinx.coroutines.flow.combine(player.state, player.progress) { it, p -> (if (it.current == null) MediaPlaybackStatus.STOPPED else if (it.isPlaying) MediaPlaybackStatus.PLAYING else MediaPlaybackStatus.PAUSED) to p.positionMs / 1000 }
                     .distinctUntilChanged()
-                    .collect { (status, _) -> MediaControlService.setPlaybackState(MediaPlaybackState(status, player.state.value.positionMs)) }
+                    .collect { (status, _) -> MediaControlService.setPlaybackState(MediaPlaybackState(status, player.progress.value.positionMs)) }
             }
         }
     }
@@ -58,7 +58,7 @@ class SystemMediaControls(private val player: BlossomPlayer, scope: CoroutineSco
             MediaControlEvent.Toggle -> if (player.state.value.isPlaying) player.pause() else player.play()
             MediaControlEvent.Next -> player.next()
             MediaControlEvent.Previous -> player.previous()
-            is MediaControlEvent.SeekBy -> player.seekTo((player.state.value.positionMs + event.offsetMs).coerceAtLeast(0))
+            is MediaControlEvent.SeekBy -> player.seekTo((player.progress.value.positionMs + event.offsetMs).coerceAtLeast(0))
             is MediaControlEvent.SetPosition -> player.seekTo(event.positionMs)
             is MediaControlEvent.SetVolume -> player.setVolume(event.volume.toFloat())
             else -> Unit

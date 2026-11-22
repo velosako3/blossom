@@ -62,6 +62,13 @@ class DefaultBlossomPlayer(
     private val mutex = Mutex()
     private val _state = MutableStateFlow(PlaybackState())
     override val state: StateFlow<PlaybackState> = _state.asStateFlow()
+    private val _progress = MutableStateFlow(PlaybackProgress())
+    override val progress: StateFlow<PlaybackProgress> = _progress.asStateFlow()
+
+    /** A deliberate jump (seek, skip, a new track): the lyrics clock snaps to it instead of easing. */
+    private fun jumpTo(positionMs: Long, durationMs: Long = _progress.value.durationMs) {
+        _progress.update { PlaybackProgress(positionMs, durationMs, nanoTime(), it.seeks + 1) }
+    }
 
     private var wantPlaying = false
     private var reResolves = 0
@@ -104,15 +111,15 @@ class DefaultBlossomPlayer(
     override fun seekTo(positionMs: Long) = command {
         endFade()
         lastPositionMs = positionMs
-        _state.update { it.copy(positionMs = positionMs) }
+        jumpTo(positionMs)
         engine.seekTo(positionMs)
     }
 
     override fun next() = command { advance(userInitiated = true) }
 
     override fun previous() = command {
-        when (val move = queue.previous(_state.value.positionMs)) {
-            QueueMove.Restart -> { lastPositionMs = 0; _state.update { it.copy(positionMs = 0) }; engine.seekTo(0) }
+        when (val move = queue.previous(_progress.value.positionMs)) {
+            QueueMove.Restart -> { lastPositionMs = 0; jumpTo(0); engine.seekTo(0) }
             is QueueMove.Moved -> { reResolves = 0; loadCurrent(0) }
             QueueMove.End -> Unit
         }
@@ -154,7 +161,10 @@ class DefaultBlossomPlayer(
                 // Playing again after a recovery: the next expiry starts a fresh count ("2 consecutive failures").
                 if (event.positionMs > 0) reResolves = 0
                 lastPositionMs = event.positionMs
-                _state.update { it.copy(positionMs = event.positionMs, durationMs = event.durationMs.takeIf { d -> d > 0 } ?: it.durationMs) }
+                val duration = event.durationMs.takeIf { d -> d > 0 } ?: _progress.value.durationMs
+                _progress.update { it.copy(positionMs = event.positionMs, durationMs = duration, sampledAtNanos = nanoTime()) }
+                // Equal values don't emit: [state] only changes when the engine first reports the real length.
+                _state.update { it.copy(durationMs = duration) }
                 approachingEnd(event.durationMs - event.positionMs)
             }
             is EngineEvent.Buffering -> _state.update { it.copy(isBuffering = event.buffering) }
@@ -201,7 +211,8 @@ class DefaultBlossomPlayer(
                 } else {
                     wantPlaying = false
                     engine.pause()
-                    _state.update { it.copy(isPlaying = false, positionMs = 0) }
+                    _state.update { it.copy(isPlaying = false) }
+                    jumpTo(0)
                     publish()
                 }
             }
@@ -243,7 +254,8 @@ class DefaultBlossomPlayer(
         _activeEngine.value = incoming
         fadingOut = outgoing
         lastPositionMs = 0
-        _state.update { it.copy(positionMs = 0, durationMs = next.durationMs, error = null) }
+        _state.update { it.copy(durationMs = next.durationMs, error = null) }
+        jumpTo(0, next.durationMs)
         publish()
         incoming.setVolume(0f)
         incoming.onTrackChanged(next)
@@ -282,7 +294,8 @@ class DefaultBlossomPlayer(
             val input = inputFor(track)
             if (input != null) {
                 lastPositionMs = startMs
-                _state.update { it.copy(positionMs = startMs, durationMs = track.durationMs) }
+                _state.update { it.copy(durationMs = track.durationMs) }
+                jumpTo(startMs, track.durationMs)
                 publish()
                 engine.onTrackChanged(track)
                 engine.load(input, startMs)
@@ -321,3 +334,5 @@ class DefaultBlossomPlayer(
         const val FADE_STEP_MS = 50L
     }
 }
+
+private fun nanoTime(): Long = System.nanoTime()

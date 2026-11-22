@@ -16,6 +16,7 @@ import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,8 +39,10 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun SeekBar(state: PlaybackState, player: BlossomPlayer, modifier: Modifier = Modifier, compactTimes: Boolean = false) {
     var dragging by remember { mutableStateOf<Float?>(null) }
-    val duration = state.durationMs.coerceAtLeast(1)
-    val fraction = dragging ?: (state.positionMs.toFloat() / duration).coerceIn(0f, 1f)
+    // The playhead is read here, not by the caller, so a tick recomposes the seek bar alone.
+    val progress by player.progress.collectAsState()
+    val duration = (progress.durationMs.takeIf { it > 0 } ?: state.durationMs).coerceAtLeast(1)
+    val fraction = dragging ?: (progress.positionMs.toFloat() / duration).coerceIn(0f, 1f)
     val shownPos = (fraction * duration).toLong()
     Column(modifier) {
         GlassSlider(

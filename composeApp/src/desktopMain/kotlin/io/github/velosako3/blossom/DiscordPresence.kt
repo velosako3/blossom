@@ -19,7 +19,7 @@ import kotlin.time.Clock
  * Discord Rich Presence while [enabled] (off by default, for privacy). Updates on a track change, play/pause or a
  * seek, at most one every 5 s (Discord's limit); silently does nothing while Discord isn't running.
  */
-class DiscordPresence(state: StateFlow<PlaybackState>, enabled: StateFlow<Boolean>, scope: CoroutineScope, applicationId: String = BlossomSecrets.DISCORD_APPLICATION_ID) {
+class DiscordPresence(state: StateFlow<PlaybackState>, progress: StateFlow<io.github.velosako3.blossom.core.player.PlaybackProgress>, enabled: StateFlow<Boolean>, scope: CoroutineScope, applicationId: String = BlossomSecrets.DISCORD_APPLICATION_ID) {
     private val ipc = DiscordIpc(applicationId)
 
     /** What the presence shows; the position only matters as "where the track started" (seeks change it). */
@@ -27,13 +27,13 @@ class DiscordPresence(state: StateFlow<PlaybackState>, enabled: StateFlow<Boolea
 
     init {
         if (applicationId.isNotEmpty()) scope.launch(Dispatchers.IO) {
-            combine(enabled, state) { on, s ->
+            combine(enabled, state, progress) { on, s, p ->
                 val t = s.current?.takeIf { on }
-                Triple(Shown(t?.id?.value, s.isPlaying, (Clock.System.now().toEpochMilliseconds() - s.positionMs) / 5_000), t, s)
+                Triple(Shown(t?.id?.value, s.isPlaying, (Clock.System.now().toEpochMilliseconds() - p.positionMs) / 5_000), t, s)
             }.distinctUntilChanged { a, b -> a.first == b.first }.conflate().collectLatest { (_, track, s) ->
                 if (track == null) { if (ipc.connected) ipc.setActivity(null); return@collectLatest }
                 if (!ipc.connect()) return@collectLatest
-                ipc.setActivity(PresenceBuilder.activity(track, s.positionMs, s.isPlaying, Clock.System.now()))
+                ipc.setActivity(PresenceBuilder.activity(track, progress.value.positionMs, s.isPlaying, Clock.System.now()))
                 delay(5_000)
             }
         }

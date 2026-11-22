@@ -10,32 +10,32 @@ import kotlin.test.assertTrue
 class LrcParserTest {
     @Test fun lineSynced() {
         val l = assertIs<Lyrics.LineSynced>(LrcParser.parse("[00:12.50]Hello\n[00:15.00]World", "p", null))
-        assertEquals(listOf(12_500L, 15_000L), l.lines.map { it.startMs })
-        assertEquals(15_000, l.lines[0].endMs)
+        assertEquals(listOf(12_500L, 15_000L), l.lines.map { it.timeMs })
+        assertEquals(15_000L, l.lines[0].sungUntilMs)
         assertEquals("Hello", l.lines[0].text)
     }
 
     @Test fun threeDigitFractions() {
         val l = assertIs<Lyrics.LineSynced>(LrcParser.parse("[01:02.345]x", "p", null))
-        assertEquals(62_345, l.lines[0].startMs)
+        assertEquals(62_345, l.lines[0].timeMs)
     }
 
     @Test fun repeatedStamps() {
         val l = assertIs<Lyrics.LineSynced>(LrcParser.parse("[00:12.00][00:45.00]Chorus", "p", null))
-        assertEquals(listOf(12_000L, 45_000L), l.lines.map { it.startMs })
+        assertEquals(listOf(12_000L, 45_000L), l.lines.map { it.timeMs })
         assertEquals(listOf("Chorus", "Chorus"), l.lines.map { it.text })
     }
 
     @Test fun offsetShiftsEarlier() {
         val l = assertIs<Lyrics.LineSynced>(LrcParser.parse("[offset:+500]\n[00:10.00]A", "p", null))
-        assertEquals(9_500, l.lines[0].startMs)
+        assertEquals(9_500, l.lines[0].timeMs)
     }
 
     @Test fun metadataIgnoredAndLastLineEnds() {
         val l = assertIs<Lyrics.LineSynced>(LrcParser.parse("[ar:Someone]\n[ti:Title]\n[00:01.00]Only", "p", null))
         assertEquals(1, l.lines.size)
-        assertEquals(6_000, l.lines[0].endMs)
-        assertEquals(200_000, assertIs<Lyrics.LineSynced>(LrcParser.parse("[00:01.00]Only", "p", 200_000)).lines[0].endMs)
+        assertEquals(6_000L, l.lines[0].sungUntilMs)
+        assertEquals(200_000L, assertIs<Lyrics.LineSynced>(LrcParser.parse("[00:01.00]Only", "p", 200_000)).lines[0].sungUntilMs)
     }
 
     @Test fun enhancedWords() {
@@ -54,7 +54,7 @@ class LrcParserTest {
 
     @Test fun byteOrderMarkIgnored() {
         val l = assertIs<Lyrics.LineSynced>(LrcParser.parse("\uFEFF[offset:+200]\n[00:10.00]A", "p", null))
-        assertEquals(9_800, l.lines[0].startMs)
+        assertEquals(9_800, l.lines[0].timeMs)
     }
 
     @Test fun textBeforeFirstWordStampIsAWord() {
@@ -70,7 +70,7 @@ class LrcParserTest {
 
     @Test fun negativeOffsetNeverEndsBeforeStart() {
         val l = assertIs<Lyrics.LineSynced>(LrcParser.parse("[offset:+5000]\n[00:01.00]A\n[00:03.00]B\n[00:09.00]C", "p", null))
-        l.lines.forEach { assertTrue(it.endMs >= it.startMs, "$it") }
+        l.lines.forEach { assertTrue(it.sungUntilMs!! >= it.timeMs, "$it") }
     }
 
     @Test fun lastWordWithoutClosingStampIsCapped() {

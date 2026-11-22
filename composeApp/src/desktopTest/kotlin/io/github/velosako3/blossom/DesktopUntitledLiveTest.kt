@@ -35,9 +35,9 @@ class DesktopUntitledLiveTest {
             }
             graph.player.setQueue(listOf(track), 0)
             graph.player.play()
-            kotlinx.coroutines.withTimeoutOrNull(60_000) { graph.player.state.first { it.positionMs > 3_000 } }
+            kotlinx.coroutines.withTimeoutOrNull(60_000) { graph.player.progress.first { it.positionMs > 3_000 } }
                 ?: println("untitled live: state ${i + 1}: index=${graph.player.state.value.currentIndex} error=${graph.player.state.value.error?.let { it::class.simpleName }}")
-            println("untitled live: sample link ${i + 1}: ${p.tracks.size} tracks, all native=${p.tracks.all { it.nativeTrack != null }}, first track playing at ${graph.player.state.value.positionMs} ms")
+            println("untitled live: sample link ${i + 1}: ${p.tracks.size} tracks, all native=${p.tracks.all { it.nativeTrack != null }}, first track playing at ${graph.player.progress.value.positionMs} ms")
             graph.player.pause()
         }
         assertTrue(links.isNotEmpty())

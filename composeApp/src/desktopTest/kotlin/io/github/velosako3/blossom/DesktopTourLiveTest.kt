@@ -43,7 +43,7 @@ class DesktopTourLiveTest {
         val songs = kotlinx.coroutines.runBlocking { graph.ytm.search("Daft Punk Around the World").songs }
         println("tour: ${songs.size} songs")
         kotlinx.coroutines.runBlocking { graph.player.setQueue(songs.take(5), 0); graph.player.play() }
-        waitFor(what = "playback") { graph.player.state.value.positionMs > 3_000 }
+        waitFor(what = "playback") { graph.player.progress.value.positionMs > 3_000 }
         val song = graph.player.state.value.current!!
         println("tour playing: ${song.title} – ${song.artistNames}")
         go(Destination.NowPlaying, "now_playing_lyrics", 6000)

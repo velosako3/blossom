@@ -53,7 +53,7 @@ class LyricsResolver(
         when {
             cached == null -> Unit
             cached.lyrics == null -> if (age!! < NEGATIVE_TTL) return null
-            cached.lyrics !is Lyrics.Plain || age!! < PLAIN_RETRY -> return cached.lyrics
+            cached.lyrics.isSynced || age!! < PLAIN_RETRY -> return cached.lyrics
         }
         val q = LyricsQuery(
             title = track.title,

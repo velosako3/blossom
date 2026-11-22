@@ -39,7 +39,7 @@ class DesktopCrossfadeLiveTest {
         var lastFirstPosition = 0L
         withTimeout(20_000) {
             graph.player.state.first { s ->
-                if (s.currentIndex == 0) lastFirstPosition = s.positionMs
+                if (s.currentIndex == 0) lastFirstPosition = graph.player.progress.value.positionMs
                 s.currentIndex == 1
             }
         }
@@ -47,8 +47,8 @@ class DesktopCrossfadeLiveTest {
         println("crossfade: switched to track 2 after $switchedAt ms; track 1 was at $lastFirstPosition ms")
         // 8 s track, 3 s fade: the next one starts about 5 s in, well before the first one ends.
         assertTrue(lastFirstPosition in 4_000..6_500, "switched at $lastFirstPosition ms")
-        withTimeout(15_000) { graph.player.state.first { it.currentIndex == 1 && it.positionMs > 3_500 } }
-        println("crossfade: track 2 at ${graph.player.state.value.positionMs} ms, playing=${graph.player.state.value.isPlaying}")
+        withTimeout(15_000) { graph.player.state.first { it.currentIndex == 1 }; graph.player.progress.first { it.positionMs > 3_500 } }
+        println("crossfade: track 2 at ${graph.player.progress.value.positionMs} ms, playing=${graph.player.state.value.isPlaying}")
         graph.player.pause()
     }
 }

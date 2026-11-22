@@ -63,8 +63,8 @@ class DesktopOfflineLiveTest {
             graph.player.setQueue(listOf(song), 0)
             graph.player.play()
             val end = System.currentTimeMillis() + 60_000
-            while (graph.player.state.value.positionMs <= 3_000) { check(System.currentTimeMillis() < end) { "offline playback" }; pump(250) }
-            println("offline playing: ${graph.player.state.value.current?.title} at ${graph.player.state.value.positionMs} ms, online=${graph.network.status.value.online}")
+            while (graph.player.progress.value.positionMs <= 3_000) { check(System.currentTimeMillis() < end) { "offline playback" }; pump(250) }
+            println("offline playing: ${graph.player.state.value.current?.title} at ${graph.player.progress.value.positionMs} ms, online=${graph.network.status.value.online}")
             graph.player.pause()
         } finally {
             System.clearProperty("blossom.forceOffline")

@@ -30,24 +30,25 @@ class PlayTrackerTest {
 
     private class Rig(val scope: TestScope, tracks: List<Track> = tracks(3)) {
         val state = MutableStateFlow(PlaybackState(queue = tracks, currentIndex = 0, durationMs = tracks[0].durationMs))
+        val position = MutableStateFlow(0L)
         val recorded = mutableListOf<PlayEvent>()
         val prefs = MapPreferenceStore()
         var trackerScope = child(scope)
         var tracker = start()
 
         var failNext = false
-        fun start() = PlayTracker(state, { if (failNext) { failNext = false; error("database busy") }; recorded += it }, VirtualClock(scope), "dev", prefs, trackerScope)
+        fun start() = PlayTracker(state, position, { if (failNext) { failNext = false; error("database busy") }; recorded += it }, VirtualClock(scope), "dev", prefs, trackerScope)
 
         fun play() = state.update { it.copy(isPlaying = true, isBuffering = false) }
         fun pause() = state.update { it.copy(isPlaying = false) }
-        fun seek(to: Long) = state.update { it.copy(positionMs = to) }
-        fun next() = state.update { it.copy(currentIndex = it.currentIndex + 1, positionMs = 0) }
+        fun seek(to: Long) { position.value = to }
+        fun next() { position.value = 0; state.update { it.copy(currentIndex = it.currentIndex + 1) } }
         fun run(ms: Long) {
             var left = ms
             while (left > 0) {
                 val step = minOf(250L, left)
                 scope.advanceTimeBy(step)
-                state.update { s -> if (s.isPlaying && !s.isBuffering) s.copy(positionMs = s.positionMs + step) else s }
+                state.value.let { s -> if (s.isPlaying && !s.isBuffering) position.value += step }
                 left -= step
             }
             scope.runCurrent()

@@ -57,7 +57,7 @@ fun WrappedRoute(graph: AppGraph, key: String, onClose: () -> Unit) {
  * The top song playing softly behind Wrapped. Start and restore run one after another on one job, and the preview is
  * not tracked as a play.
  */
-private class WrappedMusic(private val graph: AppGraph, private val before: PlaybackState) {
+private class WrappedMusic(private val graph: AppGraph, private val before: PlaybackState, private val beforePosition: Long = graph.player.progress.value.positionMs) {
     private var job: kotlinx.coroutines.Job? = null
     private var started = false
 
@@ -82,7 +82,7 @@ private class WrappedMusic(private val graph: AppGraph, private val before: Play
             graph.player.setVolume(1f)
             if (before.queue.isEmpty()) graph.player.pause()
             else {
-                graph.player.setQueue(before.queue, before.currentIndex.coerceAtLeast(0), startPositionMs = before.positionMs)
+                graph.player.setQueue(before.queue, before.currentIndex.coerceAtLeast(0), startPositionMs = beforePosition)
                 if (before.isPlaying) graph.player.play() else graph.player.pause()
             }
             graph.playTracker.setIgnoring(false)

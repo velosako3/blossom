@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.feature.lyrics
 
+import io.github.velosako3.blossom.feature.lyrics.providers.LyricLine
+import io.github.velosako3.blossom.feature.lyrics.providers.LyricWord
+
 /**
  * LRC and enhanced LRC. `[mm:ss.xx]` / `[mm:ss.xxx]` line stamps (several per line allowed), `<mm:ss.xx>` word
  * stamps, `[offset:±ms]` (positive = lyrics earlier), standard tags (`[ar:…]`, `[ti:…]`, …) ignored. A line ends
@@ -70,9 +73,9 @@ object LrcParser {
             val end = maxOf(r.start, sorted.getOrNull(i + 1)?.start ?: trackDurationMs?.takeIf { it > r.start } ?: (r.start + LAST_LINE_MS))
             val words = r.words.mapIndexed { j, (t, w) ->
                 val wordEnd = r.words.getOrNull(j + 1)?.first ?: r.closing ?: minOf(end, t + LAST_WORD_MS)
-                LyricWord(w, t, maxOf(t, wordEnd))
+                LyricWord(t, maxOf(t, wordEnd), w)
             }
-            LyricLine(r.start, end, r.text, words)
+            LyricLine(r.start, r.text, words, sungUntilMs = end)
         }
         return if (lines.any { it.words.isNotEmpty() }) Lyrics.WordSynced(lines, provider) else Lyrics.LineSynced(lines, provider)
     }

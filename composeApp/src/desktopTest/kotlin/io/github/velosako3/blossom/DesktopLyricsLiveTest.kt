@@ -42,13 +42,13 @@ class DesktopLyricsLiveTest {
         onNode(hasSetTextAction()).performTextInput("Kanye West Runaway")
         waitFor(what = "results") { onAllNodes(hasText("Runaway", substring = true)).fetchSemanticsNodes().size > 2 }
         onAllNodes(hasText("Runaway", substring = true))[1].performClick()
-        waitFor(what = "playback") { graph.player.state.value.positionMs > 3_000 }
+        waitFor(what = "playback") { graph.player.progress.value.positionMs > 3_000 }
         onAllNodesWithContentDescription("Lyrics")[0].performClick()
         waitFor(what = "lyrics") { (graph.lyrics.state.value as? LyricsUi.Ready)?.lyrics != null }
         val lyrics = (graph.lyrics.state.value as LyricsUi.Ready).lyrics!!
         println("lyrics: ${lyrics::class.simpleName} from ${lyrics.provider}")
         graph.player.seekTo(60_000)
-        waitFor(what = "seek") { graph.player.state.value.positionMs in 60_000..80_000 }
+        waitFor(what = "seek") { graph.player.progress.value.positionMs in 60_000..80_000 }
 
         // Test frames take ~0.7 s of wall time each while the song plays in real time, so line changes arrive faster
         // than the virtual clock can animate them. Pause, then give the springs ~1 s of frames to settle.

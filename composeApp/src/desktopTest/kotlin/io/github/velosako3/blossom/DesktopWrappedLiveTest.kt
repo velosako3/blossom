@@ -40,18 +40,18 @@ class DesktopWrappedLiveTest {
         pump(1000)
         navigator.navigate(Destination.Wrapped(Period.weekContaining(now, graph.stats.zoneId).key))
         val end = System.currentTimeMillis() + 60_000
-        while (graph.player.state.value.current?.id != songs[0].id || graph.player.state.value.positionMs < songs[0].durationMs * 0.25) {
-            check(System.currentTimeMillis() < end) { "top song did not start: ${graph.player.state.value.current?.title} at ${graph.player.state.value.positionMs}" }
+        while (graph.player.state.value.current?.id != songs[0].id || graph.player.progress.value.positionMs < songs[0].durationMs * 0.25) {
+            check(System.currentTimeMillis() < end) { "top song did not start: ${graph.player.state.value.current?.title} at ${graph.player.progress.value.positionMs}" }
             pump(250)
         }
-        val at = graph.player.state.value.positionMs
+        val at = graph.player.progress.value.positionMs
         println("wrapped live: top song '${songs[0].title}' playing at $at ms of ${songs[0].durationMs} (${at * 100 / songs[0].durationMs}%)")
         pump(2000)
         onRoot().captureRoboImage("src/desktopTest/snapshots/e2e/13_wrapped.png")
         navigator.back()
         val end2 = System.currentTimeMillis() + 30_000
         while (graph.player.state.value.current?.id != songs[2].id) { check(System.currentTimeMillis() < end2) { "not restored" }; pump(250) }
-        println("wrapped live: restored '${graph.player.state.value.current?.title}' at ${graph.player.state.value.positionMs} ms, playing=${graph.player.state.value.isPlaying}")
+        println("wrapped live: restored '${graph.player.state.value.current?.title}' at ${graph.player.progress.value.positionMs} ms, playing=${graph.player.state.value.isPlaying}")
         assertEquals(songs[2].id, graph.player.state.value.current?.id)
         assertTrue(at >= songs[0].durationMs * 0.25)
     }

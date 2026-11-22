@@ -15,9 +15,14 @@ kotlin {
             implementation(libs.ktor.client.okhttp)
             implementation(libs.okhttp)
             implementation(libs.jsoup)
+            implementation(libs.lifecycle.runtime.compose)
         }
         getByName("desktopMain").dependencies {
             implementation(libs.jaudiotagger)
+        }
+        // BitChord's panel collects with lifecycle, which needs a Main dispatcher (the app has Swing's).
+        getByName("desktopTest").dependencies {
+            implementation(libs.kotlinx.coroutines.swing)
         }
     }
 }

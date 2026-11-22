@@ -23,6 +23,8 @@ import kotlin.uuid.Uuid
  */
 class PlayTracker(
     state: StateFlow<PlaybackState>,
+    /** The playhead ([BlossomPlayer.progress]); it ticks apart from [state]. */
+    position: kotlinx.coroutines.flow.Flow<Long>,
     private val record: suspend (PlayEvent) -> Unit,
     private val clock: Clock,
     private val deviceId: String,
@@ -54,7 +56,7 @@ class PlayTracker(
                     lock.withLock { current?.let(::checkpoint) }
                 }
             }
-            state.collect { s -> lock.withLock { onState(s) } }
+            kotlinx.coroutines.flow.combine(state, position) { s, p -> s to p }.collect { (s, p) -> lock.withLock { onState(s, p) } }
         }
     }
 
@@ -67,13 +69,13 @@ class PlayTracker(
         ignoring = ignore
     }
 
-    private suspend fun onState(s: PlaybackState) {
+    private suspend fun onState(s: PlaybackState, positionMs: Long) {
         if (ignoring) return
         val now = clock.now()
         val track = s.current
         current?.let { c ->
             val nearEnd = c.durationMs > 0 && c.lastPosition >= c.durationMs - END_SLACK_MS
-            val restarted = track?.id == c.track.id && s.currentIndex == c.index && nearEnd && s.positionMs < END_SLACK_MS // repeat one
+            val restarted = track?.id == c.track.id && s.currentIndex == c.index && nearEnd && positionMs < END_SLACK_MS // repeat one
             if (track == null || track.id != c.track.id || s.currentIndex != c.index || restarted) {
                 finalize(c, reachedEnd = nearEnd)
                 current = null
@@ -84,7 +86,7 @@ class PlayTracker(
         val playing = s.isPlaying && !s.isBuffering
         if (playing && c.playingSince == null) c.playingSince = now
         if (!playing) c.playingSince?.let { since -> c.playedMs += (now - since).inWholeMilliseconds; c.playingSince = null }
-        c.lastPosition = s.positionMs
+        c.lastPosition = positionMs
         c.durationMs = s.durationMs.takeIf { it > 0 } ?: c.track.durationMs
     }
 

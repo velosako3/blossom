@@ -41,7 +41,8 @@ fun MiniPlayer(player: BlossomPlayer, onOpen: () -> Unit, modifier: Modifier = M
     val state by player.state.collectAsState()
     val track = state.current ?: return
     val colors = BlossomTheme.colors
-    val progress = if (state.durationMs > 0) (state.positionMs.toFloat() / state.durationMs).coerceIn(0f, 1f) else 0f
+    // Read only in the draw lambda below: a tick redraws the hairline, nothing else.
+    val playhead = player.progress.collectAsState()
     GlassSurface(
         modifier.fillMaxWidth().height(64.dp)
             .pointerInput(Unit) { detectVerticalDragGestures { _, dy -> if (dy < -12) onOpen() } },
@@ -53,6 +54,8 @@ fun MiniPlayer(player: BlossomPlayer, onOpen: () -> Unit, modifier: Modifier = M
                     drawContent()
                     val y = size.height - 1.dp.toPx()
                     drawLine(colors.onSurface.copy(alpha = 0.15f), Offset(0f, y), Offset(size.width, y), 2.dp.toPx())
+                    val p = playhead.value
+                    val progress = if (p.durationMs > 0) (p.positionMs.toFloat() / p.durationMs).coerceIn(0f, 1f) else 0f
                     drawLine(colors.accent, Offset(0f, y), Offset(size.width * progress, y), 2.dp.toPx())
                 },
             verticalAlignment = Alignment.CenterVertically,
