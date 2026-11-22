@@ -63,10 +63,12 @@ class LibraryCommands(
     suspend fun deletePlaylist(id: PlaylistId) { run(listOf(Operation.PlaylistDeleted(id))) }
 
     /** Adds [entries] in order, appended or before the entry now at [atIndex]. Returns the new entry IDs. */
-    suspend fun addEntries(id: PlaylistId, entries: List<NewEntry>, atIndex: Int? = null): List<String> {
+    /** [inTransaction] runs in the same transaction (an import marks its items written, so a crash can't duplicate). */
+    suspend fun addEntries(id: PlaylistId, entries: List<NewEntry>, atIndex: Int? = null, inTransaction: () -> Unit = {}): List<String> {
         if (entries.isEmpty()) return emptyList()
         val ids = entries.map { Uuid.random().toString() }
         runComputed {
+            inTransaction()
             val positions = db.blossomQueries.liveEntries(id.value).executeAsList().map { it.position }
             val (before, after) = neighbors(positions, (atIndex ?: positions.size).coerceIn(0, positions.size))
             val keys = FractionalIndex.nBetween(before, after, entries.size)

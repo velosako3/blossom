@@ -1,7 +1,7 @@
 # blossom progress
 
 ## Current position
-Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Tasks 5.1–5.4 done. Next: Milestone 5 wrap-up (check, review, push).
+Milestones 0–2 done (wrap-up: `./gradlew check` green, 99 desktop tests, reviewer findings fixed, `dev` pushed). Milestones 0–3 done (M3 wrap-up: `./gradlew check` green, 137 desktop tests, reviewer findings fixed, pushed). Tasks 4.1–4.3 and 5.1–5.2 done. Milestone 4 wrapped up (review fixed, `./gradlew check` green, pushed). Tasks 5.1–5.4 and 6.1 done. Milestone 5 review received; its fix pass is next, then Task 6.2.
 
 Hands-on testing rule: the owner is using this desktop, so never inject keyboard/mouse input or capture the screen.
 Desktop end-to-end checks run off-screen with the real graph: `./gradlew :composeApp:desktopTest -PliveTests=true -Proborazzi.test.record=true --tests "*DesktopEndToEnd*"`. `./gradlew :composeApp:run -Pblossom.debugPlay="query"` plays a search result at startup, for `playerctl` checks. Kill stray app instances by PID (`ps … | grep 'blossom\.MainKt'`), never with a `pkill -f` pattern that matches your own shell.
@@ -43,6 +43,14 @@ Desktop end-to-end checks run off-screen with the real graph: `./gradlew :compos
 - Desktop `NetworkMonitor` checks for an up interface plus a DNS answer every 15 s (no request to any server); `-Dblossom.forceOffline=true` pins it offline for testing.
 
 ## Deviations from plan
+- Task 6.1:
+  - `Track` has no ISRC field, so `TrackMatcher.match` takes an optional `isrcOf` lookup.
+  - Playlist entries keep no source key, so Refresh from source treats a track as present by its stored source title + artist, or by its native track ID.
+  - SoundCloud short links and untitled invites are detected as PLAYLIST; the importer resolves their real kind after the redirect.
+  - Batch size is a constructor parameter, so the resume test can stop at exactly 40.
+  - Match results are stored in the same transaction as the batch's entries and "written" marks, not one autocommit per item. A crash re-matches at most one window. The per-item commits made 5,000 tracks take over 30 s; now 2.93 s.
+  - `addEntries` gained an `inTransaction` hook so import bookkeeping commits atomically with the entries (no duplicates on resume).
+- Desktop database driver: `BlossomSqliteDriver` replaces SQLDelight's `JdbcSqliteDriver` for the file database. It keeps one connection per thread and adds WAL, `synchronous=NORMAL`, and `BEGIN IMMEDIATE` transactions. SQLDelight begins DEFERRED transactions, so a transaction that reads before writing (`addEntries`) failed at once with SQLITE_BUSY when another connection held the write lock. That's SQLite's lock-upgrade deadlock, where the busy timeout doesn't apply. `ConcurrentWritesTest.readThenWriteTransactionsWithReaders` failed before and passes after. Android's driver already begins exclusive transactions.
 - Task 5.4:
   - `OfflineModeTest` lives in `composeApp/src/commonTest` as planned.
   - The Settings destination shows the Storage screen until 9.7 builds the full settings page.

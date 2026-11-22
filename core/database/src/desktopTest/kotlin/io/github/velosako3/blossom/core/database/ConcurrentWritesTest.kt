@@ -29,4 +29,27 @@ class ConcurrentWritesTest {
             file.delete(); java.io.File(file.path + "-wal").delete(); java.io.File(file.path + "-shm").delete()
         }
     }
+
+    /** Read-then-write transactions racing each other and plain readers (lock upgrades must wait, not fail). */
+    @Test fun readThenWriteTransactionsWithReaders() {
+        val file = kotlin.io.path.createTempFile("blossom-db", ".db").toFile()
+        try {
+            val db = fileDatabase(file)
+            val pool = Executors.newFixedThreadPool(8)
+            val writers = (0 until 200).map { i ->
+                pool.submit {
+                    db.transaction {
+                        db.blossomQueries.offlineUsage().executeAsOne() // read first: takes a shared lock
+                        db.blossomQueries.offlineInsert("t$i", "{}")
+                    }
+                }
+            }
+            val readers = (0 until 400).map { pool.submit { db.blossomQueries.offlineOrphans().executeAsList() } }
+            (writers + readers).forEach { it.get(60, TimeUnit.SECONDS) }
+            pool.shutdown()
+            assertEquals(200, (0 until 200).count { db.blossomQueries.offlineItem("t$it").executeAsOneOrNull() != null })
+        } finally {
+            file.delete(); java.io.File(file.path + "-wal").delete(); java.io.File(file.path + "-shm").delete()
+        }
+    }
 }

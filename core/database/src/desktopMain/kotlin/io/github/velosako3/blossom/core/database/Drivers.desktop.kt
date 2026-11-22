@@ -8,7 +8,7 @@ import java.util.Properties
 /** The library database file in the app data folder (schema created on first open). */
 fun fileDatabase(file: File): BlossomDatabase {
     file.parentFile?.mkdirs()
-    val driver = JdbcSqliteDriver("jdbc:sqlite:${file.absolutePath}", Properties(), BlossomDatabase.Schema)
+    val driver = BlossomSqliteDriver.open("jdbc:sqlite:${file.absolutePath}", BlossomDatabase.Schema)
     return BlossomDatabase(driver)
 }
 

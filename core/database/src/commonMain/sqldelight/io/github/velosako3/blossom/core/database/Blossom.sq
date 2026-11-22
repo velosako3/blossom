@@ -314,3 +314,43 @@ SELECT track_json FROM offline_item WHERE state = 'SAVED' ORDER BY rowid DESC;
 
 offlinePausedForStorage:
 SELECT count(*) FROM offline_item WHERE state = 'PAUSED_STORAGE';
+
+-- import jobs
+importJobInsert:
+INSERT INTO import_job(id, url, service, target_json, playlist_id, state, total, created_at) VALUES (?, ?, ?, ?, NULL, ?, NULL, ?);
+
+importJob:
+SELECT * FROM import_job WHERE id = ?;
+
+importJobsActive:
+SELECT id FROM import_job WHERE state IN ('READING', 'MATCHING') ORDER BY created_at;
+
+importJobSetState:
+UPDATE import_job SET state = ? WHERE id = ?;
+
+importJobSetPlaylist:
+UPDATE import_job SET playlist_id = ? WHERE id = ?;
+
+importJobSetTotal:
+UPDATE import_job SET total = ? WHERE id = ?;
+
+importItemInsert:
+INSERT OR IGNORE INTO import_job_item(job_id, idx, imported_json) VALUES (?, ?, ?);
+
+importItemsUnwritten:
+SELECT * FROM import_job_item WHERE job_id = ? AND written = 0 ORDER BY idx;
+
+importItemSetResult:
+UPDATE import_job_item SET result_json = ? WHERE job_id = ? AND idx = ?;
+
+importItemMarkWritten:
+UPDATE import_job_item SET written = 1 WHERE job_id = ? AND idx = ?;
+
+importItemCounts:
+SELECT
+    count(*) AS total,
+    CAST(coalesce(sum(written), 0) AS INTEGER) AS written,
+    CAST(coalesce(sum(CASE WHEN written = 1 AND result_json LIKE '%"status":"MATCHED"%' THEN 1 ELSE 0 END), 0) AS INTEGER) AS matched,
+    CAST(coalesce(sum(CASE WHEN written = 1 AND result_json LIKE '%"status":"UNCERTAIN"%' THEN 1 ELSE 0 END), 0) AS INTEGER) AS uncertain,
+    CAST(coalesce(sum(CASE WHEN written = 1 AND result_json LIKE '%"status":"UNAVAILABLE"%' THEN 1 ELSE 0 END), 0) AS INTEGER) AS unavailable
+FROM import_job_item WHERE job_id = ?;
