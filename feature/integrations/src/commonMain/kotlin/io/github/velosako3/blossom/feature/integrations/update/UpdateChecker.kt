@@ -22,7 +22,8 @@ import kotlin.time.Instant
 data class Update(val label: String, val pageUrl: String, val assetUrl: String? = null, val assetName: String? = null)
 
 /**
- * Asks GitHub for the newest release, pre-releases included, at most once an hour. A release is newer when it was
+ * Asks GitHub for the newest release at most once an hour; test builds ([testBuild]) also follow pre-releases, public
+ * builds only public releases. A release is newer when it was
  * built from another commit than this build ([currentCommit]) and published after this build was made ([builtAtMs]).
  * Version numbers aren't compared: test builds share one. Builds made outside CI (no commit) never check.
  * Sends nothing but the request. Off when the user turns it off ([ENABLED_KEY]).
@@ -37,6 +38,7 @@ class UpdateChecker(
     private val clock: Clock = Clock.System,
     private val http: OkHttpClient = OkHttpClient(),
     private val url: String = "https://api.github.com/repos/velosako3/blossom/releases?per_page=10",
+    private val testBuild: Boolean = true,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -56,7 +58,7 @@ class UpdateChecker(
         val request = Request.Builder().url(url).header("Accept", "application/vnd.github+json").header("User-Agent", "blossom").build()
         val body = runInterruptible(Dispatchers.IO) { http.newCall(request).execute().use { check(it.isSuccessful) { "HTTP ${it.code}" }; it.body.string() } }
         val newest = json.parseToJsonElement(body).jsonArray.map { it.jsonObject }
-            .filterNot { it.bool("draft") }
+            .filterNot { it.bool("draft") || (!testBuild && it.bool("prerelease")) }
             .maxByOrNull { it.str("published_at").orEmpty() } ?: return null
         val commit = newest.str("target_commitish").orEmpty()
         val published = newest.str("published_at")?.let { runCatching { Instant.parse(it) }.getOrNull() } ?: return null

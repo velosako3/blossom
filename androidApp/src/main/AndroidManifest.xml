@@ -55,6 +55,12 @@
             </intent-filter>
         </activity>
         <!-- Shares Wrapped cards (cache/wrapped) with other apps, and hands downloaded updates (cache/updates) to the installer. -->
+        <!-- Invisible; shows Google's consent screen when Google Drive sync is first turned on. -->
+        <activity
+            android:name="io.github.velosako3.blossom.feature.sync.backends.GoogleConsentActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.files"

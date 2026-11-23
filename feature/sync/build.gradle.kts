@@ -22,6 +22,8 @@ kotlin {
             implementation(libs.camerax.lifecycle)
             implementation(libs.camerax.view)
             implementation(libs.androidx.activity.compose)
+            // Google Drive sign-in on Android (Google no longer allows browser redirects for Android apps).
+            implementation(libs.play.services.auth)
         }
         commonTest.dependencies {
             implementation(libs.okhttp.mockwebserver)

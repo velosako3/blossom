@@ -49,8 +49,15 @@ class UpdateCheckerTest {
         },
     )
 
-    private fun checker(server: MockWebServer, prefs: MapPreferenceStore = MapPreferenceStore(), clock: Clock = Clock.System, commit: String = "aaa", abi: String = "arm64-v8a") =
-        UpdateChecker(commit, built, UpdateChecker.androidApk(abi), prefs, clock, url = server.url("/releases").toString())
+    private fun checker(server: MockWebServer, prefs: MapPreferenceStore = MapPreferenceStore(), clock: Clock = Clock.System, commit: String = "aaa", abi: String = "arm64-v8a", testBuild: Boolean = true) =
+        UpdateChecker(commit, built, UpdateChecker.androidApk(abi), prefs, clock, url = server.url("/releases").toString(), testBuild = testBuild)
+
+    @Test fun publicBuildsOnlyFollowPublicReleases(): Unit = runBlocking {
+        MockWebServer().use { server ->
+            server.enqueue(releases(Triple("ccc", "2026-11-23T02:00:00Z", true), Triple("bbb", "2026-11-23T00:50:00Z", false))); server.start()
+            assertEquals("build bbb", checker(server, testBuild = false).check()?.label, "the newer test build is skipped")
+        }
+    }
 
     @Test fun aNewerPreReleaseFromAnotherCommitIsAnUpdate(): Unit = runBlocking {
         MockWebServer().use { server ->

@@ -73,8 +73,10 @@ class ShellState {
 @Composable
 fun ExpandedShell(navigator: Navigator, slots: ShellSlots, modifier: Modifier = Modifier, shell: ShellState = remember { ShellState() }) {
     val panel = shell.rightPanel
-    // The player bar floats over the page, which runs under it so its glass has something to bend.
-    val barSpace = PLAYER_BAR_HEIGHT + 12.dp
+    // The player bar floats over the page, which runs under it so its glass has something to bend. Now playing has its
+    // own controls, so the bar steps aside there (it covered them on shorter windows).
+    val immersive = navigator.current == io.github.velosako3.blossom.navigation.Destination.NowPlaying
+    val barSpace = if (immersive) 0.dp else PLAYER_BAR_HEIGHT + 12.dp
     Box(modifier.fillMaxSize().padding(12.dp)) {
         Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             GlassSidebar(Modifier.testTag(SIDEBAR_TAG).padding(bottom = barSpace)) {
@@ -128,7 +130,7 @@ fun ExpandedShell(navigator: Navigator, slots: ShellSlots, modifier: Modifier = 
                 }
             }
         }
-        Box(Modifier.align(Alignment.BottomCenter)) {
+        if (!immersive) Box(Modifier.align(Alignment.BottomCenter)) {
             slots.playerBar?.invoke(shell) ?: PlaceholderPlayerBar(
                 onToggleQueue = { shell.toggle(RightPanel.QUEUE) },
                 onToggleLyrics = { shell.toggle(RightPanel.LYRICS) },

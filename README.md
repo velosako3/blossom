@@ -5,8 +5,12 @@ A free, open-source, liquid-glass music player for Android, Windows and Linux.
 It's free for everyone: no ads, no paid tier, no analytics, no blossom account.
 
 <p>
-<img src="docs/screenshots/m9/desktop/03_now_playing_lyrics.png" width="560" alt="Now playing with synced lyrics on desktop">
-<img src="docs/screenshots/m9/android/07_now_playing.png" width="200" alt="Now playing on Android">
+<img src="docs/screenshots/readme/desktop_now_playing.jpg" width="600" alt="Now playing on desktop, with word-by-word synced lyrics">
+<img src="docs/screenshots/readme/android_lyrics.jpg" width="187" alt="Synced lyrics on Android">
+</p>
+<p>
+<img src="docs/screenshots/readme/desktop_home.jpg" width="600" alt="Home on desktop, with the liquid-glass player bar">
+<img src="docs/screenshots/readme/android_now_playing.jpg" width="187" alt="Now playing on Android">
 </p>
 
 ## What it does
@@ -26,7 +30,8 @@ It's free for everyone: no ads, no paid tier, no analytics, no blossom account.
 
 ## Install
 
-Installers are built by the [installers workflow](.github/workflows/release.yml) as workflow artifacts:
+Download the installer for your device from the [latest release](https://github.com/velosako3/blossom/releases/latest).
+blossom then updates itself: it offers each new release and installs it when you tap it.
 
 | Platform | File | Notes |
 | --- | --- | --- |
@@ -34,7 +39,8 @@ Installers are built by the [installers workflow](.github/workflows/release.yml)
 | Windows 10/11 (x64) | `blossom-<version>-windows-x64.msi` | Or the `-portable.zip`: unzip and run `blossom.exe`. |
 | Linux (x86_64) | `blossom-<version>-linux-x86_64.AppImage` | `chmod +x` and run. Or `sudo apt install ./blossom_<version>_amd64.deb`. |
 
-Each artifact has a `SHA256SUMS` file. Builds marked `test-build` are signed with a debug key.
+Each release has `SHA256SUMS` files to check downloads against. The Windows installer isn't code-signed yet, so Windows
+may show "Windows protected your PC": choose **More info → Run anyway**. Pre-releases named "test build" are for testing.
 
 ## Building
 

@@ -119,8 +119,9 @@ private fun androidSyncSetup(context: Context, secure: io.github.velosako3.bloss
     val dropboxKey = BlossomSecrets.DROPBOX_APP_KEY
     val kinds = io.github.velosako3.blossom.feature.sync.ui.BackendKind.entries.filter {
         when (it) {
-            // Drive needs an Android OAuth client (package + signing key), not configured yet.
-            io.github.velosako3.blossom.feature.sync.ui.BackendKind.GOOGLE_DRIVE -> false
+            // Drive needs an Android OAuth client (package + release signing key) in the Google Cloud project; the ID
+            // only marks builds where it's set up (debug builds are signed with another key and Google refuses them).
+            io.github.velosako3.blossom.feature.sync.ui.BackendKind.GOOGLE_DRIVE -> BlossomSecrets.GOOGLE_OAUTH_ANDROID_CLIENT_ID.isNotEmpty()
             io.github.velosako3.blossom.feature.sync.ui.BackendKind.DROPBOX -> dropboxKey.isNotEmpty()
             else -> true
         }
@@ -148,7 +149,18 @@ private fun androidSyncSetup(context: Context, secure: io.github.velosako3.bloss
                         io.github.velosako3.blossom.feature.sync.backends.DropboxBackend(o)
                     }
                 }
-                io.github.velosako3.blossom.feature.sync.ui.BackendKind.GOOGLE_DRIVE -> null
+                io.github.velosako3.blossom.feature.sync.ui.BackendKind.GOOGLE_DRIVE -> {
+                    val auth = io.github.velosako3.blossom.feature.sync.backends.AndroidGoogleAuth
+                    val o = io.github.velosako3.blossom.feature.sync.backends.OAuthClient(
+                        io.github.velosako3.blossom.feature.sync.backends.OAuthConfig.googleDrive(BlossomSecrets.GOOGLE_OAUTH_ANDROID_CLIENT_ID, null),
+                        secure, "gdrive",
+                    ) { auth.token(context, interactive = false) }
+                    // Signed out: only a fresh choice (interactive) shows Google's screens.
+                    if (o.tokens() == null && !interactive) null else {
+                        if (o.tokens() == null) o.save(auth.token(context, interactive = true))
+                        io.github.velosako3.blossom.feature.sync.backends.GoogleDriveBackend(o)
+                    }
+                }
             }
         },
         discovery = { io.github.velosako3.blossom.feature.sync.lan.NsdDiscovery(context) },
