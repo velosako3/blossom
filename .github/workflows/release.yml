@@ -64,7 +64,7 @@ jobs:
             cp "androidApp/build/outputs/apk/release/androidApp-$abi-release.apk" "out/blossom-$VER-android-$abi$SUFFIX.apk"
           done
           (cd out && sha256sum * > SHA256SUMS)
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: android
           path: out/
@@ -94,7 +94,7 @@ jobs:
           cp composeApp/build/compose/binaries/main-release/msi/*.msi "out/blossom-$VER-windows-x64.msi"
           (cd composeApp/build/compose/binaries/main-release/app && 7z a -tzip "$GITHUB_WORKSPACE/out/blossom-$VER-windows-x64-portable.zip" blossom > /dev/null)
           (cd out && sha256sum * > SHA256SUMS)
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: windows
           path: out/
@@ -139,7 +139,7 @@ jobs:
           cp composeApp/build/compose/binaries/main-release/deb/*.deb "out/blossom_${VER}_amd64.deb"
           mv "blossom-$VER-linux-x86_64.AppImage" out/
           (cd out && sha256sum * > SHA256SUMS)
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: linux
           path: out/
