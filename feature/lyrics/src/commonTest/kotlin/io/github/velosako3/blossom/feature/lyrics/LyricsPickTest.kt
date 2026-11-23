@@ -81,3 +81,24 @@ class LyricsPickDeadlineTest {
         kotlin.test.assertFalse(LyricsRepository.outlastsTrack(lines, 0))
     }
 }
+
+class KuGouTitleTest {
+    @Test fun onlyTheSameTitleIsTheSong() {
+        val same = io.github.velosako3.blossom.feature.lyrics.providers.KuGou::sameTitle
+        kotlin.test.assertFalse(same("Flashing Lights", "Nitrous"))
+        kotlin.test.assertFalse(same("Bound 2", "Free My Kids"))
+        kotlin.test.assertTrue(same("Runaway (Explicit)", "Runaway"))
+        kotlin.test.assertTrue(same("Diddy Free", "diddy free"))
+        kotlin.test.assertFalse(same("", "Nitrous"))
+    }
+}
+
+class SameWordsTest {
+    private fun l(vararg t: String) = t.map { LyricLine(1_000, it) }
+
+    @Test fun anotherSongsLyricsDontShareTheWords() {
+        val genius = l("Nitrous really fucking with my brain", "Tryna see my kids, but they don't think I'm sane")
+        kotlin.test.assertFalse(LyricsRepository.sameWords(l("Oh, understand, girl, I'm out of sight", "B-B-B-B-Bound to fall in love"), genius))
+        kotlin.test.assertTrue(LyricsRepository.sameWords(l("Nitrous really fuckin' with my brain", "Tryna see my kids but they don't think I'm sane"), genius))
+    }
+}

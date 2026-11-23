@@ -67,7 +67,8 @@ object Genius {
 
     suspend fun lyrics(title: String, artist: String): List<LyricLine>? = withContext(Dispatchers.IO) {
         runCatching {
-            scrapeLyrics(title, artist)
+            // blossom: and under the artist's current name where Genius renamed them (Kanye West is "Ye" there).
+            scrapeLyrics(title, artist) ?: artist.replace(Regex("""(?i)\bkanye west\b"""), "Ye").takeIf { it != artist }?.let { scrapeLyrics(title, it) }
         }.getOrNull()
     }
 
@@ -174,18 +175,21 @@ object Genius {
     ): JsonObject? {
         if (candidates.isEmpty()) return null
         val normTitle = targetTitle.lowercase(Locale.ROOT)
-        val normArtist = targetArtist.lowercase(Locale.ROOT)
+        // blossom: Genius files Kanye West as "Ye"; other sources still use the old name.
+        // ponytail: one known alias, a table if more turn up.
+        val normArtist = targetArtist.lowercase(Locale.ROOT).replace(Regex("""\bkanye west\b"""), "ye")
 
         val scored = candidates.mapNotNull { item ->
             val title = item["title"]?.jsonPrimitive?.contentOrNull?.lowercase(Locale.ROOT) ?: ""
-            val artist = item["artist_names"]?.jsonPrimitive?.contentOrNull?.lowercase(Locale.ROOT) ?: ""
+            val artist = (item["artist_names"]?.jsonPrimitive?.contentOrNull?.lowercase(Locale.ROOT) ?: "").replace(Regex("""\bkanye west\b"""), "ye")
             var score = 0
 
             val titleMatches = normTitle.isNotBlank() && (title == normTitle || title.contains(normTitle) || normTitle.contains(title))
             val artistMatches = normArtist.isNotBlank() && (artist == normArtist || artist.contains(normArtist) || normArtist.contains(artist))
 
-            // blossom: both, not either. A title match by another artist, or another song by the same artist, is
-            // the wrong lyrics, and for an unreleased song it is nearly always one of those.
+            // blossom: title and artist both. Another song by the same artist, or the same title by someone else
+            // (Joji's "Nitrous" for Ye's), is the wrong lyrics, and for an unreleased song it is nearly always one
+            // of those.
             if (!titleMatches || (normArtist.isNotBlank() && !artistMatches)) return@mapNotNull null
 
             if (title == normTitle) score += 50

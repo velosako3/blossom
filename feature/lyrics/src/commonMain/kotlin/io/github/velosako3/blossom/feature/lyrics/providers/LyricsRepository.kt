@@ -2,7 +2,7 @@
 // Ported from BitChord (https://github.com/kushagrasinghx/BitChord) at 21356206,
 // shared/src/jvmSharedMain/kotlin/com/music/bitchord/data/lyrics/LyricsRepository.kt (GPL-3.0).
 // Modified for blossom, 2026: package; a deadline on waiting for priority in [pick]; timed lyrics that run past the
-// end of the track are rejected ([outlastsTrack]).
+// end of the track are rejected ([outlastsTrack]); name-matched timed lyrics are checked against Genius ([sameWords]).
 package io.github.velosako3.blossom.feature.lyrics.providers
 
 import kotlinx.coroutines.CancellationException
@@ -162,7 +162,16 @@ object LyricsRepository {
         }
 
         try {
-            pick(racing.map { (source, job) -> source to suspend { job.await() } }, prioritizeSyllableSync)
+            val picked = pick(racing.map { (source, job) -> source to suspend { job.await() } }, prioritizeSyllableSync)
+            // blossom: a track no catalogue knows by its recording (most unreleased songs) was matched on its name
+            // alone, and name matches are where another song's lyrics come from. Genius, which must match title and
+            // artist, has the words for most of them: timed lyrics that don't share those words are another song.
+            val genius = racing.firstOrNull { it.first == LyricsSource.GENIUS }?.second
+            if (picked != null && recording == null && picked.source != LyricsSource.GENIUS && genius != null) {
+                val reference = runCatching { withTimeoutOrNull(GENIUS_CHECK_MS) { genius.await() } }.getOrNull()
+                if (reference != null && !sameWords(picked.lines, reference.lines)) return@coroutineScope reference
+            }
+            picked
         } finally {
             // Whoever lost the race is no longer worth waiting on, and
             // coroutineScope will not return while they are still running.
@@ -242,6 +251,18 @@ object LyricsRepository {
 
     /** Marks a source that answered "none" in the sweep, apart from one that is still running. */
     private val NONE = Result(LyricsSource.GENIUS, emptyList())
+
+    /** blossom: how long the Genius cross-check may add to a lookup. */
+    private const val GENIUS_CHECK_MS = 4_000L
+
+    /** blossom: whether [lines] share most of their words with [reference] (the same song, maybe transcribed differently). */
+    internal fun sameWords(lines: List<LyricLine>, reference: List<LyricLine>): Boolean {
+        fun words(l: List<LyricLine>) = l.flatMap { line -> line.text.lowercase().split(Regex("""[^\p{L}\p{N}]+""")) }
+            .filter { it.length >= 3 }.toSet()
+        val a = words(lines); val b = words(reference)
+        if (a.isEmpty() || b.isEmpty()) return true
+        return (a intersect b).size.toDouble() / minOf(a.size, b.size) >= 0.35
+    }
 
     /** blossom: see [pick]'s `priorityWaitMs`. */
     private const val PRIORITY_WAIT_MS = 2_500L

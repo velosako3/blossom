@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Ported from BitChord (https://github.com/kushagrasinghx/BitChord) v1.9.1,
 // shared/src/jvmSharedMain/kotlin/com/music/bitchord/data/lyrics/LrcLib.kt (GPL-3.0).
-// Modified for blossom, 2026: package and HTTP client wiring.
+// Modified for blossom, 2026: package and HTTP client wiring; Kanye West also looked up as Ye.
 package io.github.velosako3.blossom.feature.lyrics.providers
 
 import io.github.velosako3.blossom.feature.lyrics.providers.Http
@@ -35,6 +35,11 @@ object LrcLib {
 
     /** Synced lyrics for a track, or null when nothing usable is published. */
     suspend fun lyrics(title: String, artist: String, durationMs: Long): List<LyricLine>? =
+        lyricsAs(title, artist, durationMs)
+            // blossom: LRCLIB files Kanye West's newer songs under "Ye".
+            ?: artist.replace(Regex("""(?i)\bkanye west\b"""), "Ye").takeIf { it != artist }?.let { lyricsAs(title, it, durationMs) }
+
+    private suspend fun lyricsAs(title: String, artist: String, durationMs: Long): List<LyricLine>? =
         withContext(Dispatchers.IO) {
             val cleanTitle = title.clean()
             val cleanArtist = artist.clean()

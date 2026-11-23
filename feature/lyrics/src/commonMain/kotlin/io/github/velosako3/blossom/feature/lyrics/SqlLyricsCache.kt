@@ -17,10 +17,11 @@ class SqlLyricsCache(private val db: BlossomDatabase) : LyricsCache {
     private val json = Json { ignoreUnknownKeys = true }
 
     /**
-     * Rows are keyed per format. v3 stores BitChord's full lines (2026-11-22); rows from before (v2, and the old
-     * resolver's unprefixed rows, often a plain Genius page or the wrong song) are ignored rather than trusted.
+     * Rows are keyed per lookup generation, so a fix to the lookup isn't hidden behind answers the old one cached.
+     * v4 (2026-11-23): Genius must match title and artist, lyrics longer than the song are rejected. Older rows
+     * (often the wrong song or a plain Genius page) are ignored rather than trusted.
      */
-    private fun key(id: TrackId) = "v3:" + id.value
+    private fun key(id: TrackId) = "v4:" + id.value
 
     override suspend fun get(id: TrackId): CachedLyrics? = withContext(Dispatchers.IO) {
         val row = db.blossomQueries.lyricsFor(key(id)).executeAsOneOrNull() ?: return@withContext null

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Ported from BitChord (https://github.com/kushagrasinghx/BitChord) v1.9.1,
 // shared/src/jvmSharedMain/kotlin/com/music/bitchord/data/lyrics/KuGou.kt (GPL-3.0).
-// Modified for blossom, 2026: package and HTTP client wiring.
+// Modified for blossom, 2026: package and HTTP client wiring; a result must carry the song's title.
 package io.github.velosako3.blossom.feature.lyrics.providers
 
 import kotlinx.coroutines.Dispatchers
@@ -36,9 +36,9 @@ object KuGou {
         val keyword = keyword(title, artist, album)
         val seconds = (durationMs / 1000).toInt()
 
-        val candidate = searchSongs(keyword, seconds)?.firstNotNullOfOrNull { hash ->
+        val candidate = searchSongs(keyword, seconds, title)?.firstNotNullOfOrNull { hash ->
             searchLyrics(hash = hash)?.firstOrNull()
-        } ?: searchLyrics(keyword = keyword, seconds = seconds)?.firstOrNull()
+        } ?: searchLyrics(keyword = keyword, seconds = seconds)?.firstOrNull { it.song.isBlank() || sameTitle(it.song, title) }
             ?: return@withContext null
 
         val lrc = download(candidate.id, candidate.accesskey) ?: return@withContext null
@@ -51,7 +51,7 @@ object KuGou {
      * first result for a common title is as likely to be a cover or a remix
      * as the right recording — and ordered closest match first.
      */
-    private fun searchSongs(keyword: Keyword, seconds: Int): List<String>? {
+    private fun searchSongs(keyword: Keyword, seconds: Int, title: String): List<String>? {
         val url = "https://mobileservice.kugou.com/api/v3/search/song".toHttpUrl().newBuilder()
             .addQueryParameter("version", "9108")
             .addQueryParameter("plat", "0")
@@ -63,6 +63,9 @@ object KuGou {
         val response = runCatching { lyricsJson.decodeFromString<SearchSongResponse>(body) }.getOrNull()
         return response?.data?.info.orEmpty()
             .filter { seconds <= 0 || abs(it.duration - seconds) <= DURATION_TOLERANCE_SECONDS }
+            // blossom: KuGou answers a title it doesn't have with the artist's other songs ("Nitrous" by Ye came back
+            // as Bound 2); only a result with this title is the song.
+            .filter { sameTitle(it.songname, title) }
             .sortedBy { abs(it.duration - seconds) }
             .map { it.hash }
     }
@@ -165,20 +168,27 @@ object KuGou {
 
     private class Keyword(val query: String)
 
+    /** blossom: [found] names the same song as [wanted], ignoring case, punctuation and bracketed extras. */
+    internal fun sameTitle(found: String, wanted: String): Boolean {
+        fun norm(t: String) = t.lowercase().replace(Regex("""[(\[（【].*?[)\]）】]"""), " ").replace(Regex("""[^\p{L}\p{N}]+"""), " ").trim()
+        val a = norm(found); val b = norm(wanted)
+        return a.isNotEmpty() && b.isNotEmpty() && (a == b || a.startsWith("$b ") || b.startsWith("$a "))
+    }
+
     @Serializable
     private data class SearchSongResponse(val data: Data? = null) {
         @Serializable
         data class Data(val info: List<Info> = emptyList())
 
         @Serializable
-        data class Info(val hash: String, val duration: Int = -1)
+        data class Info(val hash: String, val duration: Int = -1, val songname: String = "")
     }
 
     @Serializable
     private data class SearchLyricsResponse(val candidates: List<Candidate> = emptyList())
 
     @Serializable
-    private data class Candidate(val id: String, val accesskey: String)
+    private data class Candidate(val id: String, val accesskey: String, val song: String = "")
 
     @Serializable
     private data class DownloadResponse(val content: String = "")
