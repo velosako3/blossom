@@ -10,6 +10,19 @@ import kotlin.time.measureTimedValue
 
 /** The owner's unreleased Ye songs, per source. Live: -PliveTests=true. */
 class YeUnreleasedLiveTest {
+    /** The app's own path: resolver, saved-lyrics cache, a track as the untitled.stream source builds it. */
+    @Test fun throughTheResolver() = runBlocking {
+        val resolver = LyricsResolver(bitChordLyrics(), LocalLyricsSource { null }, SqlLyricsCache(io.github.velosako3.blossom.core.database.inMemoryDatabase(), "test"), kotlin.time.Clock.System)
+        for ((title, ms) in listOf("NITROUS" to 97_000L, "FREE MY KIDS" to 109_000L, "FREE DIDDY" to 178_000L)) {
+            val track = io.github.velosako3.blossom.core.model.Track(
+                io.github.velosako3.blossom.core.model.TrackId.of(io.github.velosako3.blossom.core.model.SourceKind.UNTITLED, title.lowercase().replace(' ', '-')),
+                title, listOf(io.github.velosako3.blossom.core.model.ArtistRef(null, "YeBreak")), null, ms, null,
+            )
+            val (r, t) = measureTimedValue { resolver.resolve(track) }
+            println("resolver '$title': ${r?.provider} ${r?.let { it::class.simpleName }} in ${t.inWholeMilliseconds} ms, first='${r?.lines?.firstOrNull { it.text.isNotBlank() }?.text}'")
+        }
+    }
+
     @Test fun asTheAppSeesThem() = runBlocking {
         for ((title, ms) in listOf("NITROUS" to 97_000L, "FREE MY KIDS" to 109_000L, "FREE DIDDY" to 178_000L)) {
             val (r, t) = measureTimedValue { bitChordLyrics().lyrics(LyricsQuery(title, listOf("YeBreak"), null, ms)) }

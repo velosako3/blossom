@@ -13,15 +13,17 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.time.Instant
 
-class SqlLyricsCache(private val db: BlossomDatabase) : LyricsCache {
+/**
+ * Lyrics found earlier, keyed per [generation]. The app passes its build's commit, so every new build looks each song
+ * up again once: a fixed lookup is never hidden behind answers a broken one saved (wrong lyrics, or "none found").
+ */
+class SqlLyricsCache(private val db: BlossomDatabase, private val generation: String = "dev") : LyricsCache {
     private val json = Json { ignoreUnknownKeys = true }
 
-    /**
-     * Rows are keyed per lookup generation, so a fix to the lookup isn't hidden behind answers the old one cached.
-     * v4 (2026-11-23): Genius must match title and artist, lyrics longer than the song are rejected. Older rows
-     * (often the wrong song or a plain Genius page) are ignored rather than trusted.
-     */
-    private fun key(id: TrackId) = "v4:" + id.value
+    private fun key(id: TrackId) = "$generation:" + id.value
+
+    /** Drops what other builds saved (they are never read again). */
+    suspend fun pruneOtherGenerations() = withContext(Dispatchers.IO) { db.blossomQueries.pruneLyrics("$generation:%"); Unit }
 
     override suspend fun get(id: TrackId): CachedLyrics? = withContext(Dispatchers.IO) {
         val row = db.blossomQueries.lyricsFor(key(id)).executeAsOneOrNull() ?: return@withContext null

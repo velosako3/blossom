@@ -168,6 +168,7 @@ class AppGraph(
         online -> true
         else -> offline?.isSaved(track.id) == true
     }
+    private val lyricsCache = SqlLyricsCache(db, generation = BlossomBuildInfo.COMMIT.ifBlank { "dev" }.take(12))
     private val lyricsResolver = LyricsResolver(
         // Offline, the online providers fail at once instead of waiting out their timeouts.
         bitChordLyrics().let { online ->
@@ -175,11 +176,12 @@ class AppGraph(
                 if (network.status.value.online) online.lyrics(q) else throw java.io.IOException("offline")
             }
         },
-        localLyrics, SqlLyricsCache(db), Clock.System,
+        localLyrics, lyricsCache, Clock.System,
     )
     val lyrics = LyricsViewModel(lyricsResolver, player.state.map { it.current }, scope)
 
     init {
+        scope.launch { runCatching { lyricsCache.pruneOtherGenerations() } }
         // The next song's lyrics are looked up while this one plays, so a skip shows them at once (from the cache).
         scope.launch(kotlinx.coroutines.Dispatchers.IO) {
             player.state.map { it.queue.getOrNull(it.currentIndex + 1) }

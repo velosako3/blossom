@@ -385,3 +385,6 @@ SELECT count(*) FROM op_log;
 
 clearLyrics:
 DELETE FROM lyrics_cache;
+
+pruneLyrics:
+DELETE FROM lyrics_cache WHERE track_id NOT LIKE ?;
