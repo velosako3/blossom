@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <!-- Scanning another device's pairing QR code; never recorded. -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Installing a blossom update the user asked for (Android asks them to confirm). -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <application
@@ -48,7 +50,7 @@
                 <data android:host="untitled.stream" />
             </intent-filter>
         </activity>
-        <!-- Shares Wrapped cards (cache/wrapped) with other apps. -->
+        <!-- Shares Wrapped cards (cache/wrapped) with other apps, and hands downloaded updates (cache/updates) to the installer. -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.files"

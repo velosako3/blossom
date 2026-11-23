@@ -6,7 +6,9 @@ import io.github.velosako3.blossom.core.offline.OfflineSettingsStore
 import io.github.velosako3.blossom.feature.home.HomeState
 import io.github.velosako3.blossom.feature.home.OfflinePlaylistCard
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlin.time.Duration.Companion.days
@@ -166,19 +168,29 @@ class AppGraph(
         online -> true
         else -> offline?.isSaved(track.id) == true
     }
-    val lyrics = LyricsViewModel(
+    private val lyricsResolver = LyricsResolver(
         // Offline, the online providers fail at once instead of waiting out their timeouts.
-        LyricsResolver(
-            bitChordLyrics().let { online ->
-                io.github.velosako3.blossom.feature.lyrics.OnlineLyrics { q ->
-                    if (network.status.value.online) online.lyrics(q) else throw java.io.IOException("offline")
-                }
-            },
-            localLyrics, SqlLyricsCache(db), Clock.System,
-        ),
-        player.state.map { it.current },
-        scope,
+        bitChordLyrics().let { online ->
+            io.github.velosako3.blossom.feature.lyrics.OnlineLyrics { q ->
+                if (network.status.value.online) online.lyrics(q) else throw java.io.IOException("offline")
+            }
+        },
+        localLyrics, SqlLyricsCache(db), Clock.System,
     )
+    val lyrics = LyricsViewModel(lyricsResolver, player.state.map { it.current }, scope)
+
+    init {
+        // The next song's lyrics are looked up while this one plays, so a skip shows them at once (from the cache).
+        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            player.state.map { it.queue.getOrNull(it.currentIndex + 1) }
+                .distinctUntilChanged { a, b -> a?.id == b?.id }
+                .collectLatest { next ->
+                    if (next == null) return@collectLatest
+                    kotlinx.coroutines.delay(3_000) // after the current song's own lookup
+                    runCatching { lyricsResolver.resolve(next) }
+                }
+        }
+    }
 
     init {
         YouTubeLyricsApi.next = ytm.client::next
@@ -209,7 +221,13 @@ class AppGraph(
 
     /** A newer release on GitHub, checked at most daily (off in Settings); null in tests (no [secure]). */
     val update = MutableStateFlow<io.github.velosako3.blossom.feature.integrations.update.Update?>(null)
-    val updateChecker = io.github.velosako3.blossom.feature.integrations.update.UpdateChecker(BlossomBuildInfo.VERSION, android = !desktop, prefs)
+    /** Picks this platform's installer from a release's files; set by the platform graph. */
+    var updateAssetPicker: (List<String>) -> String? = { null }
+    /** Downloads and installs an update; set by the platform graph where blossom can update itself. */
+    var updateInstaller: io.github.velosako3.blossom.feature.integrations.update.UpdateInstaller? = null
+    val updateChecker = io.github.velosako3.blossom.feature.integrations.update.UpdateChecker(
+        BlossomBuildInfo.COMMIT, BlossomBuildInfo.BUILT_AT_MS, { names -> updateAssetPicker(names) }, prefs,
+    )
 
     private val _discord = MutableStateFlow(prefs.get(DISCORD_KEY) == "true")
     /** Discord Rich Presence (desktop only): off by default. */

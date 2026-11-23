@@ -227,7 +227,7 @@ class DefaultBlossomPlayer(
         else -> null
     }
 
-    /** Near the end: start the crossfade, or resolve the next stream ahead so it starts at once. */
+    /** On every tick: resolve the next stream ahead (once per track), and near the end start the crossfade. */
     private suspend fun approachingEnd(remainingMs: Long) {
         if (remainingMs <= 0 || fadeJob?.isActive == true || !wantPlaying || _stopAfterCurrent.value) return
         val current = queue.current ?: return
@@ -242,7 +242,8 @@ class DefaultBlossomPlayer(
             crossfadeTo(next, input, fade, minOf(seconds * 1000L, remainingMs))
             return
         }
-        if (remainingMs <= PRELOAD_MS && preloadedFor != queue.currentIndex && next.id.kind != SourceKind.LOCAL && !isSavedOffline(next.id) && network.status.value.online) {
+        // Resolved as soon as this track plays, not near its end: a skip then starts the next song at once.
+        if (preloadedFor != queue.currentIndex && next.id.kind != SourceKind.LOCAL && !isSavedOffline(next.id) && network.status.value.online) {
             preloadedFor = queue.currentIndex
             scope.launch { runCatching { resolver.resolve(next.id, quality()) } }
         }
@@ -330,7 +331,6 @@ class DefaultBlossomPlayer(
 
     private companion object {
         const val MAX_RERESOLVES = 2
-        const val PRELOAD_MS = 20_000L
         const val FADE_STEP_MS = 50L
     }
 }

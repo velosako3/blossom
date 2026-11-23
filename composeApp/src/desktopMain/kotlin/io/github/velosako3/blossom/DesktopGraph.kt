@@ -110,6 +110,33 @@ fun createDesktopGraph(): AppGraph {
     DiscordPresence(player.state, player.progress, graph.discordEnabled, scope)
     // "Use the system title bar" lives in the window state file, which the window reads at start.
     val windows = io.github.velosako3.blossom.window.WindowStateStore()
+    // Updates: a Linux AppImage is swapped in place and restarted; Windows runs the new MSI. Other installs (the .deb,
+    // the portable zip) get the release page.
+    val appImage = System.getenv("APPIMAGE")?.let(::File)?.takeIf { it.isFile }
+    val onWindows = System.getProperty("os.name").lowercase().contains("win")
+    graph.updateAssetPicker = { names ->
+        when {
+            appImage != null -> names.firstOrNull { it.endsWith(".AppImage") }
+            onWindows -> names.firstOrNull { it.endsWith(".msi") }
+            else -> null
+        }
+    }
+    graph.updateInstaller = io.github.velosako3.blossom.feature.integrations.update.UpdateInstaller { update, progress ->
+        val url = requireNotNull(update.assetUrl)
+        if (appImage != null) {
+            val fresh = File(appImage.parentFile, appImage.name + ".new")
+            io.github.velosako3.blossom.feature.integrations.update.downloadUpdate(url, fresh, progress)
+            fresh.setExecutable(true)
+            // The running copy keeps its own (now unlinked) file; the path holds the new one from here on.
+            java.nio.file.Files.move(fresh.toPath(), appImage.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE)
+            ProcessBuilder(appImage.path).start()
+        } else {
+            val msi = File(System.getProperty("java.io.tmpdir"), update.assetName ?: "blossom-update.msi")
+            io.github.velosako3.blossom.feature.integrations.update.downloadUpdate(url, msi, progress)
+            ProcessBuilder("msiexec", "/i", msi.path).start()
+        }
+        kotlin.system.exitProcess(0)
+    }
     graph.systemTitleBar = PrefFlow(
         io.github.velosako3.blossom.core.platform.MapPreferenceStore(mapOf("t" to windows.load().systemTitleBar.toString())) { m ->
             windows.save(windows.load().copy(systemTitleBar = m["t"] == "true"))

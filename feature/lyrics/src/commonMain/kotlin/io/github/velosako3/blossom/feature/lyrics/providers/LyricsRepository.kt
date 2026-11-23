@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Ported from BitChord (https://github.com/kushagrasinghx/BitChord) at 21356206,
 // shared/src/jvmSharedMain/kotlin/com/music/bitchord/data/lyrics/LyricsRepository.kt (GPL-3.0).
-// Modified for blossom, 2026: package.
+// Modified for blossom, 2026: package; a deadline on waiting for priority in [pick]; timed lyrics that run past the
+// end of the track are rejected ([outlastsTrack]).
 package io.github.velosako3.blossom.feature.lyrics.providers
 
 import kotlinx.coroutines.CancellationException
@@ -181,23 +182,78 @@ object LyricsRepository {
     internal suspend fun pick(
         racing: List<Pair<LyricsSource, suspend () -> Result?>>,
         prioritizeSyllableSync: Boolean,
+        /**
+         * blossom: how long priority order is waited on. A source still pending after this no longer holds up an
+         * answer that is already in: a track the top sources don't have (an unreleased song) would otherwise wait
+         * out every one of their timeouts before a lower source's synced lyrics could show.
+         */
+        priorityWaitMs: Long = PRIORITY_WAIT_MS,
     ): Result? {
         var lineSynced: Result? = null
         var plain: Result? = null
-        for ((source, await) in racing) {
-            // If we already found a line-synced or better result, skip Genius completely
-            if ((lineSynced ?: plain) != null && source == LyricsSource.GENIUS) continue
+        val left = racing.toMutableList()
 
-            val found = runCatching { await() }.getOrNull() ?: continue
-            if (found.lines.any { it.isWordSynced }) return found
+        // Takes one source's answer; true when it settles the pick.
+        fun take(found: Result?): Boolean {
+            if (found == null) return false
+            if (found.lines.any { it.isWordSynced }) { lineSynced = found; plain = null; return true }
             if (found.lines.any { it.timeMs > 0 }) {
-                if (!prioritizeSyllableSync) return found
                 if (lineSynced == null) lineSynced = found
-            } else if (plain == null) {
-                plain = found
+                return !prioritizeSyllableSync
+            }
+            if (plain == null) plain = found
+            return false
+        }
+        fun best() = if (lineSynced?.lines?.any { it.isWordSynced } == true) lineSynced else lineSynced ?: plain
+
+        // 1. In priority order, for as long as [priorityWaitMs] allows.
+        val settled = withTimeoutOrNull(priorityWaitMs) {
+            while (left.isNotEmpty()) {
+                val (source, await) = left.first()
+                // If we already found a line-synced or better result, skip Genius completely
+                if ((lineSynced ?: plain) != null && source == LyricsSource.GENIUS) { left.removeAt(0); continue }
+                val found = runCatching { await() }.getOrNull()
+                left.removeAt(0)
+                if (take(found)) return@withTimeoutOrNull true
+            }
+            true
+        }
+        if (settled != null) return best()
+
+        // 2. Past the deadline: whatever has already answered, still in priority order.
+        val pending = mutableListOf<Pair<LyricsSource, suspend () -> Result?>>()
+        for (entry in left) {
+            if (entry.first == LyricsSource.GENIUS) { pending += entry; continue }
+            val done = withTimeoutOrNull(1) { runCatching { entry.second() }.getOrNull() ?: NONE }
+            when {
+                done == null -> pending += entry
+                done !== NONE && take(done) -> return best()
             }
         }
-        return lineSynced ?: plain
+        if (lineSynced != null) return best()
+
+        // 3. Nothing timed yet: wait for the rest in order, as BitChord does.
+        for ((source, await) in pending) {
+            if ((lineSynced ?: plain) != null && source == LyricsSource.GENIUS) continue
+            if (take(runCatching { await() }.getOrNull())) return best()
+        }
+        return best()
+    }
+
+    /** Marks a source that answered "none" in the sweep, apart from one that is still running. */
+    private val NONE = Result(LyricsSource.GENIUS, emptyList())
+
+    /** blossom: see [pick]'s `priorityWaitMs`. */
+    private const val PRIORITY_WAIT_MS = 2_500L
+
+    /**
+     * blossom: timed lyrics whose lines run more than 15 s past the end of the track are another song's (a single
+     * against its extended cut, or a name match on an unreleased track). Unknown durations prove nothing.
+     */
+    internal fun outlastsTrack(lines: List<LyricLine>, durationMs: Long): Boolean {
+        if (durationMs <= 0) return false
+        val last = lines.filter { it.timeMs > 0 }.maxOfOrNull { it.timeMs } ?: return false
+        return last > durationMs + 15_000
     }
 
     private suspend fun fetch(
@@ -237,7 +293,7 @@ object LyricsRepository {
             LyricsSource.GENIUS -> Genius.lyrics(title, artist)
         }
         // An instrumental's "pure music, please enjoy" is no lyrics, whoever relays it.
-        return found?.takeUnless(KuGou::isInstrumentalNotice)
+        return found?.takeUnless(KuGou::isInstrumentalNotice)?.takeUnless { outlastsTrack(it, durationMs) }
     }
 
     /**

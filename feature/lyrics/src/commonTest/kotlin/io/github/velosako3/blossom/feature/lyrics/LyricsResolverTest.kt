@@ -129,3 +129,10 @@ class LyricsResolverTest {
         assertEquals(plain, r.resolve(localTrack))
     }
 }
+
+class PlainLyricsTest {
+    @Test fun sectionLabelsAreNotLyrics() {
+        val l = lyricsOf(listOf("[Verse 1]", "Hello", "", "[Chorus]", "World").map { io.github.velosako3.blossom.feature.lyrics.providers.LyricLine(0, it) }, "Genius")
+        assertEquals("Hello\n\nWorld", (l as Lyrics.Plain).text)
+    }
+}

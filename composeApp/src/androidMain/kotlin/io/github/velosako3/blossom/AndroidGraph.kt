@@ -96,6 +96,17 @@ fun createAndroidGraph(context: Context): AppGraph {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
     })
+    // Updates: this device's APK from the newest release, handed to Android's package installer.
+    graph.updateAssetPicker = io.github.velosako3.blossom.feature.integrations.update.UpdateChecker.androidApk(android.os.Build.SUPPORTED_ABIS.firstOrNull() ?: "universal")
+    graph.updateInstaller = io.github.velosako3.blossom.feature.integrations.update.UpdateInstaller { update, progress ->
+        val apk = java.io.File(context.cacheDir, "updates/blossom-update.apk")
+        io.github.velosako3.blossom.feature.integrations.update.downloadUpdate(requireNotNull(update.assetUrl), apk, progress)
+        val uri = androidx.core.content.FileProvider.getUriForFile(context, context.packageName + ".files", apk)
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/vnd.android.package-archive")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+    }
     graph.sync?.let { vm ->
         io.github.velosako3.blossom.feature.sync.backends.SyncWorker.sync = { vm.syncAll() }
         // Hourly in the background; a run with nothing set up does nothing.

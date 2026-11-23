@@ -36,48 +36,68 @@ class SemVerTest {
 class UpdateCheckerTest {
     private class FixedClock(var now: Instant) : Clock { override fun now() = now }
 
-    private fun release(tag: String) = MockResponse().setBody(
-        """{"tag_name":"$tag","html_url":"https://github.com/velosako3/blossom/releases/tag/$tag",
-           "assets":[{"name":"blossom-$tag.apk","browser_download_url":"https://github.com/velosako3/blossom/releases/download/$tag/blossom.apk"},
-                     {"name":"blossom-$tag.msi","browser_download_url":"https://example.com/x.msi"}]}""")
+    private val built = Instant.parse("2026-11-22T12:00:00Z").toEpochMilliseconds()
 
-    @Test fun newerReleaseOncePerDay(): Unit = runBlocking {
+    private fun releases(vararg r: Triple<String, String, Boolean>) = MockResponse().setBody(
+        r.joinToString(",", "[", "]") { (commit, published, pre) ->
+            """{"tag_name":"test-$commit","name":"build $commit","draft":false,"prerelease":$pre,"target_commitish":"$commit",
+               "published_at":"$published","html_url":"https://github.com/velosako3/blossom/releases/tag/test-$commit",
+               "assets":[{"name":"blossom-android-armeabi-v7a.apk","browser_download_url":"https://x/armeabi.apk"},
+                         {"name":"blossom-android-arm64-v8a.apk","browser_download_url":"https://x/arm64.apk"},
+                         {"name":"blossom-android-universal.apk","browser_download_url":"https://x/universal.apk"},
+                         {"name":"blossom-linux-x86_64.AppImage","browser_download_url":"https://x/app.AppImage"}]}"""
+        },
+    )
+
+    private fun checker(server: MockWebServer, prefs: MapPreferenceStore = MapPreferenceStore(), clock: Clock = Clock.System, commit: String = "aaa", abi: String = "arm64-v8a") =
+        UpdateChecker(commit, built, UpdateChecker.androidApk(abi), prefs, clock, url = server.url("/releases").toString())
+
+    @Test fun aNewerPreReleaseFromAnotherCommitIsAnUpdate(): Unit = runBlocking {
         MockWebServer().use { server ->
-            server.enqueue(release("v1.1.0")); server.start()
-            val clock = FixedClock(Instant.fromEpochSeconds(1_800_000_000))
-            val prefs = MapPreferenceStore()
-            val checker = UpdateChecker("1.0.0", android = false, prefs, clock, url = server.url("/latest").toString())
-            val u = checker.check()!!
-            assertEquals("1.1.0", u.version.toString())
-            assertEquals("https://github.com/velosako3/blossom/releases/tag/v1.1.0", u.url)
-            clock.now += 2.hours
-            assertEquals(u, checker.check(), "the day's answer is remembered")
-            assertEquals(1, server.requestCount)
+            server.enqueue(releases(Triple("bbb", "2026-11-23T00:50:00Z", true), Triple("aaa", "2026-11-22T13:00:00Z", true))); server.start()
+            val u = checker(server).check()!!
+            assertEquals("build bbb", u.label)
+            assertEquals("https://x/arm64.apk", u.assetUrl, "this device's ABI")
         }
     }
 
-    @Test fun androidLinksTheApk(): Unit = runBlocking {
-        MockWebServer().use { server ->
-            server.enqueue(release("v2.0.0")); server.start()
-            val u = UpdateChecker("1.0.0", android = true, MapPreferenceStore(), Clock.System, url = server.url("/latest").toString()).check()!!
-            assertEquals("https://github.com/velosako3/blossom/releases/download/v2.0.0/blossom.apk", u.url)
-        }
-    }
-
-    @Test fun sameOlderOrGarbageShowsNothing(): Unit = runBlocking {
-        for (tag in listOf("v1.0.0", "v0.9.0", "nightly")) {
+    @Test fun ownReleaseOrOlderIsNot(): Unit = runBlocking {
+        for (newest in listOf(Triple("aaa", "2026-11-23T00:50:00Z", true), Triple("ccc", "2026-11-21T09:00:00Z", false))) {
             MockWebServer().use { server ->
-                server.enqueue(release(tag)); server.start()
-                assertNull(UpdateChecker("1.0.0", android = false, MapPreferenceStore(), Clock.System, url = server.url("/latest").toString()).check(), tag)
+                server.enqueue(releases(newest)); server.start()
+                assertNull(checker(server).check(), newest.toString())
             }
         }
     }
 
-    @Test fun offMeansNoRequest(): Unit = runBlocking {
+    @Test fun universalWhenThereIsNoBuildForThisAbi(): Unit = runBlocking {
+        MockWebServer().use { server ->
+            server.enqueue(releases(Triple("bbb", "2026-11-23T00:50:00Z", true))); server.start()
+            assertEquals("https://x/universal.apk", checker(server, abi = "x86").check()!!.assetUrl)
+        }
+    }
+
+    @Test fun askedAtMostOnceAnHour(): Unit = runBlocking {
+        MockWebServer().use { server ->
+            server.enqueue(releases(Triple("bbb", "2026-11-23T00:50:00Z", true))); server.enqueue(releases()); server.start()
+            val clock = FixedClock(Instant.parse("2026-11-23T01:00:00Z"))
+            val prefs = MapPreferenceStore()
+            val first = checker(server, prefs, clock).check()
+            clock.now += kotlin.time.Duration.parse("30m")
+            assertEquals(first, checker(server, prefs, clock).check(), "remembered")
+            assertEquals(1, server.requestCount)
+            clock.now += 1.hours
+            assertNull(checker(server, prefs, clock).check())
+            assertEquals(2, server.requestCount)
+        }
+    }
+
+    @Test fun offOrLocalBuildMeansNoRequest(): Unit = runBlocking {
         MockWebServer().use { server ->
             server.start()
-            val prefs = MapPreferenceStore().apply { put(UpdateChecker.ENABLED_KEY, "false") }
-            assertNull(UpdateChecker("1.0.0", android = false, prefs, Clock.System, url = server.url("/latest").toString()).check())
+            val off = MapPreferenceStore().apply { put(UpdateChecker.ENABLED_KEY, "false") }
+            assertNull(checker(server, off).check())
+            assertNull(checker(server, commit = "").check())
             assertEquals(0, server.requestCount)
         }
     }

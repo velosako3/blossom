@@ -21,10 +21,14 @@ import androidx.compose.material.icons.rounded.SystemUpdate
 import io.github.velosako3.blossom.composeApp.resources.Res
 import io.github.velosako3.blossom.composeApp.resources.offline_banner
 import io.github.velosako3.blossom.composeApp.resources.update_chip
+import io.github.velosako3.blossom.composeApp.resources.update_downloading
 import io.github.velosako3.blossom.composeApp.resources.offline_saved_icon
 import io.github.velosako3.blossom.composeApp.resources.storage_paused_banner
 import io.github.velosako3.blossom.core.designsystem.glass.GlassSurface
 import io.github.velosako3.blossom.core.designsystem.theme.BlossomTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
 /** "You're offline. Showing saved music." */
@@ -53,11 +57,32 @@ fun SavedIcon(modifier: Modifier = Modifier) {
 
 /** A newer blossom is out: opens its release page (or the APK on Android). Never installs anything itself. */
 @Composable
-fun UpdateChip(version: String, url: String, modifier: Modifier = Modifier) {
+fun UpdateChip(
+    update: io.github.velosako3.blossom.feature.integrations.update.Update,
+    installer: io.github.velosako3.blossom.feature.integrations.update.UpdateInstaller?,
+    modifier: Modifier = Modifier,
+) {
     val uri = androidx.compose.ui.platform.LocalUriHandler.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var progress by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Float?>(null) }
     io.github.velosako3.blossom.core.designsystem.components.GlassChip(
-        selected = true, onClick = { runCatching { uri.openUri(url) } },
-        label = stringResource(Res.string.update_chip, version), modifier = modifier,
+        selected = true,
+        onClick = {
+            val url = update.assetUrl
+            when {
+                progress != null -> Unit
+                // Downloaded and installed in the app; if that fails, the release page is the way.
+                installer != null && url != null -> scope.launch {
+                    progress = 0f
+                    runCatching { installer.install(update) { progress = it } }.onFailure { runCatching { uri.openUri(update.pageUrl) } }
+                    progress = null
+                }
+                else -> runCatching { uri.openUri(update.pageUrl) }
+            }
+        },
+        label = progress?.let { stringResource(Res.string.update_downloading, (it * 100).toInt()) }
+            ?: stringResource(Res.string.update_chip, update.label),
+        modifier = modifier,
         leadingIcon = androidx.compose.material.icons.Icons.Rounded.SystemUpdate,
     )
 }

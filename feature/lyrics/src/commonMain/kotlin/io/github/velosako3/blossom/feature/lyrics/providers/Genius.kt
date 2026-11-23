@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Ported from BitChord (https://github.com/kushagrasinghx/BitChord) v1.9.1,
 // shared/src/jvmSharedMain/kotlin/com/music/bitchord/data/lyrics/Genius.kt (GPL-3.0).
-// Modified for blossom, 2026: package and HTTP client wiring.
+// Modified for blossom, 2026: package and HTTP client wiring; a hit must match title and artist.
 package io.github.velosako3.blossom.feature.lyrics.providers
 
 import io.github.velosako3.blossom.feature.lyrics.providers.Http
@@ -184,7 +184,9 @@ object Genius {
             val titleMatches = normTitle.isNotBlank() && (title == normTitle || title.contains(normTitle) || normTitle.contains(title))
             val artistMatches = normArtist.isNotBlank() && (artist == normArtist || artist.contains(normArtist) || normArtist.contains(artist))
 
-            if (!titleMatches && !artistMatches) return@mapNotNull null
+            // blossom: both, not either. A title match by another artist, or another song by the same artist, is
+            // the wrong lyrics, and for an unreleased song it is nearly always one of those.
+            if (!titleMatches || (normArtist.isNotBlank() && !artistMatches)) return@mapNotNull null
 
             if (title == normTitle) score += 50
             else if (titleMatches) score += 25

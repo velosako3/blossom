@@ -44,6 +44,7 @@
     <string name="settings_equalizer">Equalizer</string>
     <string name="settings_equalizer_hint">Presets and 10 bands</string>
     <string name="update_chip">Update to %1$s</string>
+    <string name="update_downloading">Downloading update… %1$d%%</string>
     <string name="licenses_title">Open-source licenses</string>
     <string name="signin_ytm_title">Sign in to YouTube Music</string>
     <string name="signin_spotify_title">Sign in to Spotify</string>

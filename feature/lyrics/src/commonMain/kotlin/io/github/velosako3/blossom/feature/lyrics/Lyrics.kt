@@ -2,6 +2,7 @@
 package io.github.velosako3.blossom.feature.lyrics
 
 import io.github.velosako3.blossom.feature.lyrics.providers.LyricLine
+import io.github.velosako3.blossom.feature.lyrics.providers.isGeniusSectionHeader
 
 /**
  * Lyrics in BitChord's line model (word and syllable timing, background vocals, duet sides), sorted by time.
@@ -27,6 +28,8 @@ fun lyricsOf(lines: List<LyricLine>, provider: String): Lyrics? {
     return when {
         lines.any { it.isWordSynced } -> Lyrics.WordSynced(lines.sortedBy { it.timeMs }, provider)
         lines.any { it.timeMs > 0 } -> Lyrics.LineSynced(lines.sortedBy { it.timeMs }, provider)
-        else -> Lyrics.Plain(lines.joinToString("\n") { it.text }.trim(), provider)
+        // Genius's [Verse 1] / [Chorus] labels are page structure, not words anyone sings.
+        else -> lines.filterNot { isGeniusSectionHeader(it.text) }.joinToString("\n") { it.text }.trim()
+            .replace(Regex("\n{3,}"), "\n\n").takeIf { it.isNotBlank() }?.let { Lyrics.Plain(it, provider) }
     }
 }

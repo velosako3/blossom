@@ -59,3 +59,25 @@ class LyricsPickTest {
         assertEquals(plain, picked)
     }
 }
+
+/** blossom's changes to the pick: a deadline on priority, and lyrics that outlast the song rejected. */
+class LyricsPickDeadlineTest {
+    private val lineSynced = Result(LyricsSource.LRCLIB, listOf(LyricLine(1_000, "line")))
+
+    @Test fun aStuckTopSourceDoesNotHoldUpAnAnswerThatIsAlreadyIn() = runTest {
+        val start = testScheduler.currentTime
+        val picked = LyricsRepository.pick(
+            listOf(LyricsSource.LRC_RED to { awaitCancellation() }, LyricsSource.LRCLIB to { lineSynced }),
+            prioritizeSyllableSync = false,
+        )
+        assertEquals(lineSynced, picked)
+        kotlin.test.assertTrue(testScheduler.currentTime - start <= 2_500, "waited ${testScheduler.currentTime - start} ms")
+    }
+
+    @Test fun lyricsLongerThanTheSongAreAnotherSong() {
+        val lines = listOf(LyricLine(1_000, "a"), LyricLine(250_000, "b"))
+        kotlin.test.assertTrue(LyricsRepository.outlastsTrack(lines, 180_000))
+        kotlin.test.assertFalse(LyricsRepository.outlastsTrack(lines, 255_000))
+        kotlin.test.assertFalse(LyricsRepository.outlastsTrack(lines, 0))
+    }
+}

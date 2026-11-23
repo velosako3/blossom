@@ -38,7 +38,12 @@ val generateBuildInfo by tasks.registering {
     val out = layout.buildDirectory.dir("generated/buildinfo/kotlin")
     val version = blossomVersion
     val secrets = secretValues
+    // CI builds carry their commit and build time so the updater can tell builds apart; local builds have neither
+    // and never check.
+    val commit = System.getenv("GITHUB_SHA").orEmpty()
+    val builtAt = if (commit.isEmpty()) 0L else System.currentTimeMillis()
     inputs.property("version", version)
+    inputs.property("commit", commit)
     inputs.property("secrets", secrets.hashCode())
     outputs.dir(out)
     doLast {
@@ -52,6 +57,8 @@ val generateBuildInfo by tasks.registering {
             |object BlossomBuildInfo {
             |    const val VERSION: String = "$version"
             |    const val APP_NAME = "blossom"
+            |    const val COMMIT: String = "$commit"
+            |    const val BUILT_AT_MS: Long = ${builtAt}L
             |}
             |""".trimMargin(),
         )
