@@ -32,7 +32,6 @@ newpipe = "v0.27.1"
 jsoup = "1.24.1"
 vlcj = "4.12.1"
 nucleus = "2.5.18"
-vlcjBundler = "0.2.1"
 reorderable = "3.1.0"
 jaudiotagger = "3.0.1"
 
@@ -43,7 +42,6 @@ kotlin-serialization-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-ser
 android-gradle-plugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 compose-gradle-plugin = { module = "org.jetbrains.compose:compose-gradle-plugin", version.ref = "compose" }
 roborazzi-gradle-plugin = { module = "io.github.takahirom.roborazzi:roborazzi-gradle-plugin", version.ref = "roborazzi" }
-vlcj-bundler-gradle-plugin = { module = "org.spotube:vlcj-bundler-gradle-plugin", version.ref = "vlcjBundler" }
 sqldelight-gradle-plugin = { module = "app.cash.sqldelight:gradle-plugin", version.ref = "sqldelight" }
 
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }

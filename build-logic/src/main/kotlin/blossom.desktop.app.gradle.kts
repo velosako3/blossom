@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// The desktop app: bundles libVLC (Spotube's vlcj-bundler) into every installer so users install nothing.
-plugins {
-    id("org.spotube.vlcj-bundler")
-}
+// The desktop app: bundles libVLC (Spotube's vlcj-bundler, vendored in org/spotube) into every installer so users install nothing.
+apply<org.spotube.VlcjBundlerGradlePlugin>()
 
 extensions.configure<org.spotube.VlcjBundlerExtension> {
     packageName.set("io.github.velosako3.blossom.vlc")

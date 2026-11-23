@@ -9,5 +9,5 @@ dependencies {
     implementation(libs.compose.gradle.plugin)
     implementation(libs.roborazzi.gradle.plugin)
     implementation(libs.sqldelight.gradle.plugin)
-    implementation(libs.vlcj.bundler.gradle.plugin)
 }
+

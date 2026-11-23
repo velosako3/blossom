@@ -6,15 +6,13 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 import java.io.File
-import java.io.FileOutputStream
 import java.net.URI
 import java.util.zip.GZIPInputStream
-import java.util.zip.ZipInputStream
 
 /**
  * Adds what vlcj-bundler leaves out but blossom needs: on Linux libebml/libmatroska for the mkv (WebM) demuxer, and `imem` (imem-access.c), the byte-stream access module behind vlcj's
  * callback media (blossom feeds every remote and encrypted stream to libVLC through it).
- * Linux: taken from the same Ubuntu archive/suite as the bundled libVLC. Windows: from the same VLC release zip.
+ * Linux: taken from the same Ubuntu archive/suite as the bundled libVLC. (On Windows the vendored bundler unpacks them from the VLC zip.)
  */
 @DisableCachingByDefault(because = "Downloads from the network")
 abstract class AddVlcPluginsTask : DefaultTask() {
@@ -27,7 +25,6 @@ abstract class AddVlcPluginsTask : DefaultTask() {
         val root = nativesDirectory.get().asFile
         when {
             os.contains("linux") -> linux(File(root, "linux-x64"))
-            os.contains("win") -> windows(File(root, "windows-x64"))
             else -> logger.warn("No extra VLC plugins for $os")
         }
     }
@@ -88,33 +85,6 @@ abstract class AddVlcPluginsTask : DefaultTask() {
             real.copyTo(dest, overwrite = true)
             exec(target, "patchelf", "--set-rpath", "\$ORIGIN", dest.absolutePath)
         }
-    }
-
-    private fun windows(target: File) {
-        // imem (callback media) and es (plain MP3/AAC streams), each in its plugin folder.
-        val wanted = mapOf("libimem_plugin.dll" to "access", "libes_plugin.dll" to "demux", "libskiptags_plugin.dll" to "stream_filter")
-        if (!target.isDirectory || wanted.all { (n, dir) -> File(target, "plugins/$dir/$n").isFile }) return
-        var added = 0
-        val url = "https://download.videolan.org/pub/videolan/vlc/3.0.23/win64/vlc-3.0.23-win64.zip"
-        // Downloaded whole and checked against VideoLAN's published SHA256 before anything is extracted.
-        val zipFile = File(temporaryDir, "vlc-win64.zip")
-        URI(url).toURL().openStream().use { input -> zipFile.outputStream().use { input.copyTo(it) } }
-        val expected = URI("$url.sha256").toURL().readText().trim().substringBefore(' ').lowercase()
-        if (sha256(zipFile) != expected) throw GradleException("$url: SHA256 mismatch, refusing to bundle it")
-        ZipInputStream(zipFile.inputStream()).use { zip ->
-            var e = zip.nextEntry
-            while (e != null) {
-                val name = e.name.substringAfterLast('/')
-                val dir = wanted[name]
-                if (dir != null && e.name.contains("plugins/$dir/")) {
-                    val dest = File(target, "plugins/$dir/$name").apply { parentFile.mkdirs() }
-                    FileOutputStream(dest).use { zip.copyTo(it) }
-                    if (++added == wanted.size) { logger.lifecycle("Added ${wanted.keys.joinToString()}"); return }
-                }
-                e = zip.nextEntry
-            }
-        }
-        throw GradleException("imem plugins not found in $url")
     }
 
     private fun exec(dir: File, vararg command: String) {
