@@ -57,13 +57,15 @@ data class OAuthTokens(val access: String, val refresh: String?, val expiresAtMs
 
 /**
  * Tokens for one provider, kept in [SecureStore] under `oauth.<key>`. Requests go through [authorized]: an expired
- * access token is refreshed and the request retried once.
+ * access token is refreshed and the request retried once. Without a refresh token (Android's Google sign-in hands out
+ * access tokens only) [renew] fetches a new one instead.
  */
 class OAuthClient(
     val config: OAuthConfig,
     private val store: SecureStore,
     private val key: String,
     private val http: OkHttpClient = OkHttpClient.Builder().callTimeout(60, TimeUnit.SECONDS).build(),
+    private val renew: (suspend () -> OAuthTokens)? = null,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
     private val lock = Mutex()
@@ -93,7 +95,7 @@ class OAuthClient(
     private suspend fun refresh(stale: OAuthTokens): OAuthTokens = lock.withLock {
         val current = tokens()
         if (current != null && current.access != stale.access) return current // someone else refreshed meanwhile
-        val refresh = stale.refresh ?: throw SignInRequired()
+        val refresh = stale.refresh ?: return@withLock (renew ?: throw SignInRequired()).invoke().also { save(it) }
         tokenRequest("grant_type" to "refresh_token", "refresh_token" to refresh)
             .let { it.copy(refresh = it.refresh ?: refresh) }
             .also { save(it) }

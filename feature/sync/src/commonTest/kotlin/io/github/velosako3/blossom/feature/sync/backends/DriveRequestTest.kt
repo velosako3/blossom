@@ -61,6 +61,19 @@ class DriveRequestTest {
         assertEquals("media", requests.last().requestUrl!!.queryParameter("alt"))
     }
 
+    /** Android's Google sign-in hands out access tokens only; a stale one is renewed through Play services instead. */
+    @Test fun withoutARefreshTokenTheRenewHookGetsANewToken() = runTest {
+        var renewed = 0
+        val android = OAuthClient(OAuthConfig("client-1", null, "$base/auth", "$base/token", emptyList()), store, "drive-android") {
+            renewed++; OAuthTokens("fresh", null, Long.MAX_VALUE)
+        }
+        android.save(OAuthTokens("stale", null, Long.MAX_VALUE))
+        assertEquals(1, GoogleDriveBackend(android, apiBase = base).list("blossom/v1").size)
+        assertEquals(1, renewed)
+        assertTrue(requests.none { it.requestUrl!!.encodedPath == "/token" })
+        assertEquals("fresh", android.tokens()!!.access, "the renewed token is kept")
+    }
+
     @Test fun writeUpdatesExistingOrCreatesInAppData() = runTest {
         oauth.save(OAuthTokens("fresh", "refresh-1", Long.MAX_VALUE))
         drive.write("blossom/v1/devices/A/manifest.json", "{\"x\":1}".toByteArray())
