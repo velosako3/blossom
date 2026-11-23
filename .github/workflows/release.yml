@@ -111,7 +111,8 @@ jobs:
           chmod +x appimagetool
           APPDIR=blossom.AppDir
           cp -r composeApp/build/compose/binaries/main-release/app/blossom "$APPDIR"
-          printf '#!/bin/sh\nexec "$(dirname "$(readlink -f "$0")")/bin/blossom" "$@"\n' > "$APPDIR/AppRun"
+          # Two malloc arenas: glibc's per-thread arenas cost ~85 MB of mostly empty memory (see Main.kt).
+          printf '#!/bin/sh\nexport MALLOC_ARENA_MAX="${MALLOC_ARENA_MAX:-2}"\nexec "$(dirname "$(readlink -f "$0")")/bin/blossom" "$@"\n' > "$APPDIR/AppRun"
           chmod +x "$APPDIR/AppRun"
           printf '[Desktop Entry]\nType=Application\nName=blossom\nComment=Music player\nExec=blossom\nIcon=blossom\nCategories=AudioVideo;Audio;Player;\n' > "$APPDIR/blossom.desktop"
           cp composeApp/icons/blossom.png "$APPDIR/blossom.png"

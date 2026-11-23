@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
+import coil3.memory.MemoryCache
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.network.ktor3.KtorNetworkFetcherFactory
@@ -38,12 +39,21 @@ import io.github.velosako3.blossom.core.designsystem.color.extractPalette
 import io.github.velosako3.blossom.core.designsystem.theme.BlossomTheme
 import androidx.compose.ui.graphics.ImageBitmap
 
-/** Installs the app-wide Coil loader (Ktor/OkHttp networking, memory + disk cache defaults). Call once at startup. */
+/**
+ * Installs the app-wide Coil loader (Ktor/OkHttp networking, disk cache default). Call once at startup.
+ * The memory cache is capped: Coil's default is a fifth of the max heap (~150 MB on desktop, where the bitmaps are
+ * native memory the GC never sees). The disk cache refills it quickly.
+ */
 fun installImageLoader() {
     SingletonImageLoader.setSafe { context: PlatformContext ->
-        ImageLoader.Builder(context).components { add(KtorNetworkFetcherFactory()) }.build()
+        ImageLoader.Builder(context)
+            .components { add(KtorNetworkFetcherFactory()) }
+            .memoryCache { MemoryCache.Builder().maxSizeBytes(IMAGE_MEMORY_CACHE_BYTES).build() }
+            .build()
     }
 }
+
+private const val IMAGE_MEMORY_CACHE_BYTES = 40L * 1024 * 1024
 
 /** Album art with a soft gradient placeholder (and the same as fallback when there's no URL or it fails). */
 @Composable

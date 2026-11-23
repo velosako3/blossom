@@ -120,10 +120,14 @@ kotlin {
 }
 
 /**
- * The desktop app's live heap is ~30 MB, but G1 keeps whatever it once grew to. A 768 MB cap, a lower free-heap ratio
- * and a periodic GC hand unused heap back to the system (measured at startup: 478 MB RSS instead of 553 MB).
+ * The desktop app's live heap is ~30 MB. G1 kept ~90 MB of its own bookkeeping and whatever heap it once grew to; the
+ * serial collector with a small young generation stays near the live size (measured at startup, anonymous memory:
+ * 510 MB with G1, 445 MB with these flags, 359 MB with fewer malloc arenas on top, see Main.kt).
  */
-val desktopMemoryFlags = listOf("-Xmx768m", "-XX:MinHeapFreeRatio=10", "-XX:MaxHeapFreeRatio=30", "-XX:G1PeriodicGCInterval=15000", "-XX:+UseStringDeduplication")
+val desktopMemoryFlags = listOf(
+    "-XX:+UseSerialGC", "-Xms24m", "-XX:MaxNewSize=40m", "-Xmx768m",
+    "-XX:MinHeapFreeRatio=10", "-XX:MaxHeapFreeRatio=30", "-XX:+UseStringDeduplication",
+)
 
 compose.desktop {
     application {
