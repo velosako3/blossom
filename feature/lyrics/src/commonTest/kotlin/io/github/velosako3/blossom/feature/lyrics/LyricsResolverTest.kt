@@ -136,3 +136,15 @@ class PlainLyricsTest {
         assertEquals("Hello\n\nWorld", (l as Lyrics.Plain).text)
     }
 }
+
+class LyricsArtistTest {
+    @Test fun yeUploadersAreYe() {
+        for (a in listOf("YeBreak", "YEBREAK", "Ye Leaks", "yeleaks", "Ye Archive", "KanyeLeaks", "Kanye West", "kanye", "Ye", "YE"))
+            assertEquals("Ye", lyricsArtist(a), a)
+    }
+
+    @Test fun othersAreLeftAlone() {
+        for (a in listOf("Yeat", "Yeah Yeah Yeahs", "Yelawolf", "Yes", "King Combs", "Joji", "Yeezus Fan"))
+            assertEquals(a, lyricsArtist(a), a)
+    }
+}

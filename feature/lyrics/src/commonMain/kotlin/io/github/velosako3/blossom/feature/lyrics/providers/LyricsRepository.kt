@@ -161,6 +161,10 @@ object LyricsRepository {
             }
         }
 
+        // blossom: a recording no catalogue knows will be checked against Genius ([sameWords]), so Genius starts
+        // with everyone else instead of after them.
+        if (recording == null) racing.firstOrNull { it.first == LyricsSource.GENIUS }?.second?.start()
+
         try {
             val picked = pick(racing.map { (source, job) -> source to suspend { job.await() } }, prioritizeSyllableSync)
             // blossom: a track no catalogue knows by its recording (most unreleased songs) was matched on its name
