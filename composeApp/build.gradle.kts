@@ -112,10 +112,17 @@ kotlin {
     }
 }
 
+/**
+ * The desktop app's live heap is ~30 MB, but G1 keeps whatever it once grew to. A 768 MB cap, a lower free-heap ratio
+ * and a periodic GC hand unused heap back to the system (measured at startup: 478 MB RSS instead of 553 MB).
+ */
+val desktopMemoryFlags = listOf("-Xmx768m", "-XX:MinHeapFreeRatio=10", "-XX:MaxHeapFreeRatio=30", "-XX:G1PeriodicGCInterval=15000", "-XX:+UseStringDeduplication")
+
 compose.desktop {
     application {
         mainClass = "io.github.velosako3.blossom.MainKt"
         // Debug-only switches forwarded to `./gradlew :composeApp:run`, e.g. -Pblossom.debugPlay="daft punk".
+        jvmArgs += desktopMemoryFlags
         jvmArgs += listOf("blossom.debugPlay", "blossom.forceOffline", "blossom.dataDir", "blossom.vlcLog").mapNotNull { key ->
             providers.gradleProperty(key).orNull?.let { "-D$key=$it" }
         }

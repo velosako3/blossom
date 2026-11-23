@@ -48,5 +48,9 @@ Reference: `../_upstream/BitChord` at `21356206` (kushagrasinghx/BitChord, GPL-3
   Still open: BitChord's lens selection pill in the tab bar; now-playing `ArtworkMeshBackdrop`.
 - [ ] **4. Speed and memory.** Measure first (track start, track switch, lyrics time, RSS) on desktop and the
   emulator; compare with BitChord's stream pipeline; fix what the numbers show.
+  Measured: resolve 0.17-0.4 s (fine). googlevideo paces an open-ended read (first MiB 34.6 s vs 0.18 s as a range):
+  Android now streams through BitChord's ChunkedDataSource with BitChord's load control. Desktop skips ~0.57 s to
+  audio (already ranged). Desktop RSS: a second libVLC instance costs ~0 MB and VLC caching didn't change skip time
+  (both reverted); JVM flags cut startup RSS 553 -> 478 MB (kept). Android RAM not measured yet (needs the device).
 - [ ] **5. Smoothness.** Frame-time pass over the lyric view, now playing and lists; Android baseline profile.
 - [ ] **6. Wrap-up.** `check verifyRoborazziDesktop`, review, push, new test build for the owner.
