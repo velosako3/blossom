@@ -1,0 +1,175 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+package io.github.velosako3.blossom
+
+import io.github.velosako3.blossom.core.offline.OfflineSettingsStore
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import io.github.velosako3.blossom.core.designsystem.components.installImageLoader
+import io.github.velosako3.blossom.core.database.androidDatabase
+import io.github.velosako3.blossom.core.model.SourceKind
+import io.github.velosako3.blossom.core.platform.AndroidNetworkMonitor
+import io.github.velosako3.blossom.core.platform.AndroidSecureStore
+import io.github.velosako3.blossom.core.platform.SharedPreferenceStore
+import io.github.velosako3.blossom.core.player.BlossomPlaybackService
+import io.github.velosako3.blossom.core.player.DefaultBlossomPlayer
+import io.github.velosako3.blossom.core.player.Media3PlaybackEngine
+import io.github.velosako3.blossom.core.player.PlayerHolder
+import io.github.velosako3.blossom.core.player.StreamResolver
+import io.github.velosako3.blossom.source.youtubemusic.YouTubeSource
+import io.github.velosako3.blossom.source.youtubemusic.YouTubeStreams
+import io.github.velosako3.blossom.source.youtubemusic.YtmSource
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
+import io.github.velosako3.blossom.feature.library.local.MediaStoreLibrary
+
+import kotlin.time.Clock
+
+/** Builds the Android object graph once per process and hands the player to the media session service. */
+fun createAndroidGraph(context: Context): AppGraph {
+    installImageLoader()
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    val secure = AndroidSecureStore(context)
+    val prefs = SharedPreferenceStore(context)
+    val network = AndroidNetworkMonitor(context)
+    val streams = YouTubeStreams({ secure.get(YtmSource.COOKIE_KEY) }, context.cacheDir)
+    val ytm = YtmSource(secure, context.cacheDir, streams = streams)
+    val youtube = YouTubeSource(streams)
+    val soundcloudClient = io.github.velosako3.blossom.source.soundcloud.SoundCloudClient()
+    val soundcloud = io.github.velosako3.blossom.source.soundcloud.SoundCloudSource(soundcloudClient)
+    val untitledClient = io.github.velosako3.blossom.source.untitled.UntitledClient()
+    val untitled = io.github.velosako3.blossom.source.untitled.UntitledSource(untitledClient)
+    val trees = prefs.folderList("local.trees")
+    val permission = MutableStateFlow(!AndroidLocalBridge.hasAudioPermission(context))
+    val localLibrary = MediaStoreLibrary(context, trees, scope) { AndroidLocalBridge.hasAudioPermission(context) }
+    val local = LocalFilesHost(
+        library = localLibrary,
+        folders = trees,
+        addFolder = { AndroidLocalBridge.pickFolder?.invoke() },
+        removeFolder = { f -> prefs.setFolderList("local.trees", trees.value - f, trees) },
+        needsPermission = permission,
+        requestPermission = { AndroidLocalBridge.requestPermission?.invoke() },
+    )
+    AndroidLocalBridge.onFolderPicked = { uri -> prefs.setFolderList("local.trees", (trees.value + uri).distinct(), trees) }
+    AndroidLocalBridge.onPermissionResult = { permission.value = !it; scope.launch { localLibrary.rescan() } }
+    val db = androidDatabase(context)
+    val resolver = StreamResolver(mapOf(SourceKind.YOUTUBE_MUSIC to ytm, SourceKind.YOUTUBE to youtube, SourceKind.SOUNDCLOUD to soundcloud, SourceKind.UNTITLED to untitled), Clock.System)
+    // filesDir, not cacheDir: Android may purge the cache folder, and saved songs must stay.
+    val offlineSettings = OfflineSettingsStore(prefs, defaultWifiOnly = true)
+    val offline = offlineStore(db, java.io.File(context.filesDir, "offline"), secure, resolver, network, offlineSettings.settings, scope)
+    io.github.velosako3.blossom.core.offline.DownloadWorker.install(context, offline.manager)
+    io.github.velosako3.blossom.feature.stats.wrapped.WrappedExporter.context = context.applicationContext
+    val engine = Media3PlaybackEngine(context, offlineDataSource = io.github.velosako3.blossom.core.offline.EncryptedDataSource.Factory(offline))
+    // The second engine plays the incoming track during a crossfade.
+    val fadeEngine = Media3PlaybackEngine(context, offlineDataSource = io.github.velosako3.blossom.core.offline.EncryptedDataSource.Factory(offline))
+    val player = DefaultBlossomPlayer(
+        engine = engine,
+        resolver = resolver,
+        isSavedOffline = offline::isSaved,
+        network = network,
+        scope = scope,
+        radio = { ytm.radio(it.id) },
+        localPath = localLibrary::pathFor,
+        fadeEngine = fadeEngine,
+        crossfadeSeconds = { prefs.get(CROSSFADE_KEY)?.toIntOrNull() ?: 0 },
+        autoplaySimilar = { prefs.get(AUTOPLAY_KEY) != "false" },
+    )
+    PlayerHolder.engine = engine
+    PlayerHolder.player = player
+    val graph = AppGraph(player, db, prefs.deviceId(), ytm, prefs, network, scope, local, offline = offline, offlineSettings = offlineSettings,
+        syncSetup = androidSyncSetup(context, secure),
+        secure = secure,
+        sources = mapOf(SourceKind.YOUTUBE to youtube, SourceKind.SOUNDCLOUD to soundcloud, SourceKind.UNTITLED to untitled),
+        importers = mapOf(
+            io.github.velosako3.blossom.feature.importer.ImportService.SPOTIFY to io.github.velosako3.blossom.source.spotify.SpotifyImporter(auth = AndroidSpotifyAuth(context, secure)),
+            io.github.velosako3.blossom.feature.importer.ImportService.YOUTUBE_MUSIC to io.github.velosako3.blossom.source.youtubemusic.YtmImporter(ytm),
+            io.github.velosako3.blossom.feature.importer.ImportService.SOUNDCLOUD to io.github.velosako3.blossom.source.soundcloud.SoundCloudImporter(soundcloudClient),
+            io.github.velosako3.blossom.feature.importer.ImportService.UNTITLED to io.github.velosako3.blossom.source.untitled.UntitledImporter(untitledClient),
+        ), shareLink = { link ->
+        context.startActivity(
+            Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, link), null)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+    })
+    // Updates: this device's APK from the newest release, handed to Android's package installer.
+    graph.updateAssetPicker = io.github.velosako3.blossom.feature.integrations.update.UpdateChecker.androidApk(android.os.Build.SUPPORTED_ABIS.firstOrNull() ?: "universal")
+    graph.updateInstaller = io.github.velosako3.blossom.feature.integrations.update.UpdateInstaller { update, progress ->
+        val apk = java.io.File(context.cacheDir, "updates/blossom-update.apk")
+        io.github.velosako3.blossom.feature.integrations.update.downloadUpdate(requireNotNull(update.assetUrl), apk, progress)
+        val uri = androidx.core.content.FileProvider.getUriForFile(context, context.packageName + ".files", apk)
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/vnd.android.package-archive")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+    }
+    graph.sync?.let { vm ->
+        io.github.velosako3.blossom.feature.sync.backends.SyncWorker.sync = { vm.syncAll() }
+        // Hourly in the background; a run with nothing set up does nothing.
+        io.github.velosako3.blossom.feature.sync.backends.SyncWorker.schedule(context, enabled = true)
+    }
+    return graph
+}
+
+private fun androidSyncSetup(context: Context, secure: io.github.velosako3.blossom.core.platform.SecureStore): SyncSetup {
+    val dropboxKey = BlossomSecrets.DROPBOX_APP_KEY
+    val kinds = io.github.velosako3.blossom.feature.sync.ui.BackendKind.entries.filter {
+        when (it) {
+            // Drive needs an Android OAuth client (package + signing key), not configured yet.
+            io.github.velosako3.blossom.feature.sync.ui.BackendKind.GOOGLE_DRIVE -> false
+            io.github.velosako3.blossom.feature.sync.ui.BackendKind.DROPBOX -> dropboxKey.isNotEmpty()
+            else -> true
+        }
+    }
+    val name = runCatching { android.provider.Settings.Global.getString(context.contentResolver, android.provider.Settings.Global.DEVICE_NAME) }.getOrNull()
+        ?.takeIf { it.isNotBlank() } ?: android.os.Build.MODEL
+    return SyncSetup(
+        secure = secure,
+        defaultName = name,
+        kinds = kinds,
+        connect = { c, interactive ->
+            when (c.kind) {
+                io.github.velosako3.blossom.feature.sync.ui.BackendKind.FOLDER ->
+                    io.github.velosako3.blossom.feature.sync.backends.SafFolderBackend(context, android.net.Uri.parse(c.location))
+                io.github.velosako3.blossom.feature.sync.ui.BackendKind.WEBDAV ->
+                    io.github.velosako3.blossom.feature.sync.backends.WebDavBackend(c.location, c.username) { secure.get(io.github.velosako3.blossom.feature.sync.ui.SyncController.PASSWORD) }
+                io.github.velosako3.blossom.feature.sync.ui.BackendKind.DROPBOX -> {
+                    val o = io.github.velosako3.blossom.feature.sync.backends.OAuthClient(
+                        io.github.velosako3.blossom.feature.sync.backends.OAuthConfig.dropbox(dropboxKey), secure, "dropbox")
+                    // Signed out: only a fresh choice (interactive) opens the browser.
+                    if (o.tokens() == null && !interactive) null else {
+                        if (o.tokens() == null) {
+                            io.github.velosako3.blossom.feature.sync.backends.AndroidOAuth.signIn(context, o, io.github.velosako3.blossom.feature.sync.backends.AndroidOAuth.dropboxRedirect(dropboxKey))
+                        }
+                        io.github.velosako3.blossom.feature.sync.backends.DropboxBackend(o)
+                    }
+                }
+                io.github.velosako3.blossom.feature.sync.ui.BackendKind.GOOGLE_DRIVE -> null
+            }
+        },
+        discovery = { io.github.velosako3.blossom.feature.sync.lan.NsdDiscovery(context) },
+    )
+}
+
+/** Connecting a controller starts the media session service, which then runs the notification and lock screen. */
+fun connectPlaybackService(context: Context): () -> Unit {
+    val future = MediaController.Builder(context, SessionToken(context, ComponentName(context, BlossomPlaybackService::class.java))).buildAsync()
+    return { MediaController.releaseFuture(future) }
+}
+
+/** Activity-owned launchers (permission, folder picker) that the app-scoped graph can trigger. */
+object AndroidLocalBridge {
+    var requestPermission: (() -> Unit)? = null
+    var pickFolder: (() -> Unit)? = null
+    var onPermissionResult: (Boolean) -> Unit = {}
+    var onFolderPicked: (String) -> Unit = {}
+
+    fun hasAudioPermission(context: Context): Boolean {
+        val perm = if (android.os.Build.VERSION.SDK_INT >= 33) android.Manifest.permission.READ_MEDIA_AUDIO else android.Manifest.permission.READ_EXTERNAL_STORAGE
+        return context.checkSelfPermission(perm) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+}

@@ -1,0 +1,370 @@
+# blossom progress
+
+## Current position
+All milestones (0–9) are done and every checkbox in the plan is ticked. The final whole-branch review is fixed (below). `./gradlew check` is green. The installers workflow built Android, Windows and Linux on CI, and every artifact checked out against its SHA256SUMS: run 45050433114, plus the run for the final `[build]` commit. What's left needs the owner: the items under "Open questions for owner".
+
+### Final summary
+- Every spec goal has an implementation and a test; the mapping is in `docs/milestones.md` → Milestone 9.
+- Hands-on evidence:
+  - desktop, the real app off-screen with live services: `docs/screenshots/m9/desktop/`
+  - Android emulator: `docs/screenshots/m9/android/`
+  - earlier milestones: `docs/screenshots/m1`–`m8`
+- Not exercised for real, because each needs the owner's own accounts: Google Drive, Dropbox, Last.fm/ListenBrainz scrobbling to an account, Discord status, and YouTube Music/Spotify sign-in. Their code is tested against mocked endpoints, and the login pages load in the app.
+
+
+Hands-on testing rule: the owner is using this desktop, so never inject keyboard/mouse input or capture the screen.
+Desktop end-to-end checks run off-screen with the real graph: `./gradlew :composeApp:desktopTest -PliveTests=true -Proborazzi.test.record=true --tests "*DesktopEndToEnd*"`. `./gradlew :composeApp:run -Pblossom.debugPlay="query"` plays a search result at startup, for `playerctl` checks. Kill stray app instances by PID (`ps … | grep 'blossom\.MainKt'`), never with a `pkill -f` pattern that matches your own shell.
+
+## Decisions
+- Final review (whole spec), fixed with tests (RED → GREEN, full suite green):
+  - C1: a saved song whose link died stayed unplayable. Fix: `playableTracks()` lets the saved copy play, and the row isn't greyed out (`PlayableTracksTest`).
+  - I1: a song with several artists credited only the first. Each artist now gets its own name (`StatsCalculatorTest.everyArtistOfASongGetsItsOwnName`).
+  - I2: a skipped stranger counted as a "new artist". Only counted plays count now (`aSkippedStrangerIsNotANewArtist`).
+  - I3: allowlisted settings (theme, reduce motion, crossfade, autoplay, untitled auto-save) now sync as operations and apply back without echoing. Glass quality left the allowlist (`SettingsSyncTest`, `SyncEngineTest.unsyncedSettingsAreIgnored`).
+  - M1: a ✓ match now requires a known duration (`TrackMatcherTest.unknownDurationIsUncertain`).
+  - M3: the spring-forward week label ends on Sunday (`PeriodLabelTest`).
+  - M2: a committed JVM crash log (it held the home-folder path, no secrets) is removed and ignored. It stays in history, since pushed history is never rewritten.
+  - M5 (pointer part): taps on the welcome's scrim no longer reach the app.
+  - M6: Settings shows the effective Reduce motion value.
+  - M7: a cached Spotify token is tied to the session cookie it was minted for.
+  - M9: SPDX headers added to the `.sq` and `.sqm` files.
+- Final-review deferred minors:
+  - M4: dead-link checks are remembered per app session, not persisted per track, so a restart checks again (cheap).
+  - M5: Tab can still reach the app behind the welcome; screen readers can't.
+  - M8: the Android download notification title is English-only.
+- Milestone 8 review rulings:
+  - Ruling: typed pairing codes are 8 words (64-bit secret), not 6. Why: 40 bits could be brute-forced offline by anyone watching a pairing. If wrong: one extra line to type.
+  - Ruling: pairing stays HMAC-over-ECDH with the client proving first, not a PAKE (CPace/SPAKE2). Why: the JDK has no PAKE, and with a 32-byte QR secret or a 64-bit typed one, offline guessing is out of reach. If wrong: a LAN attacker who intercepts a typed-code pairing could still try to guess the secret offline.
+  - Ruling: a device stops reading another device's log at the first missing operation, including a newer app's unknown operation type. Why: the per-device high-water mark would otherwise skip the gap forever. If wrong: after a newer app writes a new operation type, older devices stop receiving that device's changes until they update.
+  - Deferred minors:
+    - Android `resolveService` races below API 34.
+    - Plain `http://` WebDAV gets no warning.
+    - Drive may keep a duplicate file after a timed-out create.
+    - A LAN first sync above 64 MiB fails, because it's sent as one frame.
+    - A spoofed mDNS announcement can redirect a paired peer's address until it reconnects (authentication still holds).
+- Versions: Kotlin 2.4.21, Compose Multiplatform 1.12.2, AGP 9.5.2, Gradle 9.9.2, compileSdk/targetSdk 37, minSdk 26 — latest stable; Spotube v6 ships the same Kotlin/CMP pair, so they are known to work together.
+- Material3 1.9.0 and material-icons-extended 1.7.3 for basic text/icons under the custom glass design system — saves hand-drawing every icon.
+- `BlossomBuildInfo` is generated from `blossom.version` in `gradle.properties`, so the version lives in one place for the app, the APK and the installers.
+- Live tests are any test class named `*LiveTest`; the convention plugin excludes them unless `-PliveTests=true`.
+- Convention plugins are precompiled script plugins in `build-logic/` (`blossom.kmp.library`, `blossom.compose`, `blossom.android.app`).
+
+- Desktop audio engine: libVLC via vlcj, Spotube v6's engine (see `docs/research/reuse-map.md`). VLC can't send arbitrary HTTP headers, so remote streams go through blossom's loopback `LocalStreamServer`, which forwards `StreamInfo.headers`.
+- System media controls: nucleus media-control (MIT, what Spotube v6 uses) for both Linux MPRIS (`org.mpris.MediaPlayer2.blossom`) and Windows SMTC, instead of hand-written D-Bus/WinRT code.
+- YouTube streams: InnerTubeX first, NewPipe Extractor fallback, URL probed before use — BitChord's pipeline. Desktop runs without a PoToken minter (BitChord's JVM target does the same).
+- Ported BitChord files use `SPDX-License-Identifier: GPL-3.0-only` (its LICENSE has no "or later" grant), inside the AGPL-3.0-or-later whole (GPLv3 §13).
+- Stats/Wrapped written new: BitChord's stats code is Android-only and its rules differ from the spec.
+
+- untitled.stream gate: **(a) works without sign-in.** Sample links 1 and 2 load metadata, sign audio URLs and stream plain MP3 with no account and no DRM (see `docs/research/untitled.md`). The sign-in flow of Task 6.5 is therefore not built; private links (`302 → /login`) show "This untitled link is private or was removed".
+
+- Glass rendering: FULL uses Haze 2.1's `haze-glass` (refraction shader: AGSL on Android 13+, SkSL on desktop) tuned to the spec (24 dp blur, 6 dp edge band, small chromatic fringe); REDUCED uses `haze-blur` (24 dp, no refraction); OFF is an 88% tint. blossom draws the rim, grain and shadow itself. No hand-written shader actuals are needed, so `GlassShaders.kt` holds the shared grain tile and rim brush instead.
+- Glass tint doubles as the text scrim: its alpha is `max(spec alpha, requiredScrimAlpha(onSurface, palette.dominant, tint))`, so text on glass always meets 4.5:1 against the artwork colour behind it.
+- `GlassSheet` and `GlassDialog` render as in-window overlays (not separate platform windows), so their glass samples the real backdrop; Esc and scrim taps dismiss them.
+- Snapshot tests force a glass quality, which also disables the frame-budget monitor; its endless frame loop would otherwise keep the test clock busy.
+
+- Navigation is a plain observable back stack (`Navigator`), not a navigation library: blossom's hierarchy is flat (5 top-level destinations, detail screens pushed on top).
+- Desktop window capture for evidence uses `xwd -id <window>` (installed `x11-apps/xwd`, `x11-misc/xdotool`), so screenshots contain only blossom's window, never the rest of the owner's screen.
+
+- Milestone 1 review: fixed the reviewer's findings (Reduce motion now drives every animation through `motionSpec`/`blossomSpring`, `ThemeMode` System/Light/Dark resolves in `App`, Android follows the system "Remove animations" switch until the in-app setting exists). The Settings toggles for theme, Reduce motion and "Use system title bar" are built with the settings screen in Task 9.7; until then the values are parameters with the spec's defaults (dark, motion on, custom title bar).
+
+- Kotlin compiles `commonMain` against the JDK when the only targets are Android and desktop JVM, so JVM-only libraries (OkHttp, NewPipe, InnerTubeX's JVM artifact) live in `commonMain` and BitChord's `jvmSharedMain` code ports without an extra source set.
+- InnerTubeX v0.12.0 (newest tag; same Kotlin 2.4.21/Ktor 3.6 as blossom) instead of BitChord's pinned v0.7.0; NewPipe Extractor v0.27.1. Both from JitPack, limited by a repository content filter.
+- `YouTubeSource` (plain YouTube uploads) searches through NewPipe's YouTube search extractor and plays through the same `YouTubeStreams` pipeline.
+- `selectAudioFormat` picks among NewPipe's progressive formats; InnerTubeX does its own selection from the quality hint (LOW/AUTO/HIGH).
+- Desktop `SecureStore` uses java-keyring (Windows Credential Manager / Linux Secret Service) with a 0600 properties fallback; Android encrypts with a Keystore AES-GCM key.
+- YouTube Music sign-in: `YtmSource` reads the cookie from `SecureStore` (`ytm.cookie`) like BitChord; the web-view login screen that captures it is built with the settings screens (Task 9.7).
+- Live test (Task 2.2): `./gradlew :source:youtubemusic:desktopTest -PliveTests=true --tests "*YtmLiveTest*"` → `live search: 20 songs, first = One More Time – Daft Punk`, `live stream: audio/webm; codecs="opus" 157 kbps, expires 2026-11-21T22:43:42Z`.
+
+- Player: shuffle reorders the visible queue (current track first, deterministic per seed) and remembers the original order to restore it; the Next button moves on even with repeat ONE (only natural track ends repeat). Non-HTTP engine errors use the same two re-resolves before skipping.
+- Desktop `NetworkMonitor` checks for an up interface plus a DNS answer every 15 s (no request to any server); `-Dblossom.forceOffline=true` pins it offline for testing.
+
+## Deviations from plan
+- Task 9.8:
+  - The plan's `:composeApp:assembleRelease` is `:androidApp:assembleRelease` here (AGP 9 keeps the app module separate).
+  - R8 and desktop ProGuard are off for now: NewPipe, InnerTubeX and vlcj use reflection and would need keep rules first. The APK is ~25 MB.
+  - The AppImage is made on CI from the release app image with appimagetool 1.9.1, pinned by SHA-256. The Windows portable zip is the app image folder.
+  - App icons: one blossom mark (`composeApp/icons/blossom.svg`), rendered to PNG/ICO for the installers and the window, plus an Android adaptive vector icon (with monochrome).
+  - Verified locally: all four APKs, the release app image (libVLC plus 51 plugins bundled) and the AppImage. There's no `dpkg-deb` on this machine, so the `.deb` and the Windows MSI are verified only on CI. I didn't open the packaged app's window on the owner's display.
+  - `actionlint` isn't installed; the workflow was reviewed by hand and parses as YAML.
+- Task 9.7:
+  - Settings is one scrolling page in sections, with links to the sub-screens: equalizer, storage, local files, sync, licenses and sign-in.
+  - Onboarding shows on first run only. It's skippable and comes back via Settings → About → "Show the welcome again". Tests skip it with `-Dblossom.skipOnboarding=true`.
+  - Accounts:
+    - Android signs in through web views ported from BitChord. YouTube Music keeps only the cookie. For Spotify, `sp_dc` plus the token is harvested by an offscreen web player.
+    - Desktop: YouTube Music takes a pasted Cookie header, since there's no embedded browser. Spotify sign-in is Android-only, as in BitChord; playlists imported there sync to desktop.
+  - Licenses come from the AboutLibraries Gradle plugin (`exportLibraryDefinitions` → `composeResources/files/aboutlibraries.json`, 234 libraries), shown in blossom's own list.
+  - Lyrics settings: an explanation and "Forget saved lyrics" (there are no lyrics options to choose).
+  - Accessibility:
+    - Every clickable control has a label (an audit test across 16 screens and both layouts).
+    - Switch rows toggle as a whole and are announced with their label.
+    - Tab order is nav → content → player bar, and Shift+Tab goes back (test).
+    - At 200 % text, nav labels no longer clip (the nav bar grows) and the offline notice is transient (6 s) instead of covering the player.
+    - Content behind the welcome is hidden from screen readers.
+  - Error and empty states: audited. Home, search, album and artist have retry; library, liked, playlist, local files and stats have empty-state guidance; lyrics say "none found"; offline lyrics no longer wait on network timeouts.
+  - Hands-on pass:
+    - Desktop: the real graph off-screen, 19 screens, in `docs/screenshots/m9/desktop/`.
+    - Android: emulator, 20 screens, in `docs/screenshots/m9/android/`.
+  - Fixed during the pass:
+    - The sleep timer dialog was drawn under the screens; it now lives in the overlay layer.
+    - The compact shell's bottom padding was a fixed guess; it's now measured, so content no longer ends under the mini player on Android.
+    - Onboarding gets a scrim.
+    - The Stats "next" arrow is disabled on the current period.
+  - An Android cold-start ANR found on the emulator:
+    - Starting straight into Home with full glass made the CPU-rendered GPU compile shaders for seconds per frame. The main thread waited on it, so the frame monitor never got to step down.
+    - Fixes: the monitor steps down at once after a frame over 250 ms; Android frame times come from `FrameMetrics` on a background thread; the emulator is capped to glass off; Settings → Appearance → Glass effects (Auto/Full/Reduced/Off) is new.
+    - Verified: two cold starts into Home now load.
+  - Not tested: the effect of the glass shaders on real low-end GPUs (no device).
+- Task 9.6:
+  - The check runs at app start. The day's answer (tag and link) is kept in preferences, so there's at most one request a day.
+  - A failed request (today's 404: the repo has no releases yet) shows nothing and is retried at the next start.
+  - The "Update to x.y.z" glass chip sits at the top right over the content. On Android it opens the release's `.apk` asset when there is one; nothing is ever installed automatically.
+  - The off switch is `update.check`; its toggle comes in Settings → About (9.7).
+- Task 9.5:
+  - The IPC client is built on JDK 16+ Unix-domain sockets (Linux/macOS: runtime/temp dirs, Flatpak and Snap paths) and a `RandomAccessFile` named pipe (Windows), with no extra library.
+  - The activity has type 2 ("Listening to"), and the artwork URL is used as the large image when it's https.
+  - Updates go out on a track change, play/pause or a seek, at most one every 5 s.
+  - The setting is `integrations.discord`, off by default; its toggle comes in Settings → Integrations (9.7).
+  - Tested against a fake Discord socket (handshake + `SET_ACTIVITY`). Not run against a real Discord, because that would change your account's visible status (Open questions).
+- Task 9.4:
+  - New module `feature/integrations`. The Last.fm and ListenBrainz clients speak the same protocol as BitChord's (signed `api_sig` POSTs; the ListenBrainz `Token` header), but they're written for OkHttp, because BitChord's use Ktor/Android logging. So they carry blossom's AGPL header.
+  - The queue lives in preferences (`scrobble.queue`, at most 5,000 items) and records which services still need each item, so a retry never double-sends. Items go oldest first; there are 5 tries with backoff (30 s, 2 min, 10 min, 30 min), then the item is dropped.
+  - Scrobbles come from the play tracker's listening sessions (clock-based `playedMs`) and are stamped with the start time. "Now playing" is sent when a song starts playing, online only.
+  - Live: a signed `auth.getToken` with the build's key was accepted (`LastFmLiveTest`).
+  - Signing in (Last.fm web auth, ListenBrainz token) gets its Settings UI in 9.7. Scrobbling to a real account needs the owner's account (Open questions).
+- Task 9.3:
+  - "End of track" is a player flag (`setStopAfterCurrent`): the player pauses on the track's own end instead of advancing, and skips the crossfade while the flag is set.
+  - The fade drives the player volume down linearly over 10 s in 250 ms steps; afterwards the volume goes back to 1.0, as the plan says.
+  - The timer lives in the app graph; its Now Playing control comes with the 9.7 polish pass.
+- Task 9.2:
+  - Equalizer settings are a device preference (`player.eq`, plain string encoding: core/player has no serialization plugin).
+  - The equalizer applies to both engines, so a crossfade keeps the sound.
+  - Desktop uses libVLC's equalizer, mapped onto whatever bands libVLC reports.
+  - Android uses `audiofx.Equalizer` on each ExoPlayer's audio session. It has no preamp, so the preamp is added to every band within the device's level range. Needs `MODIFY_AUDIO_SETTINGS`, a normal permission.
+  - Choosing a preset turns the equalizer on; dragging a band switches to Custom.
+  - Settings links to the screen until the settings hub in 9.7.
+- Task 9.1:
+  - Crossfade lives in `DefaultBlossomPlayer`, not in the engines. Each platform builds a second engine (`fadeEngine`), and the two swap roles after each fade. Only the active engine's events count, so the outgoing track's end can't skip the new one.
+  - On Android, the media session follows `activeEngine` (`MediaSession.setPlayer`).
+  - A fade never runs past the end of the outgoing track; its length is clamped to the time left.
+  - Pause, seek or a track change finish a fade at once.
+  - "Gapless" at 0 s (and between album neighbours) means the next stream is resolved 20 s ahead, so it starts at once. It isn't sample-accurate: single-item loads leave a few milliseconds.
+  - "Consecutive on one album" means the queue's next track has the same album ID.
+  - The setting is stored under `player.crossfade` (0–12, default 0); its control comes with the settings screens in 9.7.
+  - Checked live (`DesktopCrossfadeLiveTest`, two libVLC engines, 8 s files, 3 s fade): the switch happened at 5.15 s and the second track kept playing.
+- Task 8.5:
+  - The device list has one generic device icon. Manifests and pairing don't record each device's platform, so there's nothing to choose a platform icon from.
+  - The QR code and the six words share one 40-bit one-time secret, so one pairing window works with either.
+  - "Enter a code" accepts six words or a pasted `blossom://pair` link.
+  - The LAN server starts only after this device has paired, or when the pairing screen opens.
+  - Peers learn each other's sync port during the authenticated handshake, and mDNS keeps it current.
+  - Android schedules the hourly `SyncWorker` always; a run with nothing set up does nothing.
+  - Settings is still the storage screen until 9.7; a "Sync" row at its top opens Settings → Sync.
+  - Step 4's two-instance check is `TwoInstanceSyncTest`. It runs two instances with separate data directories and database files.
+    - Phase 1: a shared folder; 5 likes merge both ways.
+    - Phase 2: cloud off, pairing over 127.0.0.1, then direct LAN sync in both directions; 7 likes on both.
+    - Phase 3: after "Remove device", the removed peer no longer syncs.
+  - The check runs in one JVM rather than two windows, because I don't drive the owner's display.
+- Task 8.4:
+  - Transport (plan: Ktor over TLS with self-signed certificates): a small framed protocol over TCP, authenticated and encrypted with keys rather than certificates. Making X.509 certificates needs BouncyCastle, and on Android that's awkward.
+  - Pairing runs an ephemeral ECDH (P-256) exchange, authenticated by HMACs over the transcript keyed with the one-time secret, server first. Both sides keep the derived long-term key in `SecureStore` (`peer.<id>`), with its SHA-256 in `sync_peer.cert_sha256`.
+  - Sessions prove the key both ways (HMAC challenges) and then encrypt every frame with AES-GCM (per-direction counter nonces).
+  - A recorded handshake can't be brute-forced offline: the secret only authenticates the exchange, and the key comes from ECDH.
+  - The pairing secret is single-use and allows 5 tries.
+  - `PairingPayload` carries all LAN addresses (`hosts`); there's no `certSha256` since there's no certificate.
+  - The exchange is "send what I know per device → get everything newer", relayed ops included, so gossip spreads changes. That replaces the HTTP `/manifests` and `/segments` endpoints. The server confirms after applying.
+  - The desktop 6-word code is IPv4 + a 40-bit one-time secret on fixed port 53683. It uses a generated list of 4,096 two-syllable words (12 bits each), so there's no third-party word list to license.
+  - Discovery: jmDNS 3.6.5 (desktop) and NsdManager (Android), announcing only the device ID.
+  - The QR display and the Android camera scanner come with the pairing screen in 8.5.
+- Task 8.3:
+  - Backends use OkHttp and are tested with MockWebServer (the plan said Ktor); blossom's HTTP is OkHttp everywhere.
+  - WebDAV listing walks collections with `Depth: 1` (many servers refuse `infinity`).
+  - Drive keeps every file in the hidden app-data folder, named by its full sync path (app-data has no folders).
+  - OAuth: PKCE for both providers, refresh once on 401, and tokens in `SecureStore` (`oauth.<backend>`). Desktop catches the redirect on 127.0.0.1: any port for Google, exactly `http://127.0.0.1:53682/dropbox` for Dropbox. Android uses the system browser (the plan said Custom Tabs, which needs one more library) and Dropbox's `db-<key>://1/connect`, wired through the manifest placeholder `dropboxScheme`.
+  - The Android SAF folder backend can't replace files atomically: it writes a hidden temp document, deletes the old one and renames.
+  - Client IDs come from `secrets.properties` (or CI environment variables) into a generated `BlossomSecrets` under `build/`, never committed; an empty one hides that option. `GOOGLE_OAUTH_ANDROID_CLIENT_ID` is empty, so Drive is desktop-only for now.
+  - The live Drive and Dropbox checks aren't run: they need someone to sign in to an account in a browser, and blossom never signs in to the owner's accounts (Open questions).
+- Milestone 7 review fixes:
+  - Desktop Share no longer calls `invokeAndWait` from the event thread (it threw, and the error was swallowed).
+  - Moving past the last Wrapped card keeps its progress full (`lastCardStaysFullAfterNext`).
+  - Card progress resets inside the timer, so a stale value can't skip a card. Progress segments expose their progress to accessibility services and tests.
+  - Only the visible card is captured during a crossfade. Android shares carry ClipData for the read grant.
+  - Desktop export prefetches artwork and renders a few frames, so exported PNGs include it; no leaked frame images. The save-dialog strings are resources.
+  - Wrapped captures what was playing once, on entry; starts and restores run one after another on one job; the preview isn't tracked as a play (`PlayTracker.setIgnoring`). No navigation or exporter state is changed during composition.
+  - PlayTracker: a failed record never stops tracking and keeps the play as a checkpoint (`aFailedRecordDoesNotStopTracking`). It records first and clears the checkpoint after (safe: plays are keyed by ID). Plays with no listening time aren't recorded (`nothingPlayedNothingRecorded`).
+  - Wrapped album artwork matches by album key.
+  The WrappedScreen tests were written with the fixes; the first build failed on the new test tag, so they never ran against the old timer.
+- Milestone 7 review rulings (not changed):
+  - Seeking back to the start of the same song continues the same play (seeks add nothing, per spec).
+  - Export renders off the UI thread with `ImageComposeScene`, which the desktop export test exercises.
+  - The review's diff range missed 7.1–7.3's code; PlayTracker and Period were still reviewed at HEAD, but StatsCalculator and the Stats screen were not. The final review covers them.
+- Task 8.2: `SyncEngine` also takes the database (it inserts and projects each device's operations in one transaction) and a segment-size override for tests. Remote `SettingChanged` operations for keys outside `SyncedSettings.keys` are stored in the log but not applied. The Android hourly background sync comes with the backends (8.3) because it needs a configured backend.
+- Task 7.4:
+  - `WrappedExporter` gained `palette` (the cards' artwork tuning) and `captureWith` (Android exports by capturing the card on screen and scaling it to 1080×1920; desktop renders off-screen at exactly that size). Android shares through a `FileProvider` (cache/wrapped); desktop saves through a save dialog.
+  - The player exposes no volume yet, so leaving Wrapped restores full volume along with the previous queue, position and play/pause state.
+  - Wrapped opens inside the content area (the sidebar and player bar stay).
+  - Hands-on (real app, off-screen): the top song plays from 30 % (`playing at 129000 ms of 430000 (30%)`); closing restores the previous song at 10 s, paused, as it was. Screenshot `docs/screenshots/m7/13_wrapped.png`, all cards `docs/screenshots/m7/wrapped_cards.png`.
+- Milestone 6 review fixes:
+  - Bundled libVLC plugins are now downloaded over HTTPS and checked against SHA256: the Ubuntu package index's for the .debs, VideoLAN's published one for the Windows zip. They used to come over plain HTTP with no check.
+  - Network errors never fail an import: reading and matching back off (2 s, 8 s, 30 s), then the job waits and resumes on the next start. A match is UNAVAILABLE only after a search that answered with nothing. Sign-in-needed and not-found imports fail with a reason the Import screen shows; the reason is stored in the new `import_job.error` column (migration `1.sqm`, applied in one transaction with the version bump).
+  - One runner per job (no duplicate entries from start/resume races). A new playlist and the job's record of it commit together (no orphan on a crash). Hook failures (untitled auto-save) don't stop an import. A double tap starts one import.
+  - The router and the YouTube importer no longer throw on malformed percent escapes, and they only take IDs made of URL-safe characters.
+  - Matcher: only true version tails are dropped ("- Stereo Hearts" stays a title); "(With or Without You)" stays a title; combining marks survive (NFC); symbol-only titles never match by artist and duration alone.
+  - Dead links: only an answer uses up the day's check. SoundCloud/untitled `track()` returns null only for gone links (network errors throw). untitled 401/403 counts as private/gone. untitled project data is cached for 10 minutes.
+  - Spotify: 404 → NotFound, 403/429 → retry later, a page without data → sign-in. Paging continues from the raw item count, and a missing token is an error instead of a silent 100-track cap.
+  - SoundCloud: the client ID refreshes once for concurrent callers.
+  - HLS: encrypted and byte-range playlists are refused; sizes and reads use `Accept-Encoding: identity` and reject zero sizes; read errors surface as playback errors; a seek arriving after a track change is dropped; the time mode comes from the container (fragmented MP4 → absolute).
+  - The desktop driver clears its thread-local connection on close.
+  Tests that failed first: the router, matcher, runner (offline read, sign-in reason, matching outage, one runner + hooks), rechecker, view model, Spotify, untitled and HLS tests. `versionOneDatabaseMigrates` passed at once.
+- Milestone 6 review rulings (not changed):
+  - The clipboard is read when Import opens, as the spec asks.
+  - `watch?v=…&list=…` imports the playlist, per the plan's router table.
+  - The untitled storage path is sent as one encoded segment, per the research doc; the live test played.
+  - ISRC matching stays dormant (`Track` has no ISRC; recorded under 6.1).
+  - A running import keeps going after "Import another link".
+  - The external vlcj-bundler plugin (Spotube's) still downloads the base VLC over HTTP; that's outside blossom's code (Open questions).
+- Task 7.3: `LibraryRepository.firstPlays()` (each track's first counted play) feeds "new artists". The view model reads the period's and the previous period's plays plus first plays, and never moves past the period holding today. `Destination.Wrapped` carries a compact period key (`week:2026-47`).
+- Task 7.1: `PlayTracker` takes the player's state flow, a `record` lambda (the app passes `LibraryCommands.recordPlay`) and device preferences for the checkpoint, not `BlossomPlayer` + `LibraryCommands`, so `core:player` doesn't depend on the database module. A track counts as having reached its natural end when its last position was within 1.5 s of the end; repeat-one restarts start a new play. Desktop records the play in progress on shutdown (2 s limit); Android relies on the 15 s checkpoint.
+- Task 6.6:
+  - The destination is chosen when the import starts, not at the end: a new playlist named after the source unless the name field is filled, or "Add to existing playlist". The resumable runner needs a playlist to write into as it goes. At the end the screen offers Open playlist, plus Play now / Add to queue / Like for a single song.
+  - "Fix this match" (YouTube Music) and Find replacement (YouTube uploads + SoundCloud; for untitled) share one sheet.
+  - Android: share target (`text/plain`) and "Open with" for Spotify, YouTube Music, SoundCloud and untitled links. Both go through `AppGraph.pendingImport` to the Import screen.
+  - Interrupted imports resume when the app starts.
+  - Hands-on (real app, off-screen): the public Spotify album 'The Dark Side of the Moon' imported with no sign-in: 10 tracks, 6 matched, 4 "not sure" (album crossfades push durations past the 3 s rule), screenshot `docs/screenshots/m6/12_import_done.png`.
+- Task 6.5:
+  - Gate (a), so no untitled sign-in was built: no `UntitledSession`/web view/accounts row, and none of the sign-in tests apply. Private or removed links answer 204 and are reported as unavailable.
+  - untitled tracks inside a project have no page of their own (the track route answers 204), so their IDs are `untitled:<project slug>/<track slug>` and resolve through the project's data. Standalone tracks keep `untitled:<slug>`.
+  - `DeadLinkRechecker.recheckIfDue` takes the playlist ID too. It remembers checks per app session, checks only untitled and SoundCloud entries, and skips the check offline. A link that works again turns MATCHED.
+  - Find replacement searches YouTube uploads and SoundCloud and replaces the entry's track in place (same entry and position, `replaceEntryTrack`).
+  - untitled auto-save is an `onWritten` hook on the import runner (`UntitledAutoSave`, setting `untitledAutoSaveOffline`, default on); the app wires it to `OfflineRef.UntitledAuto` in 6.6.
+  - Bundled libVLC gained the `es` demuxer and the `skiptags` stream filter. Without them no plain MP3 played on desktop (untitled; SoundCloud progressive; local .mp3 files): "no demux modules matched".
+  - Live (links read from `secrets.properties`, never printed): sample link 1 → 15 tracks, all native, first track playing at 3105 ms; sample link 2 → 4 tracks, playing at 3172 ms. A repo scan finds neither link's ID in any file.
+- Task 6.4:
+  - SoundCloud goes through its public web API (api-v2) with the website's public `client_id`, read from its script bundles and read again on 401/403. NewPipe's SoundCloud service was skipped: its network layer can't be fed fixtures.
+  - Sets list only their first tracks in full; the rest come from `/tracks?ids=` 50 at a time, in order.
+  - Go+ preview-only tracks are `policy=SNIP` (or only snipped transcodings). They're flagged `previewOnly`, with the full duration for matching.
+  - SoundCloud now mostly serves HLS (AAC 160 kbps). Android plays it with Media3's HLS module.
+  - Desktop plays HLS through `HlsReader`, because libVLC's own HTTP can't run inside the JVM. It fetches the playlist, takes segment sizes from parallel HEAD requests, and hands libVLC init + segments as one seekable file.
+  - libVLC can't seek that concatenation by bytes and ignores `:start-time` on a slice. Ruling: a seek restarts at the segment boundary nearest the target (SoundCloud segments ≈ 10 s, so within ~5 s). Cost if wrong: SoundCloud seeks on desktop are slightly imprecise.
+  - Live: set 'Study Lofi…' 79 tracks, all native; stream `application/vnd.apple.mpegurl` 160 kbps; search 30 songs. Desktop: plays (`at 3250 ms`), and a seek to 95 s lands at the 100 s boundary.
+- Task 6.3: `YtmImporter` reuses `YtmSource.playlist` (continuation paging), `album` and `track`. Plain YouTube videos import as `ytm:` tracks too: YouTube Music's `next` endpoint resolves any video ID and plays through the same stream path. The fixtures are a real two-page playlist (98 + 82 tracks live), cut to 4 songs per page, with tracking and visitor fields removed.
+- Task 6.2:
+  - `SpotifyAuth` is a token provider (`fun interface`). The sign-in web view that mints tokens comes with the account settings in 9.7, alongside YouTube Music sign-in, so private playlists and Liked Songs work once that lands.
+  - Liked Songs import uses the special source `spotify:collection:tracks`.
+  - Embed-page tracks have no album name; tracks read from GraphQL pages do.
+  - The embed joins artists with ", ", so names containing a comma split in two (the matcher tolerates it).
+  - `ImportError` (NeedsLogin, NotFound) lives in `source/api`.
+  - Live, no sign-in: `spotify live: 'All Out 80s' 150 tracks, first 'Thriller' – [Michael Jackson], last 'Slave To Love'`; album 'The Dark Side of the Moon' 10 tracks; track 'Blinding Lights'.
+- Milestone 5 review fixes, each covered by a test that failed first:
+  - The offline file format is version 2, with an 8-byte random nonce prefix + 4-byte chunk index instead of 4 + 8. With 4 random bytes, two files under one key share a nonce with ~0.3 % odds at 5,000 files, which breaks GCM. Nothing has shipped, so no migration.
+  - Resume never re-encrypts a chunk index already on disk. A file that authenticates to its last chunk counts as complete (crash before SAVED). A file with bytes past its last whole chunk starts over with new nonces.
+  - A stream URL that expires mid-download is resolved again (`fresh`, which invalidates the player's cache) and continues from the same offset.
+  - A Content-Range that doesn't start where asked is rejected. A 416 or a changed total restarts from zero (at most 3 times).
+  - Unsave waits for a running download to stop before deleting its file. Orphans are selected and deleted in one transaction. `isSaved` drops unsaved tracks immediately, so they stream again.
+  - Unreferenced files are swept at startup. Clear-all waits for downloads to stop.
+  - A saved file that no longer decrypts (key reset, damage) heals: it's deleted and downloaded again.
+  - A truncated file reports `CacheCorruptedException` instead of crashing a player callback.
+- Milestone 5 review fixes without a new test:
+  - Going offline pauses with one conditional UPDATE, never touching SAVED or FAILED rows.
+  - Retry counts reset when bytes arrive, and the backoff doesn't hold a download slot.
+  - Saved playlists save their new tracks in one transaction with one queue check.
+  - The key loads at startup, so `openReader` doesn't wait on the keyring.
+  - Media3 `EncryptedDataSource` never reports more bytes than exist.
+  - The Android `DownloadWorker` waits for downloads to start before waiting for them to end (it used to return at once).
+  - Offline flows built in composition are `remember`ed.
+  - Progress is written every MiB.
+- Milestone 5 review rulings (not changed): offline search filters in-memory lists of local and saved songs, fine at thousands of songs; revisit with SQL search if libraries get much larger. Progress stays in `offline_item`, at 1 MiB steps.
+- Task 6.1:
+  - `Track` has no ISRC field, so `TrackMatcher.match` takes an optional `isrcOf` lookup.
+  - Playlist entries keep no source key, so Refresh from source treats a track as present by its stored source title + artist, or by its native track ID.
+  - SoundCloud short links and untitled invites are detected as PLAYLIST; the importer resolves their real kind after the redirect.
+  - Batch size is a constructor parameter, so the resume test can stop at exactly 40.
+  - Match results are stored in the same transaction as the batch's entries and "written" marks, not one autocommit per item. A crash re-matches at most one window. The per-item commits made 5,000 tracks take over 30 s; now 2.93 s.
+  - `addEntries` gained an `inTransaction` hook so import bookkeeping commits atomically with the entries (no duplicates on resume).
+- Desktop database driver: `BlossomSqliteDriver` replaces SQLDelight's `JdbcSqliteDriver` for the file database. It keeps one connection per thread and adds WAL, `synchronous=NORMAL`, and `BEGIN IMMEDIATE` transactions. SQLDelight begins DEFERRED transactions, so a transaction that reads before writing (`addEntries`) failed at once with SQLITE_BUSY when another connection held the write lock. That's SQLite's lock-upgrade deadlock, where the busy timeout doesn't apply. `ConcurrentWritesTest.readThenWriteTransactionsWithReaders` failed before and passes after. Android's driver already begins exclusive transactions.
+- Task 5.4:
+  - `OfflineModeTest` lives in `composeApp/src/commonTest` as planned.
+  - The Settings destination shows the Storage screen until 9.7 builds the full settings page.
+  - Offline settings (limit, download quality, Wi-Fi only) are device preferences: desktop defaults to Wi-Fi only off, Android to on.
+  - Download quality is separate from streaming quality.
+  - Saved-song badges appear in playlists, Liked Songs and the new Library "Saved" chip. A saved playlist shows "Saved" or "Saving n of m".
+  - The player and playlist menus offer Save for offline / Remove download.
+  - Offline, Search shows a notice, hides the album/artist/playlist tabs, and matches only local files and saved songs.
+  - A "Saving paused: the storage limit is reached" banner shows while anything is PAUSED_STORAGE.
+  - Re-recorded `fullPlayer_compact_412x915`: its golden was stale since Milestone 2 (placeholder note size; no source change since). `check` doesn't run `verifyRoborazziDesktop`, so it went unnoticed; the wrap-ups now run it.
+- Hands-on (`DesktopOfflineLiveTest`, real UI, network forced offline in the JVM): the offline home lists the saved song under "Recently played" with the offline banner; Library → Saved shows it with the saved badge; it plays from the cache (`offline playing: One More Time at 3601 ms, online=false`).
+- Task 5.3: no `LocalStreamServer`. Desktop already feeds libVLC through vlcj callback media (libVLC's own HTTP client fails inside the JVM), so saved tracks go through the same path. A `DecryptingCursor` over `DecryptingReader` decrypts chunk by chunk as libVLC reads. That means no loopback HTTP surface, no session token, and no plaintext anywhere. Android plays `blossom-offline:///<encoded track id>` through `EncryptedDataSource` (Media3); IDs contain ':', so they're encoded in the path. A corrupted chunk ends the stream with a player error instead of throwing into native code. `OfflineStore.isSaved` reads an in-memory set kept current from the database, so the player never does IO on the main thread. The player already preferred `MediaInput.Offline` for saved tracks (Milestone 2); `OfflinePreferenceTest` pins it down (it passed on first run).
+- Downloads use bounded `Range` requests of 2 MiB. YouTube throttled the first live run's open-ended request to playback speed (~5 % per 10 s); with ranges a 5.3 MB song saved in under 10 s (`downloadsInBoundedRanges` failed before the change). Servers that ignore Range get one plain download, restarted from zero if a partial file exists.
+- Hands-on (`DesktopOfflineLiveTest`, real app graph, network forced offline inside the JVM only): `offline saved: One More Time (Radio Edit) – Daft Punk, 5319766 bytes`, then `offline playing: One More Time (Radio Edit) at 3061 ms, online=false`.
+- Milestone 4 review fixes, each covered by a test that failed first:
+  - Provider errors and timeouts no longer cache "no lyrics" for 7 days. "None found" is cached for 7 days only when every provider answered; for 1 hour when some failed; not at all when all failed.
+  - Local files check their sidecar/tag before the cache, and unreadable local lyrics fall back to online providers.
+  - Blank provider lines survive as gap markers, so instrumental dots show for provider lyrics.
+  - Parser: strips the BOM, turns text before the first word stamp into a word, keeps `[Chorus: …]`-style lines in plain lyrics (only standard tags are dropped), never produces an end before a start after a negative offset, and caps a last word with no closing stamp at 2 s.
+  - The lyrics view model starts in Loading (no "No lyrics found" flash) and rethrows cancellation. An unreadable cache row counts as a miss.
+  - Lines are buttons for accessibility ("Play from this line").
+  - UI fixes without new tests:
+    - A stable seek callback, so position ticks no longer recompose every line.
+    - Glow is 12 dp.
+    - Line-synced brighten starts at 45%.
+    - The lyrics HTTP client has a 5 s call timeout.
+    - Full-screen lyrics is desktop-only, closes with Esc/Back, and resets when playback stops.
+    - Live tests refuse to wipe a data folder outside `build/`.
+- Milestone 4 review rulings (not changed):
+  - The word sweep stays under reduce motion: it's the reading position, not decoration; scale, blur, glow and scroll animation are off.
+  - Draw-phase gradient allocation: 1 small object per frame on the singing row only; revisit if profiling shows GC churn.
+  - `YouTubeLyricsApi` stays a process-wide hook set once by the app graph.
+  - Vendored BitChord files stay GPL-3.0-only inside the AGPL app, as GPLv3 §13 allows combining with AGPLv3.
+  - `lyrics_cache` has no migration because no build with a database has shipped.
+  - Embedded SYLT (synced) tags aren't read: jaudiotagger exposes only USLT through `FieldKey.LYRICS`; sidecar `.lrc` covers synced lyrics for local files.
+- Task 5.2:
+  - `DownloadManager` takes a `resolve: suspend (Track) -> StreamInfo` lambda, not `StreamResolver`, so `core:offline` doesn't depend on `core:player` (the player will read from the offline store in 5.3).
+  - Downloads encrypt as bytes arrive (`ChunkedEncryptor`). One chunk is held back, so every chunk on disk is final, and a broken download resumes from the last whole chunk with `Range: bytes=<n>-`.
+  - A saved playlist's current entries are referenced before `savePlaylist` returns. Otherwise an immediate unsave of another playlist could garbage-collect a shared track and download it again.
+  - The Android `DownloadWorker` (WorkManager 2.10.1, data-sync foreground job) only keeps the process alive until the manager goes idle. Its network constraint follows Wi-Fi only.
+  - Storage folders (`filesDir/offline`, `<appData>/offline`) get wired in the app graph with 5.3/5.4.
+  - Tests use a temp-file database like the app: the in-memory driver shares one connection, so parallel transactions collide ("cannot start a transaction within a transaction"). `ConcurrentWritesTest` guards the file database: 200 transactions from 8 threads; it passed without changes.
+- Task 5.1 interfaces: the cipher takes `java.io.InputStream`/`OutputStream` and the reader takes a `java.io.File`, not kotlinx-io `RawSource`/`Path`. `commonMain` already compiles against the JDK and nothing else in blossom uses kotlinx-io. `KeyVault` is a common class over the existing `SecureStore`, not an expect class. `SecureStore` already uses an Android Keystore-wrapped AES key on Android, and on desktop the OS keyring with a 0600 file fallback that warns once. Added beyond the plan: each chunk's GCM associated data holds its index and whether it is the last chunk, so truncated or reordered files fail authentication (`truncationDetected`).
+- Task 4.3 frame-time check: the plan says to run the desktop app on screen for 30 s with `FrameBudgetMonitor` logging. That would open a window on the owner's desktop, and there's no virtual display (no Xvfb/Xephyr/weston), so it can't run here. Instead, `LyricsFrameTimeLiveTest` renders `LyricsView` off-screen (`ImageComposeScene`, 1440×900, word-synced, 60 Hz positions). This is CPU raster with no GPU, so it's an upper bound. p90: reduce motion 9.1 ms; full motion at REDUCED glass 11.2 ms; full motion at FULL glass 78.9 ms (per-line blur is ~67 ms of that on CPU). Ruling: lyric blur applies only at FULL glass (the plan says "not OFF"). Why: `FrameBudgetMonitor` steps down one level per slow 3 s window and then waits 10 s, so on a machine that can't afford blur the first downgrade removes it, instead of ~16 s of jank. Cost if wrong: devices that run at REDUCED glass never see the depth blur. GPU p90 is still unmeasured and needs an on-screen run by the owner (Open questions).
+- LyricsView bugs found by the real-app run (`DesktopLyricsLiveTest`):
+  - Effects can start inside the composition's apply phase. Scrolling there forced a remeasure that subcomposed list items and crashed ("pending composition has not been applied"). The scroll now waits one frame (`withFrameNanos`). The live test failed before this fix and passes after.
+  - Seeks and first show reset any cascade offsets still in flight.
+  - Lyrics inside the glass right panel use `colors.onSurface`. The artwork's on-background colour could be black on a dark panel. `LyricsView`/`LyricsPanel` gained an optional `color`.
+- Milestone 3 review fixes: library commands now read positions inside the same transaction they write in, and the "after" neighbour skips keys tied with "before" (concurrent inserts could leave equal keys and crash the next insert — `insertAndMoveAroundTiedKeysDoNotCrash` RED→GREEN); like toggling is decided from the stored state in the transaction (`toggleLikeUsesStoredState`); `localOps` emits with backpressure instead of dropping; playlist summaries load artwork on IO; the desktop folder watcher stops with its job and survives watch-service failures; scanner cache evicts deleted files; Android ignores MediaStore's `<unknown>` album (IDs now match desktop) and caches embedded art for picked folders; local IDs normalize Unicode whitespace; the Android launcher bridge no longer holds a destroyed Activity. Not changed (reviewer misread): the HLC `when` with a guard was valid Kotlin 2.4 and tested; rewritten as a plain `when` for readability.
+- Lyrics providers: BitChord's lyrics package is vendored nearly unchanged (`feature/lyrics/.../providers/`, GPL-3.0-only headers) and adapted to blossom `Lyrics` in `OnlineProviders.kt`. Provider order is BitChord's default; the PaxSenix variants that need an API key and the hosts BitChord hides (SimpMusic, Megalobiz) are left out. `LyricsQuery` gained `videoId` for the two YouTube sources. Android local songs use online lyrics only (scoped storage can't read sidecar files); desktop reads a sidecar `.lrc`, then the embedded lyrics tag. Live (`LyricsProvidersLiveTest`, "Kanye West – Runaway"): lrc.red, BiniLyrics, BetterLyrics word-synced (87 lines); KuGou 95 and LRCLIB 91 line-synced; Genius plain; the rest none.
+- Local files: no `TagReader` expect/actual. Desktop reads tags with jaudiotagger inside `FolderScanner`; Android uses MediaStore columns, plus `MediaMetadataRetriever` for picked SAF folders (jaudiotagger relies on desktop-only APIs). Scan results live in memory, keyed by path, mtime and size; the `local_file` table stays unused for now. The desktop watcher registers before the first scan, so a file copied during startup isn't missed. Android local "paths" are `content://` URIs, which the Media3 engine plays directly. Local folder lists are device-only preferences (`local.folders` / `local.trees`). Evidence: `DesktopLocalFilesLiveTest` → `local: [Lossless Silence – Flac Band (LOCAL), Silent Song – Quiet Artist (LOCAL)]`, `local playing: Lossless Silence at 554 ms`.
+- Library UI: `PlaylistViewModelTest` lives in `desktopTest` because it runs against a real in-memory SQLite database (the test checks the resulting order rather than mocking `moveEntry`). Rows support swipe-to-remove, × and the Delete key on every platform, and reorder through a drag handle (reorderable 3.1); long-press selects. The like button, Ctrl+L and the player's "Add to playlist" are wired now. Evidence: `DesktopEndToEndLiveTest` → `e2e library: liked=[One More Time (Radio Edit)] playlists=[(blossom e2e, 1)]`, screenshots `docs/screenshots/m3/`.
+- The library playlist row type is `LibraryPlaylistSummary` (the plan's `LibraryRepository.playlists(): Flow<List<PlaylistSummary>>`), to stay distinct from the search result `PlaylistSummary` in source/api.
+- Projector: every field keeps the HLC of its last write ('' = not yet written), so operations can arrive in any order (a rename before its create, a move before its add) and still converge; concurrent inserts at the same index get the same key and are ordered by entry ID. `LibraryCommands.localOps` emits each appended operation for sync scheduling and offline auto-save.
+- Milestone 2 review (5 bugs, 11 risks, 1 question) fixed with RED→GREEN tests where it's logic: dead stream with repeat ONE now skips; removing the last current track pauses the engine; recovered expiries reset the re-resolve count; `HttpRangeReader` turns timeouts/truncated bodies into errors (re-resolve at position) instead of end-of-song or endless reconnects; engine events are tagged per media at the engine's own media switch (`mediaChanged` / `onMediaItemTransition`); seeking right with unknown duration no longer restarts; a user play during transient focus loss cancels auto-resume; readers and the Media3 polling scope are released; the service stops itself if started without a player; preference writes moved off the UI thread; a glass banner announces skipped songs (`PlaybackErrorBanner`).
+- Ruling: stream resolution stays under the player mutex, so a pause or seek pressed during a resolve waits for it (bounded by the HTTP timeouts). Moving it out needs cancellation of superseded loads; cost if wrong: a control lags on very slow networks.
+- Deferred to the tasks that build them: Ctrl+L and the like button (Task 3.3, Liked Songs), and the player menu's "Add to playlist" (3.3), "Save offline" (5.x) and "Sleep timer" (9.3). Each joins the menu through `PlayerMenuAction` when its task lands.
+- `OpEnvelope` carries `seq` (the originating device's operation counter): `since(device, seq)`, sync manifests and peer gossip all need it for operations from other devices too (shared interface updated in the plan).
+- Fractional index: appends and prepends step one base-62 digit (≈1 char per 60 end-inserts); middle inserts bisect. HLCs are stored as `Hlc.encode()` strings that sort in HLC order.
+- Task 2.4 evidence (emulator, Android 16 / API 36, headless AVD `blossom`): search → play gives `dumpsys media_session` → `state=PLAYING`, `description=One More Time (Radio Edit), Daft Punk`; MediaStyle notification present (`category=transport`, `FOREGROUND_SERVICE`); `KEYCODE_MEDIA_PAUSE`/`NEXT` act on blossom's queue; lock-screen controls show artwork and title, and tapping pause → `PAUSED`, next → the next queued song. Screenshots `docs/screenshots/m2/android_*.png`. The AVD shipped with no keyguard, so `locksettings set-disabled false` was used to show the lock screen.
+- Desktop playback feeds libVLC through vlcj **callback media** backed by `HttpRangeReader` (OkHttp, all `StreamInfo` headers, 1 MiB ranges). The bundled libVLC can't open a second HTTP connection inside the JVM ("connection error: Resource temporarily unavailable"), and WebM needs one to seek to its cues; through callbacks libVLC opens no sockets at all. `RemoteStreamProxy` from Task 2.5 was removed.
+- `AddVlcPluginsTask` (build-logic) adds what vlcj-bundler strips: `libimem_plugin` (the byte-stream access behind callback media; the Ubuntu build's `libaccess_imem_plugin` is the raw-ES one) and, on Linux, `libebml.so.5` and `libmatroska.so.7`, without which the bundled mkv demuxer can't load and YouTube's Opus/WebM streams don't play.
+- `EngineEvent`s carry a `mediaId`; `DefaultBlossomPlayer` drops events left over from the previous load (a stale position or Ended arriving after a skip).
+- Desktop "hands-on" evidence comes from `DesktopEndToEndLiveTest` (real app graph, live network, real audio, off-screen rendering) plus `playerctl`. Injecting input into the shared desktop session reached other windows, so it's no longer used.
+- Task 2.6 evidence: `DesktopEndToEndLiveTest` → `e2e playing: One More Time – Daft Punk at 3881 ms`, `e2e after seek: 120000 ms`, `e2e next: One More Time (Radio Edit) at 2841 ms`; screenshots in `docs/screenshots/m2/`. Task 2.5: `playerctl -p blossom metadata` → `xesam:title One More Time`, `xesam:artist Daft Punk`, `mpris:length 260000000`; `playerctl position 120` / `next` / `pause` all acted on blossom.
+- Desktop media controls are one file, `media/SystemMediaControls.kt` (nucleus media-control covers MPRIS and SMTC), instead of separate `MprisService.kt` and `WindowsMediaControls.kt`. `MprisMetadataMapper` builds the MPRIS map that feeds it.
+- Desktop remote streams go through `RemoteStreamProxy` (JDK `HttpServer` on 127.0.0.1, per-session token) from Task 2.5 on: it adds every `StreamInfo` header and reads upstream in 1 MiB ranges. Task 5.3's encrypted-cache server is a separate route.
+- VLC bundling: Spotube's `org.spotube.vlcj-bundler` plugin via a `blossom.desktop.app` convention plugin, bundling on every format including .deb. On Linux it takes libVLC 3.0 from Ubuntu 24.04 packages (needs glibc ≥ 2.39). The distributable is about 200 MB.
+- `AudioFocusPolicy` is a small class, not an `object`: "GAIN resumes only after a transient loss" needs to remember the previous loss.
+- `PlaybackEngine` gained a default no-op `onTrackChanged(track)` so the engines can publish now-playing metadata to the notification/lock screen (Android) and MPRIS/SMTC (desktop); `DefaultBlossomPlayer` calls it before every load.
+- Android audio focus is requested by `BlossomPlaybackService` through `AudioFocusPolicy` (ExoPlayer's own focus handling is off) so focus changes and "headphones unplugged" go through blossom's player state; the session's next/previous/play/pause are forwarded to blossom's queue.
+- `ImportedTrack` gained `album`, `sourceKey` and `unplayableReason` (shared interfaces updated in the plan), per the reuse audit.
+- **Separate `androidApp` module.** AGP 9 no longer allows `com.android.application` in a Kotlin Multiplatform module. `composeApp` is now a KMP library (shared UI, desktop `Main.kt`), and `androidApp` holds `MainActivity`, the manifest and the APK. Every plan command `:composeApp:assembleDebug` / `assembleRelease` becomes `:androidApp:assembleDebug` / `assembleRelease`. KMP Android unit tests are `androidHostTest` (AGP 9 naming).
+- **No remote `main` branch.** `github.com/velosako3/blossom` has no commits, so `dev` starts from an empty history and the `dev → main` PR can't be opened until `main` exists (see open questions). Pushing to `main` is not allowed for this run.
+
+- 2026-11-22: the first installers crashed on launch (`NoClassDefFoundError: java/sql/DriverManager`): the bundled Java runtime only had Compose's default modules, and every earlier desktop check ran on the full JDK. Fixed with an explicit `modules(...)` list in `composeApp/build.gradle.kts`, plus `blossom --self-check` (starts the app graph in a temp folder and checks JDBC, EC crypto, AES-GCM and ECDHE TLS without opening a window), which the installer workflow now runs on the Linux AppImage and the Windows app.
+- 2026-11-22: that self-check then failed on the `ubuntu-22.04` runner: the bundled libVLC (from `vlcj-bundler`) needs glibc 2.38. The Linux job now runs on `ubuntu-24.04`, and the minimum (Ubuntu 24.04 / Debian 13 / Fedora 39) is documented in `docs/RELEASING.md`. Falling back to the system libVLC on older systems is open.
+
+## Open questions for owner
+- **Before sharing any installer, make the repository public:** the AGPL requires that anyone who receives blossom can get its source.
+- `main` was created from the first commit (owner's request, 2026-11-22) and the `dev → main` pull request is open with the milestone summaries as comments. Reviewing and merging it is the owner's call.
+- Android signing: done on 2026-11-22 at the owner's request. A release key was generated into `~/blossom-signing/` (outside the repo, with its password file) and the four signing secrets are set on GitHub. **Back up that folder**: losing it means installed apps can never be updated.
+- Service IDs on CI: copied from `secrets.properties` into GitHub secrets on 2026-11-22 at the owner's request (all but `GOOGLE_OAUTH_ANDROID_CLIENT_ID`, which is still blank). Note that the client IDs and API secrets ship inside the app, as with any installed app, so anyone with an installer can extract them.
+- Discord Rich Presence is tested against a fake Discord socket only. To check it: run Discord, turn on Settings → Integrations → Discord, and play a song.
+- Scrobbling: the Last.fm key and signing are verified live, but scrobbling into an account needs you to sign in: Settings → Integrations → Last.fm (and paste a ListenBrainz token). I don't sign in to your accounts.
+- Sync backends: Google Drive (desktop) and Dropbox sign-in are built and tested against mocked endpoints, but haven't been run against the real services. That needs signing in with an account, which I don't do with yours. To check: Settings → Sync → Google Drive / Dropbox → sign in on two devices. For Drive on Android, create an Android OAuth client in Google Cloud Console (package `io.github.velosako3.blossom` plus the release key's SHA-1, `DD:BA:45:41:AB:1D:81:97:9D:77:C6:BE:5A:2E:E1:A4:BB:12:55:D0`) and put its ID in `GOOGLE_OAUTH_ANDROID_CLIENT_ID`.
+- The desktop packaging plugin `vlcj-bundler` (from Spotube) downloads the base libVLC packages over plain HTTP without checksums. blossom's own extra-plugin task now verifies its downloads; vendoring and hardening the bundler (HTTPS + SHA256) would close the rest. Should blossom fork it?
+- Lyrics frame time on real hardware: run `./gradlew :composeApp:run`, play a word-synced song with the lyrics panel open for 30 s, and check whether the glass quality stays FULL (it drops automatically if p90 > 20 ms). Off-screen CPU numbers are in Deviations.

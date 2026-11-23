@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lyrics_none">No lyrics found</string>
+    <string name="lyrics_back_to_current">Back to current</string>
+    <string name="lyrics_seek_here">Play from this line</string>
+    <string name="lyrics_full_screen">Full-screen lyrics</string>
+    <string name="instrumental">Instrumental</string>
+    <string name="no_lyrics_for_track">No lyrics for this track</string>
+</resources>

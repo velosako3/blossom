@@ -1,0 +1,284 @@
+{
+ "id": 1728024921,
+ "kind": "playlist",
+ "title": "Study Lofi \u2022 Chill Music \u2022 Sad Beat Instrumental \u2022 Lofi Beats \u2022 Sleep Relax \u2022",
+ "permalink_url": "https://soundcloud.com/newpunjabisongs2027/sets/study-lofi",
+ "artwork_url": "https://i1.sndcdn.com/artworks-i0uzqVroLs4Rau6K-lHjsaw-large.jpg",
+ "track_count": 7,
+ "user": {
+  "id": 1324049508,
+  "username": "New Punjabi Songs 2026"
+ },
+ "tracks": [
+  {
+   "id": 1404695473,
+   "kind": "track",
+   "title": "\u00d8neheart - Snowfall | Super Slowed + Reverb",
+   "duration": 186746,
+   "full_duration": 186749,
+   "policy": "MONETIZE",
+   "artwork_url": "https://i1.sndcdn.com/artworks-59TXIhyR5WaOkGTN-Nxr6vQ-large.jpg",
+   "permalink_url": "https://soundcloud.com/audiobe/snowfall-super-slowed-reverb",
+   "publisher_metadata": {
+    "artist": "\u00d8neheart"
+   },
+   "user": {
+    "id": 1082787244,
+    "username": "AudioBE",
+    "avatar_url": "https://i1.sndcdn.com/avatars-7AtzBz7KINhCeo6z-flKWjw-large.jpg",
+    "permalink_url": "https://soundcloud.com/audiobe"
+   },
+   "media": {
+    "transcodings": [
+     {
+      "url": "{API}/media/soundcloud:tracks:1404695473/921beb2b-a023-412b-a96c-843b2823d781/stream/hls",
+      "preset": "aac_160k",
+      "duration": 186746,
+      "snipped": false,
+      "format": {
+       "protocol": "hls",
+       "mime_type": "audio/mp4; codecs=\"mp4a.40.2\""
+      },
+      "quality": "sq",
+      "is_legacy_transcoding": false
+     },
+     {
+      "url": "{API}/media/soundcloud:tracks:1404695473/13662c18-9c34-4c7c-b05f-f117822d3e98/stream/hls",
+      "preset": "aac_96k",
+      "duration": 186746,
+      "snipped": false,
+      "format": {
+       "protocol": "hls",
+       "mime_type": "audio/mp4; codecs=\"mp4a.40.2\""
+      },
+      "quality": "lq",
+      "is_legacy_transcoding": false
+     },
+     {
+      "url": "{API}/media/soundcloud:tracks:1404695473/c153610c-8522-4cdb-b738-f11967d08228/stream/hls",
+      "preset": "abr_sq",
+      "duration": 186746,
+      "snipped": false,
+      "format": {
+       "protocol": "hls",
+       "mime_type": "audio/mpegurl"
+      },
+      "quality": "sq",
+      "is_legacy_transcoding": false
+     }
+    ]
+   },
+   "track_authorization": "FAKE_TRACK_AUTH",
+   "streamable": true,
+   "urn": "soundcloud:tracks:1404695473",
+   "monetization_model": "BLACKBOX"
+  },
+  {
+   "id": 1093341793,
+   "kind": "track",
+   "title": "It feels like I've forgotten something.",
+   "duration": 132915,
+   "full_duration": 132911,
+   "policy": "MONETIZE",
+   "artwork_url": "https://i1.sndcdn.com/artworks-qonkZsj8zSIBWOjL-vJ81dA-large.jpg",
+   "permalink_url": "https://soundcloud.com/myabandonedhome/only-one-photo",
+   "publisher_metadata": {},
+   "user": {
+    "id": 526419402,
+    "username": "reidenshi",
+    "avatar_url": "https://i1.sndcdn.com/avatars-MxsFkgqAvJI7AqLZ-1ysXbw-large.jpg",
+    "permalink_url": "https://soundcloud.com/myabandonedhome"
+   },
+   "media": {
+    "transcodings": [
+     {
+      "url": "{API}/media/soundcloud:tracks:1093341793/4dfe1dfe-89f0-4557-98e0-b1388d91f90c/stream/hls",
+      "preset": "aac_160k",
+      "duration": 132915,
+      "snipped": false,
+      "format": {
+       "protocol": "hls",
+       "mime_type": "audio/mp4; codecs=\"mp4a.40.2\""
+      },
+      "quality": "sq",
+      "is_legacy_transcoding": false
+     },
+     {
+      "url": "{API}/media/soundcloud:tracks:1093341793/0f650f18-7c6d-4421-a72f-51697240bb2d/stream/hls",
+      "preset": "aac_96k",
+      "duration": 132915,
+      "snipped": false,
+      "format": {
+       "protocol": "hls",
+       "mime_type": "audio/mp4; codecs=\"mp4a.40.2\""
+      },
+      "quality": "lq",
+      "is_legacy_transcoding": false
+     },
+     {
+      "url": "{API}/media/soundcloud:tracks:1093341793/752c5548-77e2-4246-b492-fad9384a724a/stream/hls",
+      "preset": "abr_sq",
+      "duration": 132915,
+      "snipped": false,
+      "format": {
+       "protocol": "hls",
+       "mime_type": "audio/mpegurl"
+      },
+      "quality": "sq",
+      "is_legacy_transcoding": false
+     }
+    ]
+   },
+   "track_authorization": "FAKE_TRACK_AUTH",
+   "streamable": true,
+   "urn": "soundcloud:tracks:1093341793",
+   "monetization_model": "BLACKBOX"
+  },
+  {
+   "id": 1572470647,
+   "kind": "track",
+   "title": "Childhood Nostalgia - (School Rooftop + Mourning Dove Slowed)",
+   "duration": 181137,
+   "full_duration": 181133,
+   "policy": "MONETIZE",
+   "artwork_url": "https://i1.sndcdn.com/artworks-hT9FsKkjw0xq6YxL-wps9hA-large.jpg",
+   "permalink_url": "https://soundcloud.com/dreamspacesongs/childhood-nostalgia-school-rooftop-mourning-dove-slowed",
+   "publisher_metadata": {
+    "artist": "Dreamspace",
+    "isrc": "QM42K2338387"
+   },
+   "user": {
+    "id": 399711216,
+    "username": "Dreamspace",
+    "avatar_url": "https://i1.sndcdn.com/avatars-GzSGSk5HXv24G5O0-2Y36Dg-large.jpg",
+    "permalink_url": "https://soundcloud.com/dreamspacesongs"
+   },
+   "media": {
+    "transcodings": [
+     {
+      "url": "{API}/media/soundcloud:tracks:1572470647/3d5b2184-bce3-4f11-ad7f-03503b474e33/stream/hls",
+      "preset": "aac_160k",
+      "duration": 181137,
+      "snipped": false,
+      "format": {
+       "protocol": "hls",
+       "mime_type": "audio/mp4; codecs=\"mp4a.40.2\""
+      },
+      "quality": "sq",
+      "is_legacy_transcoding": false
+     },
+     {
+      "url": "{API}/media/soundcloud:tracks:1572470647/5de5d093-cfcc-44a4-a602-3f2b68d15e4a/stream/hls",
+      "preset": "aac_96k",
+      "duration": 181137,
+      "snipped": false,
+      "format": {
+       "protocol": "hls",
+       "mime_type": "audio/mp4; codecs=\"mp4a.40.2\""
+      },
+      "quality": "lq",
+      "is_legacy_transcoding": false
+     },
+     {
+      "url": "{API}/media/soundcloud:tracks:1572470647/3cf35a92-301b-47ac-a334-ebb4945452fa/stream/hls",
+      "preset": "abr_sq",
+      "duration": 181137,
+      "snipped": false,
+      "format": {
+       "protocol": "hls",
+       "mime_type": "audio/mpegurl"
+      },
+      "quality": "sq",
+      "is_legacy_transcoding": false
+     }
+    ]
+   },
+   "track_authorization": "FAKE_TRACK_AUTH",
+   "streamable": true,
+   "urn": "soundcloud:tracks:1572470647",
+   "monetization_model": "AD_SUPPORTED"
+  },
+  {
+   "id": 1367525482,
+   "kind": "track",
+   "title": "apathy",
+   "duration": 117119,
+   "full_duration": 117107,
+   "policy": "MONETIZE",
+   "artwork_url": "https://i1.sndcdn.com/artworks-smQrsEiyRvzbAmkF-si2xTA-large.jpg",
+   "permalink_url": "https://soundcloud.com/oneheartisok/apathy",
+   "publisher_metadata": {
+    "artist": "\u00d8neheart",
+    "isrc": "USANG2218306"
+   },
+   "user": {
+    "id": 369953741,
+    "username": "\u00d8neheart",
+    "avatar_url": "https://i1.sndcdn.com/avatars-wRsCKf0B3SzEgqAe-Yyz9UQ-large.jpg",
+    "permalink_url": "https://soundcloud.com/oneheartisok"
+   },
+   "media": {
+    "transcodings": [
+     {
+      "url": "{API}/media/soundcloud:tracks:1367525482/f9e7c6d7-56e3-49eb-8d0c-530c256f9990/stream/hls",
+      "preset": "aac_160k",
+      "duration": 117119,
+      "snipped": false,
+      "format": {
+       "protocol": "hls",
+       "mime_type": "audio/mp4; codecs=\"mp4a.40.2\""
+      },
+      "quality": "sq",
+      "is_legacy_transcoding": false
+     },
+     {
+      "url": "{API}/media/soundcloud:tracks:1367525482/36e8baaf-22e7-426e-a7e8-3aeb637cfe10/stream/hls",
+      "preset": "aac_96k",
+      "duration": 117119,
+      "snipped": false,
+      "format": {
+       "protocol": "hls",
+       "mime_type": "audio/mp4; codecs=\"mp4a.40.2\""
+      },
+      "quality": "lq",
+      "is_legacy_transcoding": false
+     },
+     {
+      "url": "{API}/media/soundcloud:tracks:1367525482/96fa5f9a-3eff-4c6a-b9b3-56e379105cfd/stream/hls",
+      "preset": "abr_sq",
+      "duration": 117119,
+      "snipped": false,
+      "format": {
+       "protocol": "hls",
+       "mime_type": "audio/mpegurl"
+      },
+      "quality": "sq",
+      "is_legacy_transcoding": false
+     }
+    ]
+   },
+   "track_authorization": "FAKE_TRACK_AUTH",
+   "streamable": true,
+   "urn": "soundcloud:tracks:1367525482",
+   "monetization_model": "AD_SUPPORTED"
+  },
+  {
+   "id": 1290137131,
+   "kind": "track",
+   "policy": "MONETIZE",
+   "monetization_model": "AD_SUPPORTED"
+  },
+  {
+   "id": 1367563483,
+   "kind": "track",
+   "policy": "MONETIZE",
+   "monetization_model": "AD_SUPPORTED"
+  },
+  {
+   "id": 1318314739,
+   "kind": "track",
+   "policy": "MONETIZE",
+   "monetization_model": "AD_SUPPORTED"
+  }
+ ]
+}

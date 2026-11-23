@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="replace_title">Find a replacement</string>
+    <string name="replace_subtitle">For “%1$s”. Pick an upload to put in its place.</string>
+    <string name="replace_none">Nothing found on YouTube or SoundCloud.</string>
+    <string name="replace_source_youtube">YouTube</string>
+    <string name="replace_source_soundcloud">SoundCloud</string>
+    <string name="match_title">Fix this match</string>
+    <string name="match_subtitle">Pick the right song for “%1$s”.</string>
+    <string name="match_none">Nothing found on YouTube Music.</string>
+    <string name="import_title">Import</string>
+    <string name="import_paste_hint">Paste a Spotify, YouTube, SoundCloud or untitled link</string>
+    <string name="import_from_clipboard">Import link from clipboard?</string>
+    <string name="import_not_a_link">That doesn't look like a Spotify, YouTube, SoundCloud or untitled link.</string>
+    <string name="import_name_hint">Playlist name (from the source if empty)</string>
+    <string name="import_save_new">Save as new playlist</string>
+    <string name="import_add_existing">Add to existing playlist</string>
+    <string name="import_pick_playlist">Add to which playlist?</string>
+    <string name="import_duplicate">You imported this before as “%1$s”.</string>
+    <string name="import_update_existing">Update existing playlist</string>
+    <string name="import_create_copy">Create a copy</string>
+    <string name="import_reading">Reading the source…</string>
+    <string name="import_progress">%1$d of %2$d</string>
+    <string name="import_attention">%1$d need attention</string>
+    <string name="import_done">Done</string>
+    <string name="import_open_playlist">Open playlist</string>
+    <string name="import_play_now">Play now</string>
+    <string name="import_add_queue">Add to queue</string>
+    <string name="import_like">Like</string>
+    <string name="import_failed">Couldn't read this link. It may be private, or the service didn't answer.</string>
+    <string name="import_again">Import another link</string>
+    <string name="import_kind_track">Song</string>
+    <string name="import_kind_playlist">Playlist</string>
+    <string name="import_kind_album">Album</string>
+    <string name="import_status_matched">Matched</string>
+    <string name="import_status_uncertain">Not sure: tap to check</string>
+    <string name="import_status_unavailable">Not found: tap to fix</string>
+    <string name="import_failed_login">This is private. Signing in to the service to import private playlists comes with account settings.</string>
+    <string name="import_failed_not_found">Nothing found at this link. It may have been deleted.</string>
+</resources>

@@ -1,0 +1,14 @@
+# Weekly update PRs for pinned Actions and Gradle dependencies (security fixes arrive as soon as they're published).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    target-branch: dev
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+    target-branch: dev
+    open-pull-requests-limit: 5

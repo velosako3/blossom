@@ -1,0 +1,3 @@
+-- SPDX-License-Identifier: AGPL-3.0-or-later
+-- Version 1 -> 2: why an import failed (Milestone 6 review).
+ALTER TABLE import_job ADD COLUMN error TEXT;

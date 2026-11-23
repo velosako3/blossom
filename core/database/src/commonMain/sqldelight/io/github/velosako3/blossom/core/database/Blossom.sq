@@ -1,0 +1,390 @@
+-- SPDX-License-Identifier: AGPL-3.0-or-later
+-- blossom library database. Everything synced is a projection of op_log; device-only state is marked.
+
+CREATE TABLE op_log (
+    op_id TEXT NOT NULL PRIMARY KEY,
+    device_id TEXT NOT NULL,
+    seq INTEGER NOT NULL,
+    hlc_wall INTEGER NOT NULL,
+    hlc_counter INTEGER NOT NULL,
+    payload TEXT NOT NULL
+);
+CREATE INDEX op_log_device_seq ON op_log(device_id, seq);
+
+CREATE TABLE track (
+    id TEXT NOT NULL PRIMARY KEY,
+    json TEXT NOT NULL
+);
+
+-- hlc columns hold Hlc.encode() strings, which sort in HLC order.
+CREATE TABLE playlist (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    name_hlc TEXT NOT NULL,
+    description TEXT,
+    description_hlc TEXT NOT NULL,
+    origin_json TEXT,
+    created_hlc TEXT NOT NULL,
+    deleted_hlc TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE playlist_entry (
+    playlist_id TEXT NOT NULL,
+    entry_id TEXT NOT NULL,
+    track_json TEXT,
+    status TEXT NOT NULL,
+    source_title TEXT NOT NULL,
+    source_artist TEXT NOT NULL,
+    position TEXT NOT NULL,
+    position_hlc TEXT NOT NULL,
+    track_hlc TEXT NOT NULL,
+    added_hlc TEXT NOT NULL,
+    removed_hlc TEXT,
+    added_at INTEGER NOT NULL,
+    match_confidence REAL,
+    PRIMARY KEY (playlist_id, entry_id)
+);
+
+CREATE TABLE liked_track (
+    track_id TEXT NOT NULL PRIMARY KEY,
+    track_json TEXT NOT NULL,
+    liked INTEGER NOT NULL,
+    hlc TEXT NOT NULL,
+    liked_at INTEGER NOT NULL
+);
+
+CREATE TABLE play_event (
+    id TEXT NOT NULL PRIMARY KEY,
+    track_id TEXT NOT NULL,
+    track_json TEXT NOT NULL,
+    started_at INTEGER NOT NULL,
+    played_ms INTEGER NOT NULL,
+    counted INTEGER NOT NULL,
+    device_id TEXT NOT NULL
+);
+CREATE INDEX play_event_started ON play_event(started_at);
+
+-- This device only.
+CREATE TABLE local_file (
+    track_id TEXT NOT NULL PRIMARY KEY,
+    path TEXT NOT NULL,
+    mtime INTEGER NOT NULL,
+    size INTEGER NOT NULL
+);
+
+CREATE TABLE lyrics_cache (
+    track_id TEXT NOT NULL PRIMARY KEY,
+    json TEXT,
+    fetched_at INTEGER NOT NULL
+);
+
+CREATE TABLE import_job (
+    id TEXT NOT NULL PRIMARY KEY,
+    url TEXT NOT NULL,
+    service TEXT NOT NULL,
+    target_json TEXT NOT NULL,
+    playlist_id TEXT,
+    state TEXT NOT NULL,
+    total INTEGER,
+    created_at INTEGER NOT NULL,
+    -- why a FAILED job failed (needsLogin, notFound, unsupported)
+    error TEXT
+);
+
+CREATE TABLE import_job_item (
+    job_id TEXT NOT NULL,
+    idx INTEGER NOT NULL,
+    imported_json TEXT NOT NULL,
+    result_json TEXT,
+    written INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (job_id, idx)
+);
+
+-- This device only.
+CREATE TABLE offline_item (
+    track_id TEXT NOT NULL PRIMARY KEY,
+    track_json TEXT NOT NULL,
+    state TEXT NOT NULL,
+    bytes INTEGER NOT NULL DEFAULT 0,
+    downloaded INTEGER NOT NULL DEFAULT 0,
+    file_name TEXT
+);
+CREATE TABLE offline_ref (
+    track_id TEXT NOT NULL,
+    ref TEXT NOT NULL,
+    PRIMARY KEY (track_id, ref)
+);
+CREATE TABLE offline_playlist (
+    playlist_id TEXT NOT NULL PRIMARY KEY
+);
+
+CREATE TABLE sync_peer (
+    device_id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    cert_sha256 TEXT NOT NULL,
+    last_seen INTEGER
+);
+
+CREATE TABLE setting (
+    key TEXT NOT NULL PRIMARY KEY,
+    json_value TEXT NOT NULL,
+    hlc TEXT NOT NULL
+);
+
+-- op_log
+insertOp:
+INSERT OR IGNORE INTO op_log VALUES (?, ?, ?, ?, ?, ?);
+
+maxSeq:
+SELECT max(seq) AS seq FROM op_log WHERE device_id = ?;
+
+opsSince:
+SELECT * FROM op_log WHERE device_id = ? AND seq > ? ORDER BY seq;
+
+allOps:
+SELECT * FROM op_log;
+
+knownDevices:
+SELECT device_id, max(seq) AS last_seq FROM op_log GROUP BY device_id;
+
+-- playlists (projection; '' hlc = "not written yet", sorts before any real hlc)
+ensurePlaylist:
+INSERT OR IGNORE INTO playlist(id, name, name_hlc, description, description_hlc, origin_json, created_hlc, deleted_hlc, created_at, updated_at)
+VALUES (?, '', '', NULL, '', NULL, '', NULL, 0, 0);
+
+setPlaylistCreated:
+UPDATE playlist SET created_hlc = :hlc, origin_json = :origin, created_at = :at
+WHERE id = :id AND (created_hlc = '' OR created_hlc > :hlc);
+
+setPlaylistName:
+UPDATE playlist SET name = :name, name_hlc = :hlc, updated_at = max(updated_at, :at) WHERE id = :id AND name_hlc < :hlc;
+
+setPlaylistDescription:
+UPDATE playlist SET description = :description, description_hlc = :hlc, updated_at = max(updated_at, :at) WHERE id = :id AND description_hlc < :hlc;
+
+markPlaylistDeleted:
+UPDATE playlist SET deleted_hlc = :hlc WHERE id = :id AND (deleted_hlc IS NULL OR deleted_hlc > :hlc);
+
+touchPlaylist:
+UPDATE playlist SET updated_at = max(updated_at, :at) WHERE id = :id;
+
+livePlaylists:
+SELECT * FROM playlist WHERE deleted_hlc IS NULL AND created_hlc != '' ORDER BY created_at, id;
+
+livePlaylist:
+SELECT * FROM playlist WHERE id = ? AND deleted_hlc IS NULL AND created_hlc != '';
+
+playlistSummaries:
+SELECT p.id, p.name, p.origin_json, p.created_at,
+  (SELECT count(*) FROM playlist_entry e WHERE e.playlist_id = p.id AND e.added_hlc != '' AND e.removed_hlc IS NULL) AS entry_count
+FROM playlist p WHERE p.deleted_hlc IS NULL AND p.created_hlc != '' ORDER BY p.created_at, p.id;
+
+-- entries
+ensureEntry:
+INSERT OR IGNORE INTO playlist_entry(playlist_id, entry_id, track_json, status, source_title, source_artist, position, position_hlc, track_hlc, added_hlc, removed_hlc, added_at, match_confidence)
+VALUES (?, ?, NULL, 'MATCHED', '', '', '', '', '', '', NULL, 0, NULL);
+
+setEntryAdded:
+UPDATE playlist_entry SET source_title = :title, source_artist = :artist, match_confidence = :confidence, added_at = :at, added_hlc = :hlc
+WHERE playlist_id = :playlist AND entry_id = :entry AND (added_hlc = '' OR added_hlc > :hlc);
+
+setEntryPosition:
+UPDATE playlist_entry SET position = :position, position_hlc = :hlc WHERE playlist_id = :playlist AND entry_id = :entry AND position_hlc < :hlc;
+
+setEntryTrack:
+UPDATE playlist_entry SET track_json = :track, status = :status, track_hlc = :hlc WHERE playlist_id = :playlist AND entry_id = :entry AND track_hlc < :hlc;
+
+markEntryRemoved:
+UPDATE playlist_entry SET removed_hlc = :hlc WHERE playlist_id = :playlist AND entry_id = :entry AND (removed_hlc IS NULL OR removed_hlc > :hlc);
+
+liveEntries:
+SELECT * FROM playlist_entry WHERE playlist_id = ? AND added_hlc != '' AND removed_hlc IS NULL ORDER BY position, entry_id;
+
+firstArtworkJson:
+SELECT track_json FROM playlist_entry WHERE playlist_id = ? AND added_hlc != '' AND removed_hlc IS NULL AND track_json IS NOT NULL ORDER BY position, entry_id LIMIT 4;
+
+-- likes
+ensureLike:
+INSERT OR IGNORE INTO liked_track(track_id, track_json, liked, hlc, liked_at) VALUES (?, ?, 0, '', 0);
+
+setLiked:
+UPDATE liked_track SET liked = :liked, hlc = :hlc, liked_at = :at WHERE track_id = :id AND hlc < :hlc;
+
+setLikeTrack:
+UPDATE liked_track SET track_json = :json WHERE track_id = :id;
+
+likedTracks:
+SELECT * FROM liked_track WHERE liked = 1 ORDER BY liked_at DESC, track_id;
+
+isLiked:
+SELECT liked FROM liked_track WHERE track_id = ?;
+
+-- plays (union by id)
+insertPlay:
+INSERT OR IGNORE INTO play_event VALUES (?, ?, ?, ?, ?, ?, ?);
+
+allPlayIds:
+SELECT id FROM play_event;
+
+playsBetween:
+SELECT * FROM play_event WHERE started_at >= ? AND started_at < ? ORDER BY started_at;
+
+firstCountedPlays:
+SELECT track_json, min(started_at) AS first_at FROM play_event WHERE counted = 1 GROUP BY track_id;
+
+-- settings
+ensureSetting:
+INSERT OR IGNORE INTO setting(key, json_value, hlc) VALUES (?, '', '');
+
+setSetting:
+UPDATE setting SET json_value = :value, hlc = :hlc WHERE key = :key AND hlc < :hlc;
+
+settingValue:
+SELECT json_value FROM setting WHERE key = ? AND hlc != '';
+
+-- lyrics cache (json NULL = none found)
+lyricsFor:
+SELECT * FROM lyrics_cache WHERE track_id = ?;
+
+putLyrics:
+INSERT OR REPLACE INTO lyrics_cache(track_id, json, fetched_at) VALUES (?, ?, ?);
+
+-- offline cache
+offlineItem:
+SELECT * FROM offline_item WHERE track_id = ?;
+
+offlinePending:
+SELECT * FROM offline_item WHERE state IN ('QUEUED', 'PAUSED_NETWORK', 'PAUSED_STORAGE', 'DOWNLOADING');
+
+offlineInsert:
+INSERT OR IGNORE INTO offline_item(track_id, track_json, state) VALUES (?, ?, 'QUEUED');
+
+offlineSetState:
+UPDATE offline_item SET state = ? WHERE track_id = ?;
+
+offlineSetFile:
+UPDATE offline_item SET file_name = ?, bytes = ? WHERE track_id = ?;
+
+offlineSetProgress:
+UPDATE offline_item SET downloaded = ? WHERE track_id = ?;
+
+offlineDelete:
+DELETE FROM offline_item WHERE track_id = ?;
+
+offlineUsage:
+SELECT CAST(coalesce(sum(downloaded), 0) AS INTEGER) FROM offline_item;
+
+offlineUsageExcept:
+SELECT CAST(coalesce(sum(downloaded), 0) AS INTEGER) FROM offline_item WHERE track_id != ?;
+
+offlineAddRef:
+INSERT OR IGNORE INTO offline_ref(track_id, ref) VALUES (?, ?);
+
+offlineRemoveRef:
+DELETE FROM offline_ref WHERE track_id = ? AND ref = ?;
+
+offlineRemoveRefEverywhere:
+DELETE FROM offline_ref WHERE ref = ?;
+
+offlineTracksWithRef:
+SELECT track_id FROM offline_ref WHERE ref = ?;
+
+offlineOrphans:
+SELECT track_id FROM offline_item WHERE track_id NOT IN (SELECT track_id FROM offline_ref);
+
+offlinePlaylists:
+SELECT playlist_id FROM offline_playlist;
+
+offlineAddPlaylist:
+INSERT OR IGNORE INTO offline_playlist(playlist_id) VALUES (?);
+
+offlineRemovePlaylist:
+DELETE FROM offline_playlist WHERE playlist_id = ?;
+
+offlineClear {
+    DELETE FROM offline_item;
+    DELETE FROM offline_ref;
+    DELETE FROM offline_playlist;
+}
+
+offlineSavedIds:
+SELECT track_id FROM offline_item WHERE state = 'SAVED';
+
+offlineSavedTracks:
+SELECT track_json FROM offline_item WHERE state = 'SAVED' ORDER BY rowid DESC;
+
+offlinePausedForStorage:
+SELECT count(*) FROM offline_item WHERE state = 'PAUSED_STORAGE';
+
+-- import jobs
+importJobInsert:
+INSERT INTO import_job(id, url, service, target_json, playlist_id, state, total, created_at) VALUES (?, ?, ?, ?, NULL, ?, NULL, ?);
+
+importJob:
+SELECT * FROM import_job WHERE id = ?;
+
+importJobsActive:
+SELECT id FROM import_job WHERE state IN ('READING', 'MATCHING') ORDER BY created_at;
+
+importJobSetState:
+UPDATE import_job SET state = ? WHERE id = ?;
+
+importJobFail:
+UPDATE import_job SET state = 'FAILED', error = ? WHERE id = ?;
+
+importJobSetPlaylist:
+UPDATE import_job SET playlist_id = ? WHERE id = ?;
+
+importJobSetTotal:
+UPDATE import_job SET total = ? WHERE id = ?;
+
+importItemInsert:
+INSERT OR IGNORE INTO import_job_item(job_id, idx, imported_json) VALUES (?, ?, ?);
+
+importItemsUnwritten:
+SELECT * FROM import_job_item WHERE job_id = ? AND written = 0 ORDER BY idx;
+
+importItemSetResult:
+UPDATE import_job_item SET result_json = ? WHERE job_id = ? AND idx = ?;
+
+importItemMarkWritten:
+UPDATE import_job_item SET written = 1 WHERE job_id = ? AND idx = ?;
+
+importItemCounts:
+SELECT
+    count(*) AS total,
+    CAST(coalesce(sum(written), 0) AS INTEGER) AS written,
+    CAST(coalesce(sum(CASE WHEN written = 1 AND result_json LIKE '%"status":"MATCHED"%' THEN 1 ELSE 0 END), 0) AS INTEGER) AS matched,
+    CAST(coalesce(sum(CASE WHEN written = 1 AND result_json LIKE '%"status":"UNCERTAIN"%' THEN 1 ELSE 0 END), 0) AS INTEGER) AS uncertain,
+    CAST(coalesce(sum(CASE WHEN written = 1 AND result_json LIKE '%"status":"UNAVAILABLE"%' THEN 1 ELSE 0 END), 0) AS INTEGER) AS unavailable
+FROM import_job_item WHERE job_id = ?;
+
+offlinePauseForNetwork:
+UPDATE offline_item SET state = 'PAUSED_NETWORK' WHERE state IN ('QUEUED', 'DOWNLOADING');
+
+offlineAllIds:
+SELECT track_id FROM offline_item;
+
+-- LAN peers (keys live in the secure store, not here)
+allPeers:
+SELECT * FROM sync_peer ORDER BY name;
+
+upsertPeer:
+INSERT OR REPLACE INTO sync_peer(device_id, name, cert_sha256, last_seen) VALUES (?, ?, ?, ?);
+
+touchPeer:
+UPDATE sync_peer SET last_seen = ? WHERE device_id = ?;
+
+deletePeer:
+DELETE FROM sync_peer WHERE device_id = ?;
+
+allOpsCount:
+SELECT count(*) FROM op_log;
+
+clearLyrics:
+DELETE FROM lyrics_cache;
+
+pruneLyrics:
+DELETE FROM lyrics_cache WHERE track_id NOT LIKE ?;

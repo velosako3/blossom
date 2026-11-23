@@ -1,0 +1,53 @@
+{
+ "id": 257461550,
+ "kind": "track",
+ "title": "Cameras / Good Ones Go Interlude",
+ "duration": 30000,
+ "full_duration": 434991,
+ "policy": "SNIP",
+ "artwork_url": "https://i1.sndcdn.com/artworks-pxsFEEK11Qmg-0-large.jpg",
+ "permalink_url": "https://soundcloud.com/octobersveryown/drake-cameras-good-ones-go-1",
+ "publisher_metadata": {
+  "artist": "Drake",
+  "album_title": "Take Care",
+  "isrc": "USCM51100581"
+ },
+ "user": {
+  "id": 1078461,
+  "username": "octobersveryown",
+  "avatar_url": "https://i1.sndcdn.com/avatars-000111004820-tzrvo1-large.jpg",
+  "permalink_url": "https://soundcloud.com/octobersveryown"
+ },
+ "media": {
+  "transcodings": [
+   {
+    "url": "{API}/media/soundcloud:tracks:257461550/41b70bb1-1a6c-4edc-8377-4ef9f9f904a7/preview/hls",
+    "preset": "mp3_0_1",
+    "duration": 30000,
+    "snipped": true,
+    "format": {
+     "protocol": "hls",
+     "mime_type": "audio/mpeg"
+    },
+    "quality": "sq",
+    "is_legacy_transcoding": true
+   },
+   {
+    "url": "{API}/media/soundcloud:tracks:257461550/41b70bb1-1a6c-4edc-8377-4ef9f9f904a7/preview/progressive",
+    "preset": "mp3_0_1",
+    "duration": 30000,
+    "snipped": true,
+    "format": {
+     "protocol": "progressive",
+     "mime_type": "audio/mpeg"
+    },
+    "quality": "sq",
+    "is_legacy_transcoding": true
+   }
+  ]
+ },
+ "track_authorization": "FAKE_TRACK_AUTH",
+ "streamable": true,
+ "urn": "soundcloud:tracks:257461550",
+ "monetization_model": "SUB_HIGH_TIER"
+}

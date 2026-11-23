@@ -1,0 +1,2064 @@
+{
+ "data": {
+  "playlistV2": {
+   "__typename": "Playlist",
+   "content": {
+    "__typename": "PlaylistItemsPage",
+    "totalCount": 250,
+    "items": [
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 20",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 4"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180200
+        },
+        "name": "Fixture Track 201",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00201"
+       }
+      },
+      "uid": "u200"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 20",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 5"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180201
+        },
+        "name": "Fixture Track 202",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00202"
+       }
+      },
+      "uid": "u201"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 20",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 6"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180202
+        },
+        "name": "Fixture Track 203",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00203"
+       }
+      },
+      "uid": "u202"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 20",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 0"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180203
+        },
+        "name": "Fixture Track 204",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00204"
+       }
+      },
+      "uid": "u203"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 20",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 1"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180204
+        },
+        "name": "Fixture Track 205",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00205"
+       }
+      },
+      "uid": "u204"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 20",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 2"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180205
+        },
+        "name": "Fixture Track 206",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00206"
+       }
+      },
+      "uid": "u205"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 20",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 3"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180206
+        },
+        "name": "Fixture Track 207",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00207"
+       }
+      },
+      "uid": "u206"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 20",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 4"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180207
+        },
+        "name": "Fixture Track 208",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00208"
+       }
+      },
+      "uid": "u207"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 20",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 5"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180208
+        },
+        "name": "Fixture Track 209",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00209"
+       }
+      },
+      "uid": "u208"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 20",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 6"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180209
+        },
+        "name": "Fixture Track 210",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00210"
+       }
+      },
+      "uid": "u209"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 21",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 0"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180210
+        },
+        "name": "Fixture Track 211",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00211"
+       }
+      },
+      "uid": "u210"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 21",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 1"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180211
+        },
+        "name": "Fixture Track 212",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00212"
+       }
+      },
+      "uid": "u211"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 21",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 2"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180212
+        },
+        "name": "Fixture Track 213",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00213"
+       }
+      },
+      "uid": "u212"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 21",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 3"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180213
+        },
+        "name": "Fixture Track 214",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00214"
+       }
+      },
+      "uid": "u213"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 21",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 4"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180214
+        },
+        "name": "Fixture Track 215",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00215"
+       }
+      },
+      "uid": "u214"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 21",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 5"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180215
+        },
+        "name": "Fixture Track 216",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00216"
+       }
+      },
+      "uid": "u215"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 21",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 6"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180216
+        },
+        "name": "Fixture Track 217",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00217"
+       }
+      },
+      "uid": "u216"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 21",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 0"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180217
+        },
+        "name": "Fixture Track 218",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00218"
+       }
+      },
+      "uid": "u217"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 21",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 1"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180218
+        },
+        "name": "Fixture Track 219",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00219"
+       }
+      },
+      "uid": "u218"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 21",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 2"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180219
+        },
+        "name": "Fixture Track 220",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00220"
+       }
+      },
+      "uid": "u219"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 22",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 3"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180220
+        },
+        "name": "Fixture Track 221",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00221"
+       }
+      },
+      "uid": "u220"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 22",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 4"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180221
+        },
+        "name": "Fixture Track 222",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00222"
+       }
+      },
+      "uid": "u221"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 22",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 5"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180222
+        },
+        "name": "Fixture Track 223",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00223"
+       }
+      },
+      "uid": "u222"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 22",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 6"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180223
+        },
+        "name": "Fixture Track 224",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00224"
+       }
+      },
+      "uid": "u223"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 22",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 0"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180224
+        },
+        "name": "Fixture Track 225",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00225"
+       }
+      },
+      "uid": "u224"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 22",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 1"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180225
+        },
+        "name": "Fixture Track 226",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00226"
+       }
+      },
+      "uid": "u225"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 22",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 2"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180226
+        },
+        "name": "Fixture Track 227",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00227"
+       }
+      },
+      "uid": "u226"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 22",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 3"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180227
+        },
+        "name": "Fixture Track 228",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00228"
+       }
+      },
+      "uid": "u227"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 22",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 4"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180228
+        },
+        "name": "Fixture Track 229",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00229"
+       }
+      },
+      "uid": "u228"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 22",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 5"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180229
+        },
+        "name": "Fixture Track 230",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00230"
+       }
+      },
+      "uid": "u229"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 23",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 6"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180230
+        },
+        "name": "Fixture Track 231",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00231"
+       }
+      },
+      "uid": "u230"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 23",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 0"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180231
+        },
+        "name": "Fixture Track 232",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00232"
+       }
+      },
+      "uid": "u231"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 23",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 1"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180232
+        },
+        "name": "Fixture Track 233",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00233"
+       }
+      },
+      "uid": "u232"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 23",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 2"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180233
+        },
+        "name": "Fixture Track 234",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00234"
+       }
+      },
+      "uid": "u233"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 23",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 3"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180234
+        },
+        "name": "Fixture Track 235",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00235"
+       }
+      },
+      "uid": "u234"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 23",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 4"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180235
+        },
+        "name": "Fixture Track 236",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00236"
+       }
+      },
+      "uid": "u235"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 23",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 5"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180236
+        },
+        "name": "Fixture Track 237",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00237"
+       }
+      },
+      "uid": "u236"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 23",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 6"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180237
+        },
+        "name": "Fixture Track 238",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00238"
+       }
+      },
+      "uid": "u237"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 23",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 0"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180238
+        },
+        "name": "Fixture Track 239",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00239"
+       }
+      },
+      "uid": "u238"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 23",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 1"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180239
+        },
+        "name": "Fixture Track 240",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00240"
+       }
+      },
+      "uid": "u239"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 24",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 2"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180240
+        },
+        "name": "Fixture Track 241",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00241"
+       }
+      },
+      "uid": "u240"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 24",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 3"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180241
+        },
+        "name": "Fixture Track 242",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00242"
+       }
+      },
+      "uid": "u241"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 24",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 4"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180242
+        },
+        "name": "Fixture Track 243",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00243"
+       }
+      },
+      "uid": "u242"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 24",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 5"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180243
+        },
+        "name": "Fixture Track 244",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00244"
+       }
+      },
+      "uid": "u243"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 24",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 6"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180244
+        },
+        "name": "Fixture Track 245",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00245"
+       }
+      },
+      "uid": "u244"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 24",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 0"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180245
+        },
+        "name": "Fixture Track 246",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00246"
+       }
+      },
+      "uid": "u245"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 24",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 1"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180246
+        },
+        "name": "Fixture Track 247",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00247"
+       }
+      },
+      "uid": "u246"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 24",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 2"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180247
+        },
+        "name": "Fixture Track 248",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00248"
+       }
+      },
+      "uid": "u247"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 24",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 3"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180248
+        },
+        "name": "Fixture Track 249",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00249"
+       }
+      },
+      "uid": "u248"
+     },
+     {
+      "itemV2": {
+       "__typename": "TrackResponseWrapper",
+       "data": {
+        "__typename": "Track",
+        "albumOfTrack": {
+         "name": "Album 24",
+         "uri": "spotify:album:fixture"
+        },
+        "artists": {
+         "items": [
+          {
+           "profile": {
+            "name": "Artist 4"
+           },
+           "uri": "spotify:artist:fixture"
+          }
+         ]
+        },
+        "associationsV2": {
+         "totalCount": 1
+        },
+        "contentRating": {
+         "label": "NONE"
+        },
+        "discNumber": 1,
+        "trackDuration": {
+         "totalMilliseconds": 180249
+        },
+        "name": "Fixture Track 250",
+        "playability": {
+         "playable": true,
+         "reason": "PLAYABLE"
+        },
+        "playcount": "608663102",
+        "trackNumber": 8,
+        "uri": "spotify:track:fixture00250"
+       }
+      },
+      "uid": "u249"
+     }
+    ]
+   }
+  }
+ },
+ "extensions": {}
+}

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="album_play">Play</string>
+    <string name="album_shuffle">Shuffle</string>
+    <string name="album_failed">Couldn't load this page.</string>
+    <string name="album_retry">Try again</string>
+    <string name="album_tracks">%1$d songs</string>
+</resources>

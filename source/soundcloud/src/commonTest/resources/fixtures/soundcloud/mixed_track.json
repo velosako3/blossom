@@ -1,0 +1,60 @@
+{
+ "id": 1404695473,
+ "kind": "track",
+ "title": "\u00d8neheart - Snowfall | Super Slowed + Reverb",
+ "duration": 186746,
+ "full_duration": 186749,
+ "policy": "MONETIZE",
+ "artwork_url": "https://i1.sndcdn.com/artworks-59TXIhyR5WaOkGTN-Nxr6vQ-large.jpg",
+ "permalink_url": "https://soundcloud.com/audiobe/snowfall-super-slowed-reverb",
+ "publisher_metadata": {
+  "artist": "\u00d8neheart"
+ },
+ "user": {
+  "id": 1082787244,
+  "username": "AudioBE",
+  "avatar_url": "https://i1.sndcdn.com/avatars-7AtzBz7KINhCeo6z-flKWjw-large.jpg",
+  "permalink_url": "https://soundcloud.com/audiobe"
+ },
+ "media": {
+  "transcodings": [
+   {
+    "url": "{API}/media/soundcloud:tracks:1404695473/921beb2b-a023-412b-a96c-843b2823d781/stream/hls",
+    "preset": "aac_160k",
+    "duration": 186746,
+    "snipped": false,
+    "format": {
+     "protocol": "hls",
+     "mime_type": "audio/mp4; codecs=\"mp4a.40.2\""
+    },
+    "quality": "sq"
+   },
+   {
+    "url": "{API}/media/soundcloud:tracks:1404695473/921beb2b-a023-412b-a96c-843b2823d781/stream/progressive",
+    "preset": "mp3_1_0",
+    "duration": 186746,
+    "snipped": false,
+    "format": {
+     "protocol": "progressive",
+     "mime_type": "audio/mpeg"
+    },
+    "quality": "sq"
+   },
+   {
+    "url": "{API}/media/soundcloud:tracks:1404695473/921beb2b-a023-412b-a96c-843b2823d781/preview/progressive",
+    "preset": "mp3_0_0",
+    "duration": 30000,
+    "snipped": true,
+    "format": {
+     "protocol": "progressive",
+     "mime_type": "audio/mpeg"
+    },
+    "quality": "sq"
+   }
+  ]
+ },
+ "track_authorization": "FAKE_TRACK_AUTH",
+ "streamable": true,
+ "urn": "soundcloud:tracks:1404695473",
+ "monetization_model": "BLACKBOX"
+}
