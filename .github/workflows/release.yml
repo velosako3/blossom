@@ -159,4 +159,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           for d in android windows linux; do mv "out/$d/SHA256SUMS" "out/$d/SHA256SUMS-$d.txt"; done
-          gh release create "$GITHUB_REF_NAME" out/*/* --repo "$GITHUB_REPOSITORY" --generate-notes
+          # --target: the exact commit, which the app's updater compares against its own (a branch name never matches).
+          gh release create "$GITHUB_REF_NAME" out/*/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --generate-notes

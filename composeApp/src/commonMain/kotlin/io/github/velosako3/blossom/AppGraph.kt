@@ -229,6 +229,7 @@ class AppGraph(
     var updateInstaller: io.github.velosako3.blossom.feature.integrations.update.UpdateInstaller? = null
     val updateChecker = io.github.velosako3.blossom.feature.integrations.update.UpdateChecker(
         BlossomBuildInfo.COMMIT, BlossomBuildInfo.BUILT_AT_MS, { names -> updateAssetPicker(names) }, prefs,
+        testBuild = BlossomBuildInfo.TEST_BUILD,
     )
 
     private val _discord = MutableStateFlow(prefs.get(DISCORD_KEY) == "true")

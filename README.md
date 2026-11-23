@@ -30,7 +30,8 @@ It's free for everyone: no ads, no paid tier, no analytics, no blossom account.
 
 ## Install
 
-Installers are built by the [installers workflow](.github/workflows/release.yml) as workflow artifacts:
+Download the installer for your device from the [latest release](https://github.com/velosako3/blossom/releases/latest).
+blossom then updates itself: it offers each new release and installs it when you tap it.
 
 | Platform | File | Notes |
 | --- | --- | --- |
@@ -38,7 +39,8 @@ Installers are built by the [installers workflow](.github/workflows/release.yml)
 | Windows 10/11 (x64) | `blossom-<version>-windows-x64.msi` | Or the `-portable.zip`: unzip and run `blossom.exe`. |
 | Linux (x86_64) | `blossom-<version>-linux-x86_64.AppImage` | `chmod +x` and run. Or `sudo apt install ./blossom_<version>_amd64.deb`. |
 
-Each artifact has a `SHA256SUMS` file. Builds marked `test-build` are signed with a debug key.
+Each release has `SHA256SUMS` files to check downloads against. The Windows installer isn't code-signed yet, so Windows
+may show "Windows protected your PC": choose **More info → Run anyway**. Pre-releases named "test build" are for testing.
 
 ## Building
 
