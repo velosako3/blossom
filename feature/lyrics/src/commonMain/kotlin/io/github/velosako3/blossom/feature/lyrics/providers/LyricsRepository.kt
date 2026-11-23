@@ -170,6 +170,11 @@ object LyricsRepository {
             if (picked != null && recording == null && picked.source != LyricsSource.GENIUS && genius != null) {
                 val reference = runCatching { withTimeoutOrNull(GENIUS_CHECK_MS) { genius.await() } }.getOrNull()
                 if (reference != null && !sameWords(picked.lines, reference.lines)) return@coroutineScope reference
+                // Nothing to check against: name-matched timed lyrics that never sing the title are taken for another
+                // song's (Joji's "Nitrous" for Ye's, which sings it in its first line). No lyrics beats wrong ones.
+                if (reference == null && picked.lines.any { it.timeMs > 0 } && !mentionsTitle(picked.lines, searchTitle)) {
+                    return@coroutineScope null
+                }
             }
             picked
         } finally {
@@ -221,7 +226,7 @@ object LyricsRepository {
                 val (source, await) = left.first()
                 // If we already found a line-synced or better result, skip Genius completely
                 if ((lineSynced ?: plain) != null && source == LyricsSource.GENIUS) { left.removeAt(0); continue }
-                val found = runCatching { await() }.getOrNull()
+                val found = answer(await)
                 left.removeAt(0)
                 if (take(found)) return@withTimeoutOrNull true
             }
@@ -233,7 +238,7 @@ object LyricsRepository {
         val pending = mutableListOf<Pair<LyricsSource, suspend () -> Result?>>()
         for (entry in left) {
             if (entry.first == LyricsSource.GENIUS) { pending += entry; continue }
-            val done = withTimeoutOrNull(1) { runCatching { entry.second() }.getOrNull() ?: NONE }
+            val done = withTimeoutOrNull(1) { answer(entry.second) ?: NONE }
             when {
                 done == null -> pending += entry
                 done !== NONE && take(done) -> return best()
@@ -244,13 +249,29 @@ object LyricsRepository {
         // 3. Nothing timed yet: wait for the rest in order, as BitChord does.
         for ((source, await) in pending) {
             if ((lineSynced ?: plain) != null && source == LyricsSource.GENIUS) continue
-            if (take(runCatching { await() }.getOrNull())) return best()
+            if (take(answer(await))) return best()
         }
         return best()
     }
 
+    /**
+     * A source's answer, null for a miss or a failure. Never swallows cancellation: the deadline above cancels by
+     * throwing, and catching that here dropped every source still on its way (and with them, the lyrics).
+     */
+    private suspend fun answer(await: suspend () -> Result?): Result? =
+        try { await() } catch (e: CancellationException) { throw e } catch (_: Exception) { null }
+
     /** Marks a source that answered "none" in the sweep, apart from one that is still running. */
     private val NONE = Result(LyricsSource.GENIUS, emptyList())
+
+    /** blossom: every word of [title] (3+ letters, brackets ignored) is sung somewhere in [lines]. */
+    internal fun mentionsTitle(lines: List<LyricLine>, title: String): Boolean {
+        fun words(t: String) = t.lowercase().replace(Regex("""[(\[].*?[)\]]"""), " ").split(Regex("""[^\p{L}\p{N}]+""")).filter { it.length >= 3 }
+        val wanted = words(title).toSet()
+        if (wanted.isEmpty()) return true
+        val sung = lines.flatMap { words(it.text) }.toSet()
+        return sung.containsAll(wanted)
+    }
 
     /** blossom: how long the Genius cross-check may add to a lookup. */
     private const val GENIUS_CHECK_MS = 4_000L

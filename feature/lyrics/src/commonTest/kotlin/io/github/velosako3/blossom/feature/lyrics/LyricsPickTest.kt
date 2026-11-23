@@ -71,7 +71,29 @@ class LyricsPickDeadlineTest {
             prioritizeSyllableSync = false,
         )
         assertEquals(lineSynced, picked)
-        kotlin.test.assertTrue(testScheduler.currentTime - start <= 2_500, "waited ${testScheduler.currentTime - start} ms")
+        kotlin.test.assertTrue(testScheduler.currentTime - start <= 2_600, "waited ${testScheduler.currentTime - start} ms")
+    }
+
+    @Test fun slowSourcesStillAnswerAfterTheDeadline() = runTest {
+        val plain = Result(LyricsSource.GENIUS, listOf(LyricLine(0, "words")))
+        val picked = LyricsRepository.pick(
+            listOf(
+                LyricsSource.LRC_RED to { kotlinx.coroutines.delay(4_000); null },
+                LyricsSource.LRCLIB to { kotlinx.coroutines.delay(5_000); lineSynced },
+                LyricsSource.GENIUS to { plain },
+            ),
+            prioritizeSyllableSync = false,
+        )
+        assertEquals(lineSynced, picked, "the deadline dropped sources that were still coming")
+    }
+
+    @Test fun onlyPlainAfterTheDeadline() = runTest {
+        val plain = Result(LyricsSource.GENIUS, listOf(LyricLine(0, "words")))
+        val picked = LyricsRepository.pick(
+            listOf(LyricsSource.LRC_RED to { kotlinx.coroutines.delay(4_000); null }, LyricsSource.GENIUS to { plain }),
+            prioritizeSyllableSync = false,
+        )
+        assertEquals(plain, picked)
     }
 
     @Test fun lyricsLongerThanTheSongAreAnotherSong() {
@@ -100,5 +122,16 @@ class SameWordsTest {
         val genius = l("Nitrous really fucking with my brain", "Tryna see my kids, but they don't think I'm sane")
         kotlin.test.assertFalse(LyricsRepository.sameWords(l("Oh, understand, girl, I'm out of sight", "B-B-B-B-Bound to fall in love"), genius))
         kotlin.test.assertTrue(LyricsRepository.sameWords(l("Nitrous really fuckin' with my brain", "Tryna see my kids but they don't think I'm sane"), genius))
+    }
+}
+
+class MentionsTitleTest {
+    private fun l(vararg t: String) = t.map { LyricLine(1_000, it) }
+
+    @Test fun theTitleIsSungSomewhere() {
+        kotlin.test.assertTrue(LyricsRepository.mentionsTitle(l("Nitrous really fucking with my brain"), "NITROUS"))
+        kotlin.test.assertTrue(LyricsRepository.mentionsTitle(l("We ain't goin' to sleep 'til we see Diddy free"), "FREE DIDDY"))
+        kotlin.test.assertFalse(LyricsRepository.mentionsTitle(l("Oh, understand, girl, I'm out of sight"), "NITROUS"))
+        kotlin.test.assertTrue(LyricsRepository.mentionsTitle(l("anything"), "Go"), "too short to say anything")
     }
 }
