@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.feature.settings
 
+import io.github.velosako3.blossom.core.designsystem.components.verticalScrollWithBar
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -115,7 +116,7 @@ fun SettingsScreen(state: SettingsUi, actions: SettingsActions, modifier: Modifi
     Column(modifier.fillMaxSize()) {
         topBar()
         Column(
-            Modifier.verticalScroll(rememberScrollState()).padding(16.dp).padding(bottom = io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current).widthIn(max = 720.dp),
+            Modifier.verticalScrollWithBar().padding(16.dp).padding(bottom = io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current).widthIn(max = 720.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Text(stringResource(Res.string.settings_title), style = MaterialTheme.typography.headlineLarge)

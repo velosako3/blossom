@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.feature.home
 
+import io.github.velosako3.blossom.core.designsystem.components.ScrollbarLazyColumn
+import io.github.velosako3.blossom.core.designsystem.components.ScrollbarLazyRow
 import io.github.velosako3.blossom.core.designsystem.components.MediaRow
 import io.github.velosako3.blossom.core.designsystem.components.GlassListItem
 import io.github.velosako3.blossom.core.designsystem.components.Artwork
@@ -116,7 +118,7 @@ fun HomeScreen(
                 Text(stringResource(Res.string.home_failed), color = BlossomTheme.colors.onSurfaceVariant)
                 GlassButton(vm::refresh) { Text(stringResource(Res.string.home_retry)) }
             }
-            is HomeState.Loaded -> LazyColumn(
+            is HomeState.Loaded -> ScrollbarLazyColumn(
                 Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 24.dp + io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -144,7 +146,7 @@ private fun OfflineHomeList(
     banner: (@Composable () -> Unit)?,
 ) {
     val muted = BlossomTheme.colors.onSurfaceVariant
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 24.dp + io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current)) {
+    ScrollbarLazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 24.dp + io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current)) {
         item {
             Column(Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
                 Text(stringResource(Res.string.home_title), style = MaterialTheme.typography.headlineLarge, modifier = Modifier.padding(start = 12.dp, top = 12.dp))
@@ -186,7 +188,7 @@ private fun SectionCard(
         Column(Modifier.padding(vertical = 16.dp)) {
             section.strapline?.let { Text(it.uppercase(), style = MaterialTheme.typography.labelSmall, color = BlossomTheme.colors.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp)) }
             Text(section.title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = 16.dp))
-            LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            ScrollbarLazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 items(section.items) { item ->
                     when (item) {
                         is HomeItem.Song -> MediaCard(item.track.title, item.track.artistNames, item.track.artworkUrl, { onPlay(songs, songs.indexOf(item.track)) })

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.feature.nowplaying
 
+import io.github.velosako3.blossom.core.designsystem.components.ScrollbarLazyColumn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -41,7 +42,7 @@ fun QueueView(player: BlossomPlayer, modifier: Modifier = Modifier) {
     }
     Column(modifier) {
         Text(stringResource(Res.string.np_up_next), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
-        LazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(bottom = 16.dp)) {
+        ScrollbarLazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(bottom = 16.dp)) {
             itemsIndexed(state.queue, key = { i, t -> "${t.id.value}#$i" }) { i, t ->
                 ReorderableItem(reorder, key = "${t.id.value}#$i") {
                     MediaRow(

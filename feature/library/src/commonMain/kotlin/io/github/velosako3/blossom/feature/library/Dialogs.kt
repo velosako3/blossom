@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.feature.library
 
+import io.github.velosako3.blossom.core.designsystem.components.ScrollbarLazyColumn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -94,7 +95,7 @@ fun AddToPlaylistSheet(
     GlassSheet(visible, onDismiss) {
         Text(stringResource(Res.string.add_sheet_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
         GlassListItem(stringResource(Res.string.add_sheet_new), onClick = onNew, leading = { Icon(Icons.Rounded.Add, null) }, modifier = Modifier.padding(horizontal = 8.dp))
-        LazyColumn(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        ScrollbarLazyColumn(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             items(playlists, key = { it.id.value }) { p ->
                 MediaRow(p.name, pluralStringResource(Res.plurals.lib_songs, p.entryCount, p.entryCount), null, onClick = { onPick(p) })
             }

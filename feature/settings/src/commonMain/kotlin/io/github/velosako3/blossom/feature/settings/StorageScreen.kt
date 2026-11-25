@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.feature.settings
 
+import io.github.velosako3.blossom.core.designsystem.components.verticalScrollWithBar
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -64,7 +65,7 @@ fun StorageScreen(
     val muted = BlossomTheme.colors.onSurfaceVariant
     Column(modifier.fillMaxSize()) {
         topBar()
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp).padding(bottom = io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(Modifier.verticalScrollWithBar().padding(16.dp).padding(bottom = io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(stringResource(Res.string.storage_title), style = MaterialTheme.typography.headlineLarge)
             GlassSurface(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(20.dp)) {

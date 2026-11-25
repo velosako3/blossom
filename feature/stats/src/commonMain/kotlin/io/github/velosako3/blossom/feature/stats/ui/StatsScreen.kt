@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.feature.stats.ui
 
+import io.github.velosako3.blossom.core.designsystem.components.verticalScrollWithBar
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -77,7 +78,7 @@ fun StatsContent(
     val muted = BlossomTheme.colors.onSurfaceVariant
     Box(modifier.fillMaxSize()) {
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).windowInsetsPadding(WindowInsets.statusBars)
+            Modifier.fillMaxSize().verticalScrollWithBar().windowInsetsPadding(WindowInsets.statusBars)
                 .padding(horizontal = 16.dp, vertical = 12.dp).padding(bottom = io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current).widthIn(max = 900.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {

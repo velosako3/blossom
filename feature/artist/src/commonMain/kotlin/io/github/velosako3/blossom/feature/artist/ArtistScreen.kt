@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.feature.artist
 
+import io.github.velosako3.blossom.core.designsystem.components.ScrollbarLazyColumn
+import io.github.velosako3.blossom.core.designsystem.components.ScrollbarLazyRow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -92,7 +94,7 @@ private fun Content(
     topBar: @Composable () -> Unit,
 ) {
     val top = page.topSongs.take(5)
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp + io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current)) {
+    ScrollbarLazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp + io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current)) {
         item {
             Column(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars), horizontalAlignment = Alignment.CenterHorizontally) {
                 topBar()
@@ -113,7 +115,7 @@ private fun Content(
         items(page.sections, key = { it.title }) { section ->
             Column(Modifier.padding(top = 20.dp)) {
                 Text(section.title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 20.dp))
-                LazyRow(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                ScrollbarLazyRow(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     items(section.items) { item ->
                         when (item) {
                             is HomeItem.Song -> MediaCard(item.track.title, item.track.artistNames, item.track.artworkUrl, { onPlay(listOf(item.track), 0, false) })
