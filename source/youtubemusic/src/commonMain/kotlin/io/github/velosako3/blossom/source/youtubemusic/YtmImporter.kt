@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.source.youtubemusic
 
+import io.ktor.http.decodeURLQueryComponent
 import io.github.velosako3.blossom.core.model.PlaylistOrigin
 import io.github.velosako3.blossom.core.model.SourceKind
 import io.github.velosako3.blossom.core.model.Track
@@ -9,8 +10,6 @@ import io.github.velosako3.blossom.source.api.ImportError
 import io.github.velosako3.blossom.source.api.ImportedPlaylist
 import io.github.velosako3.blossom.source.api.ImportedTrack
 import io.github.velosako3.blossom.source.api.PlaylistImporter
-import java.net.URI
-import java.net.URLDecoder
 
 /**
  * YouTube Music and YouTube links: playlists (every continuation page), albums and single videos. Everything plays
@@ -59,13 +58,15 @@ class YtmImporter(private val ytm: YtmSource) : PlaylistImporter {
     private val ID = Regex("""[A-Za-z0-9_-]{1,64}""")
 
     private fun target(url: String): Target? {
-        val uri = runCatching { URI(url.trim()) }.getOrNull() ?: return null
-        val host = uri.host?.lowercase()?.removePrefix("www.")?.removePrefix("m.") ?: return null
-        val path = uri.path.orEmpty()
+        val trimmed = url.trim()
+        if (!trimmed.startsWith("http://", ignoreCase = true) && !trimmed.startsWith("https://", ignoreCase = true)) return null
+        val uri = runCatching { io.ktor.http.Url(trimmed) }.getOrNull() ?: return null
+        val host = uri.host.lowercase().removePrefix("www.").removePrefix("m.").ifEmpty { return null }
+        val path = uri.encodedPath
         // A malformed escape drops only its own parameter; IDs must look like YouTube IDs.
-        val q = uri.rawQuery.orEmpty().split('&').filter { '=' in it }.mapNotNull {
+        val q = uri.encodedQuery.split('&').filter { '=' in it }.mapNotNull {
             val (k, v) = it.split('=', limit = 2)
-            runCatching { k to URLDecoder.decode(v, Charsets.UTF_8) }.getOrNull()?.takeIf { (_, value) -> ID.matches(value) }
+            runCatching { k to v.decodeURLQueryComponent() }.getOrNull()?.takeIf { (_, value) -> ID.matches(value) }
         }.toMap()
         return when (host) {
             "music.youtube.com", "youtube.com" -> when {

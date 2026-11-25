@@ -11,7 +11,7 @@ import kotlin.test.assertTrue
 /** Hits YouTube Music for real. Runs only with -PliveTests=true. */
 class YtmLiveTest {
     @Test fun searchAndResolve() = runBlocking {
-        val source = YtmSource(InMemorySecureStore(), Files.createTempDirectory("ytm").toFile())
+        val source = YtmSource(InMemorySecureStore(), io.github.velosako3.blossom.source.youtubemusic.YouTubeStreams({ null }, Files.createTempDirectory("ytm").toFile()))
         val songs = source.search("Daft Punk One More Time").songs
         println("live search: ${songs.size} songs, first = ${songs.firstOrNull()?.let { "${it.title} – ${it.artistNames}" }}")
         assertTrue(songs.isNotEmpty())

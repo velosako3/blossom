@@ -38,7 +38,7 @@ fun createAndroidGraph(context: Context): AppGraph {
     val prefs = SharedPreferenceStore(context)
     val network = AndroidNetworkMonitor(context)
     val streams = YouTubeStreams({ secure.get(YtmSource.COOKIE_KEY) }, context.cacheDir)
-    val ytm = YtmSource(secure, context.cacheDir, streams = streams)
+    val ytm = YtmSource(secure, streams)
     val youtube = YouTubeSource(streams)
     val soundcloudClient = io.github.velosako3.blossom.source.soundcloud.SoundCloudClient()
     val soundcloud = io.github.velosako3.blossom.source.soundcloud.SoundCloudSource(soundcloudClient)

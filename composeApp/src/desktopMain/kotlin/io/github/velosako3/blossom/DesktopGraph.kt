@@ -41,7 +41,7 @@ fun createDesktopGraph(): AppGraph {
     val prefs = FilePreferenceStore(File(dataDir, "preferences.properties"))
     val network = DesktopNetworkMonitor(scope)
     val streams = YouTubeStreams({ secure.get(YtmSource.COOKIE_KEY) }, cacheDir)
-    val ytm = YtmSource(secure, cacheDir, streams = streams)
+    val ytm = YtmSource(secure, streams)
     val youtube = YouTubeSource(streams)
     val soundcloudClient = io.github.velosako3.blossom.source.soundcloud.SoundCloudClient()
     val soundcloud = io.github.velosako3.blossom.source.soundcloud.SoundCloudSource(soundcloudClient)

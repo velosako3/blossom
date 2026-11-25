@@ -54,7 +54,7 @@ class YouTubeStreams(
     private val cookie: suspend () -> String?,
     cacheDir: File,
     private val clock: Clock = Clock.System,
-) {
+) : YtmStreams {
     private val okHttp = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(20, TimeUnit.SECONDS)
@@ -99,7 +99,7 @@ class YouTubeStreams(
     private val visitor = InnertubeClient(cookie)
     private val newPipeGate = Mutex()
 
-    suspend fun resolve(videoId: String, quality: AudioQuality): StreamInfo = withContext(Dispatchers.IO) {
+    override suspend fun resolve(videoId: String, quality: AudioQuality): StreamInfo = withContext(Dispatchers.IO) {
         val found = try {
             innerTubeX(videoId, quality) ?: newPipe(videoId, quality)
         } catch (e: CancellationException) {

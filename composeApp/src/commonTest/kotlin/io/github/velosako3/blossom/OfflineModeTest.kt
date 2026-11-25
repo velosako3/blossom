@@ -52,7 +52,7 @@ private fun song(id: String, title: String) = Track(TrackId.of(SourceKind.YOUTUB
 @OptIn(ExperimentalCoroutinesApi::class)
 class OfflineModeTest {
     // Never reached while offline: any network call would throw.
-    private val ytm = YtmSource(InMemorySecureStore(), kotlin.io.path.createTempDirectory("ytm").toFile())
+    private val ytm = YtmSource(InMemorySecureStore(), io.github.velosako3.blossom.source.youtubemusic.YouTubeStreams({ null }, kotlin.io.path.createTempDirectory("ytm").toFile()))
 
     @Test fun homeListsSavedPlaylistsOffline() = runTest {
         val offlineHome = MutableStateFlow(HomeState.OfflineHome(listOf(OfflinePlaylistCard("p1", "Road trip", emptyList())), emptyList()))

@@ -60,7 +60,7 @@ class TestGraph(val withSync: Boolean = false) {
     // Not Main: the test body blocks the Swing thread while it waits.
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val dir = kotlin.io.path.createTempDirectory("blossom-test").toFile()
-    private val ytm = YtmSource(InMemorySecureStore(), dir)
+    private val ytm = YtmSource(InMemorySecureStore(), io.github.velosako3.blossom.source.youtubemusic.YouTubeStreams({ null }, dir))
     private val player = DefaultBlossomPlayer(SilentEngine(), StreamResolver(mapOf(SourceKind.YOUTUBE_MUSIC to ytm), Clock.System), OfflineNet, scope)
     private val local = LocalFilesHost(
         library = object : LocalLibrary {

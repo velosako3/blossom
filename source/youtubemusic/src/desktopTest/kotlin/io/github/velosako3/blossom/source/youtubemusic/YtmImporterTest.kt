@@ -27,7 +27,7 @@ class YtmImporterTest {
         respond(body, headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()))
     }
     private val client = InnertubeClient(http = HttpClient(engine) { install(ContentNegotiation) { json() } })
-    private val ytm = YtmSource(InMemorySecureStore(), kotlin.io.path.createTempDirectory("ytm").toFile(), client = client)
+    private val ytm = YtmSource(InMemorySecureStore(), YouTubeStreams({ null }, kotlin.io.path.createTempDirectory("ytm").toFile()), client = client)
     private val importer = YtmImporter(ytm)
 
     @Test fun playlistWithContinuation() = runTest {

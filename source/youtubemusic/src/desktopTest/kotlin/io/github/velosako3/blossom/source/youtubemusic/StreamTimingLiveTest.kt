@@ -11,7 +11,7 @@ import kotlin.time.measureTimedValue
 /** How long a song takes to resolve, the first time and again. Live: -PliveTests=true. */
 class StreamTimingLiveTest {
     @Test fun resolveTimes() = runBlocking {
-        val source = YtmSource(InMemorySecureStore(), Files.createTempDirectory("ytm").toFile())
+        val source = YtmSource(InMemorySecureStore(), io.github.velosako3.blossom.source.youtubemusic.YouTubeStreams({ null }, Files.createTempDirectory("ytm").toFile()))
         val ids = listOf("Blinding Lights The Weeknd", "As It Was Harry Styles", "Around the World Daft Punk", "Runaway Kanye West", "Bohemian Rhapsody Queen")
             .map { q -> measureTimedValue { source.search(q).songs.first() }.also { println("timing search '$q': ${it.duration.inWholeMilliseconds} ms") }.value.id }
         for (id in ids) {
