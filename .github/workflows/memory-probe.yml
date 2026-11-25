@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Measures the released Windows app's memory under a few JVM/renderer settings (manual runs only).
+name: memory-probe
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release to measure
+        default: v0.1.0
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Measure
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          gh release download $env:TAG --repo $env:GITHUB_REPOSITORY -p "*portable.zip"
+          Expand-Archive *.zip -DestinationPath app
+          $exe = (Get-ChildItem app -Recurse -Filter blossom.exe | Select-Object -First 1).FullName
+          $configs = @("", "-XX:TieredStopAtLevel=1", "-Dskiko.renderApi=OPENGL", "-Dskiko.renderApi=SOFTWARE_FAST", "-Xss512k -XX:ReservedCodeCacheSize=64m -XX:CICompilerCount=2")
+          foreach ($c in $configs) {
+            $env:JAVA_TOOL_OPTIONS = $c
+            $p = Start-Process $exe -PassThru
+            Start-Sleep 45
+            $q = Get-Process -Id $p.Id
+            "{0,-70} working set {1,5} MB  private {2,5} MB" -f ("'" + $c + "'"), [int]($q.WorkingSet64/1MB), [int]($q.PrivateMemorySize64/1MB)
+            Stop-Process -Id $p.Id -Force
+            Start-Sleep 3
+          }
