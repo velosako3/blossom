@@ -29,6 +29,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import platform.Foundation.NSUUID
 import kotlin.time.Clock
 
@@ -69,6 +70,7 @@ class IosGraph {
     )
 
     init {
+        debugPlay()
         // Lock screen and Control Center buttons drive the app's player.
         engine.remote = { command ->
             when (command) {
@@ -77,6 +79,25 @@ class IosGraph {
                 "toggle" -> if (player.state.value.isPlaying) player.pause() else player.play()
                 "next" -> player.next()
                 "previous" -> player.previous()
+            }
+        }
+    }
+
+    /**
+     * Test hook for the simulator run (ios-smoke workflow): launched with `-debugPlay <query>`, plays the first search
+     * result and logs the position every 5 s, so CI can tell that audio really plays.
+     */
+    private fun debugPlay() {
+        val args = platform.Foundation.NSProcessInfo.processInfo.arguments.map { it.toString() }
+        val query = args.indexOf("-debugPlay").takeIf { it >= 0 }?.let { args.getOrNull(it + 1) } ?: return
+        scope.launch {
+            val songs = runCatching { ytm.search(query, io.github.velosako3.blossom.source.api.SearchFilter.SONGS).songs }.getOrElse { platform.Foundation.NSLog("blossom-debug search failed: $it"); return@launch }
+            platform.Foundation.NSLog("blossom-debug playing ${songs.firstOrNull()?.title}")
+            player.setQueue(songs.take(3), 0)
+            player.play()
+            repeat(12) {
+                kotlinx.coroutines.delay(5_000)
+                platform.Foundation.NSLog("blossom-debug position ${player.progress.value.positionMs} ms, playing=${player.state.value.isPlaying}, error=${player.state.value.error}")
             }
         }
     }

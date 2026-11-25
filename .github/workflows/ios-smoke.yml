@@ -37,6 +37,13 @@ jobs:
           xcrun simctl launch "$DEVICE" io.github.velosako3.blossom
           sleep 40
           xcrun simctl io "$DEVICE" screenshot out/1-home.png
+          # Again, playing a song: the app logs its position (IosGraph.debugPlay).
+          xcrun simctl terminate "$DEVICE" io.github.velosako3.blossom || true
+          xcrun simctl launch "$DEVICE" io.github.velosako3.blossom -debugPlay "daft punk around the world"
+          sleep 45
+          xcrun simctl io "$DEVICE" screenshot out/2-playing.png
+          sleep 2
+          grep "blossom-debug" out/log.txt | tee out/playback.txt
           # The app must still be running (a crash would have ended it).
           xcrun simctl spawn "$DEVICE" launchctl list | grep -i blossom | tee out/running.txt
           ls ~/Library/Logs/DiagnosticReports/ 2>/dev/null | grep -i blossom && cp ~/Library/Logs/DiagnosticReports/*blossom* out/ || true
