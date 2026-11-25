@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Launches the iOS app in the simulator and keeps screenshots and the log (manual runs only): the check that the
+# iPhone build starts, since nobody here has an iPhone.
+name: ios-smoke
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  simulator:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+      - name: Build for the simulator
+        run: |
+          brew install xcodegen
+          (cd iosApp && xcodegen generate)
+          xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -configuration Debug -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath iosApp/build ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build
+      - name: Launch, search, play
+        run: |
+          mkdir -p out
+          DEVICE=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k,v in d.items() if 'iOS' in k for x in v if x['name'].startswith('iPhone')))")
+          xcrun simctl boot "$DEVICE"
+          xcrun simctl bootstatus "$DEVICE" -b
+          xcrun simctl install "$DEVICE" iosApp/build/Build/Products/Debug-iphonesimulator/blossom.app
+          xcrun simctl spawn "$DEVICE" log stream --level debug --predicate 'process == "blossom"' > out/log.txt 2>&1 &
+          xcrun simctl launch "$DEVICE" io.github.velosako3.blossom
+          sleep 40
+          xcrun simctl io "$DEVICE" screenshot out/1-home.png
+          # The app must still be running (a crash would have ended it).
+          xcrun simctl spawn "$DEVICE" launchctl list | grep -i blossom | tee out/running.txt
+          ls ~/Library/Logs/DiagnosticReports/ 2>/dev/null | grep -i blossom && cp ~/Library/Logs/DiagnosticReports/*blossom* out/ || true
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: ios-smoke
+          path: out/
