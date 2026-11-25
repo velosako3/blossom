@@ -75,6 +75,8 @@ fun SearchScreen(
             onValueChange = vm::onQueryChange,
             placeholder = stringResource(Res.string.search_placeholder),
             leadingIcon = Icons.Rounded.Search,
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
+            keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { vm.commit() }),
             modifier = Modifier.padding(horizontal = 16.dp).focusRequester(focusRequester),
             trailing = if (state.query.isNotEmpty()) {
                 { GlassIconButton({ vm.onQueryChange("") }, Icons.Rounded.Close, stringResource(Res.string.search_clear), size = 32.dp, iconSize = 18.dp, glass = false) }
@@ -103,7 +105,14 @@ fun SearchScreen(
                     Text(stringResource(Res.string.search_failed), color = colors.onSurfaceVariant)
                     GlassButton({ vm.onQueryChange(state.query + " "); vm.onQueryChange(state.query.trim()) }) { Text(stringResource(Res.string.search_retry)) }
                 }
-                else -> Results(state, onPlay, onOpenAlbum, onOpenArtist, onOpenPlaylist)
+                // Opening or playing a result is what makes it a search worth remembering.
+                else -> Results(
+                    state,
+                    { tracks, i -> vm.commit(); onPlay(tracks, i) },
+                    { vm.commit(); onOpenAlbum(it) },
+                    { vm.commit(); onOpenArtist(it) },
+                    { vm.commit(); onOpenPlaylist(it) },
+                )
             }
         }
     }

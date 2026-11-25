@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.feature.library
 
+import io.github.velosako3.blossom.core.designsystem.components.typingFocus
 import io.github.velosako3.blossom.core.designsystem.components.ScrollbarLazyColumn
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -130,7 +131,7 @@ fun PlaylistScreen(
                         textStyle = MaterialTheme.typography.headlineMedium.copy(color = colors.onSurface, textAlign = TextAlign.Center),
                         cursorBrush = SolidColor(colors.accent), singleLine = true,
                         modifier = Modifier.widthIn(max = 520.dp).fillMaxWidth().padding(top = 20.dp, start = 24.dp, end = 24.dp)
-                            .onFocusChanged { if (!it.isFocused) vm.onRename(name) },
+                            .onFocusChanged { if (!it.isFocused) vm.onRename(name) }.typingFocus(),
                     )
                     var description by remember(playlist.description) { mutableStateOf(playlist.description.orEmpty()) }
                     Box(Modifier.widthIn(max = 520.dp).fillMaxWidth().padding(horizontal = 24.dp), contentAlignment = Alignment.Center) {
@@ -139,7 +140,7 @@ fun PlaylistScreen(
                             description, { description = it },
                             textStyle = MaterialTheme.typography.bodyMedium.copy(color = colors.onSurfaceVariant, textAlign = TextAlign.Center),
                             cursorBrush = SolidColor(colors.accent),
-                            modifier = Modifier.fillMaxWidth().onFocusChanged { if (!it.isFocused) vm.onDescription(description) },
+                            modifier = Modifier.fillMaxWidth().onFocusChanged { if (!it.isFocused) vm.onDescription(description) }.typingFocus(),
                         )
                     }
                     Text(pluralStringResource(Res.plurals.lib_songs, items.size, items.size), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))

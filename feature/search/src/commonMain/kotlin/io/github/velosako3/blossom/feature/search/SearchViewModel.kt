@@ -85,8 +85,7 @@ class SearchViewModel(
                     _state.update { it.copy(loading = true, error = null) }
                     try {
                         val results = if (on) source.search(q, t.filter) else SearchResults(offlineSearch(q))
-                        recentStore.add(q)
-                        _state.update { it.copy(results = results, loading = false, recents = recentStore.recents()) }
+                        _state.update { it.copy(results = results, loading = false) }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -99,6 +98,14 @@ class SearchViewModel(
     fun onQueryChange(q: String) {
         query.value = q
         _state.update { it.copy(query = q) }
+    }
+
+    /** Remembers the query as a recent search: Enter, or a result opened. Pauses while typing aren't searches. */
+    fun commit() {
+        val q = query.value.trim()
+        if (q.isEmpty()) return
+        recentStore.add(q)
+        _state.update { it.copy(recents = recentStore.recents()) }
     }
 
     fun onTabChange(t: SearchTab) {

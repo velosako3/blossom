@@ -14,8 +14,9 @@ import io.github.velosako3.blossom.navigation.Navigator
 import io.github.velosako3.blossom.shell.ShellState
 
 /**
- * Desktop shortcuts. [preview] sees Ctrl combinations before any focused control; [bubble] sees plain keys only if
- * nothing focused (a text field) used them, so typing a space in search never pauses the music.
+ * Desktop shortcuts. [preview] sees Ctrl combinations before any focused control; [bubble] sees plain keys that
+ * nothing focused used. While a text field has the keyboard ([TypingFocus]) both leave typing keys alone, so a space
+ * in search never pauses the music.
  */
 class KeyboardShortcuts(
     private val player: BlossomPlayer,
@@ -26,6 +27,8 @@ class KeyboardShortcuts(
 ) {
     fun preview(e: KeyEvent): Boolean {
         if (e.type != KeyEventType.KeyDown || !e.isCtrlPressed) return false
+        // Ctrl+arrows move by word while typing.
+        if (io.github.velosako3.blossom.core.designsystem.components.TypingFocus.active && (e.key == Key.DirectionLeft || e.key == Key.DirectionRight)) return false
         when (e.key) {
             Key.DirectionLeft -> player.previous()
             Key.DirectionRight -> player.next()
@@ -39,6 +42,8 @@ class KeyboardShortcuts(
 
     fun bubble(e: KeyEvent): Boolean {
         if (e.type != KeyEventType.KeyDown || e.isCtrlPressed) return false
+        // A text field takes the typed character but lets the key press through: Space and arrows stay with it.
+        if (io.github.velosako3.blossom.core.designsystem.components.TypingFocus.active && e.key != Key.Escape) return false
         val state = player.state.value
         when (e.key) {
             Key.Spacebar -> if (state.isPlaying) player.pause() else player.play()
