@@ -135,3 +135,22 @@ class MentionsTitleTest {
         kotlin.test.assertTrue(LyricsRepository.mentionsTitle(l("anything"), "Go"), "too short to say anything")
     }
 }
+
+class SourceMatchTest {
+    @Test fun lrclibSearchHitsMustBeTheSameSong() {
+        val same = io.github.velosako3.blossom.feature.lyrics.providers.LrcLib::sameSong
+        kotlin.test.assertTrue(same("WW3", "Ye", "WW3", "Ye"))
+        kotlin.test.assertTrue(same("Runaway (feat. Pusha T)", "Kanye West", "Runaway", "Kanye West, Pusha T"))
+        kotlin.test.assertTrue(same("GAS CHAMBERS", "Ye", "Gas Chambers", "Ye"))
+        kotlin.test.assertFalse(same("Nitrous", "Joji", "NITROUS", "Ye"))
+        kotlin.test.assertFalse(same("So Much Money (WW3)", "Gucci Mane", "WW3", "Ye"))
+    }
+
+    @Test fun geniusAiPagesAreNotTheSong() {
+        val ai = io.github.velosako3.blossom.feature.lyrics.providers.Genius::isAiPage
+        kotlin.test.assertTrue(ai("gas chambers [ai]", "/Ye-gas-chambers-ai-lyrics"))
+        kotlin.test.assertTrue(ai("Gas Chambers", "/Ye-gas-chambers-ai-lyrics"))
+        kotlin.test.assertFalse(ai("nitrous", "/Ye-nitrous-lyrics"))
+        kotlin.test.assertFalse(ai("Chained", "/Ye-chained-lyrics"))
+    }
+}

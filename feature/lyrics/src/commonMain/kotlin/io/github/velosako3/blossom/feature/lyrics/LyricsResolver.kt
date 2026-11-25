@@ -55,14 +55,21 @@ class LyricsResolver(
             cached.lyrics == null -> if (age!! < NEGATIVE_TTL) return null
             cached.lyrics.isSynced || age!! < PLAIN_RETRY -> return cached.lyrics
         }
-        val q = LyricsQuery(
-            title = track.title,
-            artists = track.artists.map { it.name },
-            album = track.album?.title,
-            durationMs = track.durationMs,
-            videoId = track.id.sourceId.takeIf { track.id.kind == SourceKind.YOUTUBE_MUSIC || track.id.kind == SourceKind.YOUTUBE },
+        val kind = track.id.kind
+        val q = tidyLyricsQuery(
+            LyricsQuery(
+                title = track.title,
+                artists = track.artists.map { it.name },
+                album = track.album?.title,
+                durationMs = track.durationMs,
+                videoId = track.id.sourceId.takeIf { kind == SourceKind.YOUTUBE_MUSIC || kind == SourceKind.YOUTUBE },
+            ),
+            uploaded = kind == SourceKind.UNTITLED || kind == SourceKind.SOUNDCLOUD || kind == SourceKind.YOUTUBE,
         )
-        val found = try { online.lyrics(q) } catch (e: CancellationException) { throw e } catch (_: Exception) { return cached?.lyrics }
+        val found = try {
+            // untitled is where unreleased Ye lives, under fans' names: what no one knows by its uploader is tried as Ye's.
+            online.lyrics(q) ?: if (kind == SourceKind.UNTITLED && q.artists.none { lyricsArtist(it) == "Ye" }) online.lyrics(q.copy(artists = listOf("Ye"))) else null
+        } catch (e: CancellationException) { throw e } catch (_: Exception) { return cached?.lyrics }
         val keep = found ?: cached?.lyrics
         cache.put(track.id, keep, clock.now())
         return keep

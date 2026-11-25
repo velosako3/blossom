@@ -176,8 +176,12 @@ object LyricsRepository {
                 if (reference != null && !sameWords(picked.lines, reference.lines)) return@coroutineScope reference
                 // Nothing to check against: name-matched timed lyrics that never sing the title are taken for another
                 // song's (Joji's "Nitrous" for Ye's, which sings it in its first line). No lyrics beats wrong ones.
-                if (reference == null && picked.lines.any { it.timeMs > 0 } && !mentionsTitle(picked.lines, searchTitle)) {
-                    return@coroutineScope null
+                // LRCLIB answers only for the same title by the same artist (LrcLib.sameSong), so it is no name guess.
+                if (reference == null && picked.source != LyricsSource.LRCLIB && picked.lines.any { it.timeMs > 0 } && !mentionsTitle(picked.lines, searchTitle)) {
+                    // That source guessed wrong, but LRCLIB may still have the song itself (WW3 never sings "WW3").
+                    val lrclib = racing.firstOrNull { it.first == LyricsSource.LRCLIB }?.second
+                    return@coroutineScope runCatching { withTimeoutOrNull(GENIUS_CHECK_MS) { lrclib?.await() } }.getOrNull()
+                        ?.takeIf { r -> r.lines.any { it.timeMs > 0 } }
                 }
             }
             picked

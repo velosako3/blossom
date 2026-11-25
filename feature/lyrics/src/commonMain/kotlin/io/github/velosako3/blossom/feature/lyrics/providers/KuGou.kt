@@ -164,7 +164,9 @@ object KuGou {
     private val STAMP = Regex("""\[\d{2}:\d{2}\.\d{2,3}]""")
     private val INSTRUMENTAL = Regex("""纯音乐.*欣赏""")
     private val STAMPED = Regex("""\[\d{2}:\d{2}\.\d{2,3}].*""")
-    private val CREDIT = Regex(""".+][^\[]+[:：].+""")
+    // blossom: also "Rick James/James Brown：" with nothing after, KuGou's sample credit (a full-width colon, which
+    // lyrics themselves don't use).
+    private val CREDIT = Regex(""".+][^\[]+(?:[:：].+|：\s*)""")
 
     private class Keyword(val query: String)
 

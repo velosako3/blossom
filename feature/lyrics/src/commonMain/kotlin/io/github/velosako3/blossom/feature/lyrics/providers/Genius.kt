@@ -54,7 +54,7 @@ object Genius {
      * which travels up as "no lyrics for this track" — indistinguishable from
      * a song Genius genuinely does not have.
      */
-    private const val USER_AGENT = "BitChord"
+    private const val USER_AGENT = "blossom (https://github.com/velosako3/blossom)" // blossom: its own name
 
     private val json by lazy { Json { ignoreUnknownKeys = true; isLenient = true } }
 
@@ -168,6 +168,10 @@ object Genius {
         }.getOrNull()
     }
 
+    /** blossom: a page for an AI-made song, by its title tag or its address. */
+    internal fun isAiPage(title: String, path: String): Boolean =
+        Regex("""(?i)[(\[]\s*ai\s*[)\]]""").containsMatchIn(title) || path.endsWith("-ai-lyrics", ignoreCase = true)
+
     private fun bestMatch(
         candidates: List<JsonObject>,
         targetTitle: String,
@@ -191,6 +195,8 @@ object Genius {
             // (Joji's "Nitrous" for Ye's), is the wrong lyrics, and for an unreleased song it is nearly always one
             // of those.
             if (!titleMatches || (normArtist.isNotBlank() && !artistMatches)) return@mapNotNull null
+            // blossom: fans' AI-made songs ("GAS CHAMBERS [AI]") have their own pages, with someone else's words.
+            if (isAiPage(title, item["path"]?.jsonPrimitive?.contentOrNull.orEmpty()) && !isAiPage(normTitle, "")) return@mapNotNull null
 
             if (title == normTitle) score += 50
             else if (titleMatches) score += 25

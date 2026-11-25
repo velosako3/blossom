@@ -29,7 +29,8 @@ import kotlin.math.abs
 object LrcLib {
 
     private const val BASE = "https://lrclib.net/api"
-    private const val AGENT = "BitChord (https://github.com/bitchord)"
+    // blossom: its own name. LRCLIB rate-limits per client name, and as "BitChord" blossom shared (and ran out of) BitChord's allowance.
+    private const val AGENT = "blossom (https://github.com/velosako3/blossom)"
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -75,11 +76,20 @@ object LrcLib {
         val hits = json.parseToJsonElement(body) as? JsonArray ?: return null
         return hits.mapNotNull { it as? JsonObject }
             .filter { it["syncedLyrics"]?.jsonPrimitive?.contentOrNull?.isNotBlank() == true }
+            // blossom: LRCLIB's search is fuzzy; only the same song by the same artist counts.
+            .filter { sameSong(it["trackName"]?.jsonPrimitive?.contentOrNull.orEmpty(), it["artistName"]?.jsonPrimitive?.contentOrNull.orEmpty(), title, artist) }
             .minByOrNull {
                 val d = it["duration"]?.jsonPrimitive?.doubleOrNull ?: 0.0
                 abs(d - seconds)
             }
             ?.get("syncedLyrics")?.jsonPrimitive?.contentOrNull
+    }
+
+    /** blossom: the hit's name is the song's (brackets, case and punctuation aside) and its artist is among the artists. */
+    internal fun sameSong(hitTitle: String, hitArtist: String, title: String, artist: String): Boolean {
+        fun norm(s: String) = s.lowercase().replace(Regex("""[(\[][^)\]]*[)\]]"""), " ").replace(Regex("""[^\p{L}\p{N}]+"""), " ").trim()
+        val a = norm(hitArtist)
+        return norm(hitTitle) == norm(title) && artist.split(',', '&').map(::norm).any { it.isNotEmpty() && (a == it || a.contains(it) || it.contains(a)) }
     }
 
     private fun get(url: String): String? {

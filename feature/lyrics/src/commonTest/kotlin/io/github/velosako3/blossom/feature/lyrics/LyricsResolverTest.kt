@@ -124,6 +124,20 @@ class LyricsResolverTest {
         assertEquals(local, LyricsResolver(FakeOnline(null), FakeLocal(local), cache, clock).resolve(localTrack))
     }
 
+    @Test fun anUntitledUploadNobodyKnowsIsTriedAsYe() = runTest {
+        val upload = Track(TrackId.of(SourceKind.UNTITLED, "u1"), "MOON ROCK (prod. X) [CDQ]", listOf(ArtistRef(null, "some_uploader")), null, 180_000, null)
+        val asked = mutableListOf<LyricsQuery>()
+        val online = OnlineLyrics { q -> asked += q; if (q.artists == listOf("Ye")) wordSynced else null }
+        assertEquals(wordSynced, LyricsResolver(online, FakeLocal(null), MemoryCache(), TestClock()).resolve(upload))
+        assertEquals(listOf("MOON ROCK" to listOf("some_uploader"), "MOON ROCK" to listOf("Ye")), asked.map { it.title to it.artists })
+    }
+
+    @Test fun otherSourcesAreNotRetriedAsYe() = runTest {
+        val online = FakeOnline(null)
+        LyricsResolver(online, FakeLocal(null), MemoryCache(), TestClock()).resolve(track)
+        assertEquals(1, online.queries.size)
+    }
+
     @Test fun unreadableLocalFallsBackToOnline() = runTest {
         val r = LyricsResolver(FakeOnline(plain), FakeLocal(null, fail = true), MemoryCache(), TestClock())
         assertEquals(plain, r.resolve(localTrack))
@@ -146,5 +160,30 @@ class LyricsArtistTest {
     @Test fun othersAreLeftAlone() {
         for (a in listOf("Yeat", "Yeah Yeah Yeahs", "Yelawolf", "Yes", "King Combs", "Joji", "Yeezus Fan"))
             assertEquals(a, lyricsArtist(a), a)
+    }
+}
+
+class TidyLyricsQueryTest {
+    private fun q(title: String, vararg artists: String) = LyricsQuery(title, artists.toList(), null, 180_000)
+    private fun tidy(title: String, artist: String, uploaded: Boolean = true) = tidyLyricsQuery(q(title, artist), uploaded).let { it.title to it.artists }
+
+    @Test fun uploadsWithTheArtistInTheTitle() {
+        assertEquals("Never Abandon Your Family" to listOf("Kanye West"), tidy("Kanye West – Never Abandon Your Family (Yedit)", "fake_uploader"))
+        assertEquals("NITROUS" to listOf("Ye"), tidy("Ye - NITROUS (prod. Ojivolta) [v2]", "donda.wav"))
+        assertEquals("Hurricane" to listOf("Kanye West", "The Weeknd"), tidy("Kanye West & The Weeknd - Hurricane [CDQ] ✦", "leaks"))
+    }
+
+    @Test fun labelsTheSitesNeverUse() {
+        assertEquals("FREE DIDDY" to listOf("YeBreak"), tidy("FREE DIDDY (Snippet) prod. Kanye", "YeBreak"))
+        assertEquals("Blinding Lights" to listOf("The Weeknd"), tidy("The Weeknd - Blinding Lights (Official Video)", "The Weeknd", uploaded = false))
+        assertEquals("Hey Jude" to listOf("The Beatles"), tidy("Hey Jude - Remastered 2015", "The Beatles", uploaded = false))
+        assertEquals("Runaway" to listOf("Kanye West"), tidy("Runaway (feat. Pusha T)", "Kanye West", uploaded = false))
+    }
+
+    @Test fun ordinaryTitlesStayAsTheyAre() {
+        assertEquals("Self Control" to listOf("Frank Ocean"), tidy("Self Control", "Frank Ocean", uploaded = false))
+        // A dash inside a song title is not "artist – title" unless the left side is an artist.
+        assertEquals("Ain't No Mountain High Enough - Live" to listOf("Marvin Gaye"), tidy("Ain't No Mountain High Enough - Live", "Marvin Gaye", uploaded = false))
+        assertEquals("Love Lockdown (Remix)" to listOf("Kanye West"), tidy("Love Lockdown (Remix)", "Kanye West", uploaded = false))
     }
 }
