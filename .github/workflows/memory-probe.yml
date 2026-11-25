@@ -27,10 +27,12 @@ jobs:
           $configs = @("", "-XX:TieredStopAtLevel=1", "-Dskiko.renderApi=OPENGL", "-Dskiko.renderApi=SOFTWARE_FAST", "-Xss512k -XX:ReservedCodeCacheSize=64m -XX:CICompilerCount=2")
           foreach ($c in $configs) {
             $env:JAVA_TOOL_OPTIONS = $c
+            $before = Get-Date
             $p = Start-Process $exe -PassThru
             Start-Sleep 45
-            $q = Get-Process -Id $p.Id
-            "{0,-70} working set {1,5} MB  private {2,5} MB" -f ("'" + $c + "'"), [int]($q.WorkingSet64/1MB), [int]($q.PrivateMemorySize64/1MB)
-            Stop-Process -Id $p.Id -Force
+            $all = Get-Process | Where-Object { $_.StartTime -ge $before -and $_.Path -like "*app*" }
+            $ws = ($all | Measure-Object WorkingSet64 -Sum).Sum; $pv = ($all | Measure-Object PrivateMemorySize64 -Sum).Sum
+            "{0,-70} working set {1,5} MB  private {2,5} MB  ({3})" -f ("'" + $c + "'"), [int]($ws/1MB), [int]($pv/1MB), (($all | ForEach-Object { $_.ProcessName + ":" + [int]($_.WorkingSet64/1MB) }) -join " ")
+            $all | Stop-Process -Force
             Start-Sleep 3
           }
