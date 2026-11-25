@@ -3,6 +3,7 @@ plugins {
     id("blossom.kmp.library")
     id("blossom.serialization")
     id("blossom.sqldelight")
+    id("blossom.ios")
 }
 
 kotlin {

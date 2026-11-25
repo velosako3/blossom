@@ -52,8 +52,9 @@ fun BlossomTheme(
     val monitorActive = glassQuality == null && glassPreference == GlassPreference.AUTO
     if (monitorActive) {
         val monitor = remember { FrameBudgetMonitor() }
-        // Android reports from a background thread: one monitor, one reporting thread, state written through the snapshot.
-        io.github.velosako3.blossom.core.designsystem.glass.FrameTimes { ms, now -> synchronized(monitor) { monitor.onFrame(ms, now) }?.let { monitorCap = it } }
+        // One reporting thread per platform (Android's is a background thread), so the monitor needs no lock; the cap is
+        // written through the snapshot.
+        io.github.velosako3.blossom.core.designsystem.glass.FrameTimes { ms, now -> monitor.onFrame(ms, now)?.let { monitorCap = it } }
     }
     val backdrop = com.kyant.backdrop.backdrops.rememberLayerBackdrop()
     val pageBackdrop = com.kyant.backdrop.backdrops.rememberLayerBackdrop()

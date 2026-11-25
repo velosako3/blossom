@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 plugins {
     id("blossom.compose")
+    id("blossom.ios")
 }
 
 kotlin {
@@ -13,7 +14,10 @@ kotlin {
             implementation(libs.haze.glass)
             api(libs.coil.compose)
             implementation(libs.coil.network.ktor3)
-            implementation(libs.ktor.client.okhttp)
         }
+        // Coil's network engine: OkHttp on the JVM, Apple's URLSession on iOS.
+        androidMain.dependencies { implementation(libs.ktor.client.okhttp) }
+        getByName("desktopMain").dependencies { implementation(libs.ktor.client.okhttp) }
+        iosMain.dependencies { implementation(libs.ktor.client.darwin) }
     }
 }

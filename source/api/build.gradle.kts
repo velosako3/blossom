@@ -2,6 +2,7 @@
 plugins {
     id("blossom.kmp.library")
     id("blossom.serialization")
+    id("blossom.ios")
 }
 
 kotlin {
