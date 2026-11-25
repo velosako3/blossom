@@ -86,7 +86,7 @@ fun createAndroidGraph(context: Context): AppGraph {
         secure = secure,
         sources = mapOf(SourceKind.YOUTUBE to youtube, SourceKind.SOUNDCLOUD to soundcloud, SourceKind.UNTITLED to untitled),
         importers = mapOf(
-            io.github.velosako3.blossom.feature.importer.ImportService.SPOTIFY to io.github.velosako3.blossom.source.spotify.SpotifyImporter(auth = AndroidSpotifyAuth(context, secure)),
+            io.github.velosako3.blossom.feature.importer.ImportService.SPOTIFY to io.github.velosako3.blossom.source.spotify.SpotifyImporter(auth = io.github.velosako3.blossom.source.spotify.SpotifyCookieAuth({ secure.get(SPOTIFY_COOKIE_KEY) })),
             io.github.velosako3.blossom.feature.importer.ImportService.YOUTUBE_MUSIC to io.github.velosako3.blossom.source.youtubemusic.YtmImporter(ytm),
             io.github.velosako3.blossom.feature.importer.ImportService.SOUNDCLOUD to io.github.velosako3.blossom.source.soundcloud.SoundCloudImporter(soundcloudClient),
             io.github.velosako3.blossom.feature.importer.ImportService.UNTITLED to io.github.velosako3.blossom.source.untitled.UntitledImporter(untitledClient),
