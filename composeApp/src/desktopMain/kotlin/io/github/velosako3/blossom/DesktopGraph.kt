@@ -146,8 +146,8 @@ fun createDesktopGraph(): AppGraph {
     Runtime.getRuntime().addShutdownHook(Thread {
         // The play in progress is recorded before the process ends.
         runCatching { kotlinx.coroutines.runBlocking { kotlinx.coroutines.withTimeoutOrNull(2_000) { graph.playTracker.finish() } } }
-        runCatching { engine.release() }
-        runCatching { fadeEngine.release() }
+        // libVLC can hang on release; quitting must not wait for it more than 2 s.
+        Thread { runCatching { engine.release() }; runCatching { fadeEngine.release() } }.apply { isDaemon = true; start() }.join(2_000)
     })
     return graph
 }
