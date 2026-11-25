@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.feature.importer
 
+import kotlinx.coroutines.IO
 import app.cash.sqldelight.coroutines.asFlow
 import io.github.velosako3.blossom.core.database.BlossomDatabase
 import io.github.velosako3.blossom.core.database.LibraryCommands
@@ -56,7 +57,8 @@ class ImportJobRunner(
     /** Backoff for network errors while reading or matching; after the last one the job waits for the next start. */
     private val retryDelaysMs: List<Long> = listOf(2_000, 8_000, 30_000),
 ) {
-    private val running = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    @OptIn(kotlin.concurrent.atomics.ExperimentalAtomicApi::class)
+    private val running = kotlin.concurrent.atomics.AtomicReference(emptySet<String>())
     private val q get() = db.blossomQueries
     private val io = Dispatchers.IO
     private val json = Json { ignoreUnknownKeys = true }
@@ -105,11 +107,11 @@ class ImportJobRunner(
 
     private suspend fun run(id: ImportJobId) {
         // One runner per job: start() and resumePending() can both reach the same job.
-        if (!running.add(id.value)) return
+        while (true) { val old = running.load(); if (id.value in old) return; if (running.compareAndSet(old, old + id.value)) break }
         try {
             runGuarded(id)
         } finally {
-            running.remove(id.value)
+            while (true) { val old = running.load(); if (running.compareAndSet(old, old - id.value)) break }
         }
     }
 
@@ -185,7 +187,7 @@ class ImportJobRunner(
         while (true) {
             try {
                 return block()
-            } catch (e: java.io.IOException) {
+            } catch (e: kotlinx.io.IOException) {
                 if (attempt >= retryDelaysMs.size) return null
                 delay(retryDelaysMs[attempt++])
             }

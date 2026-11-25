@@ -18,9 +18,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.velosako3.blossom.core.designsystem.theme.BlossomTheme
-import java.time.DayOfWeek
-import java.time.format.TextStyle
-import java.util.Locale
 
 /** Bars for [values] with optional labels under some of them; the busiest bar is drawn in the accent colour. */
 @Composable
@@ -54,5 +51,5 @@ fun HourOfDayChart(byHourMs: LongArray, description: String, modifier: Modifier 
 /** Monday-first bars with the locale's short day names. */
 @Composable
 fun DayOfWeekChart(byDayMs: LongArray, description: String, modifier: Modifier = Modifier) =
-    Bars(byDayMs, DayOfWeek.entries.map { it.getDisplayName(TextStyle.SHORT, Locale.getDefault()) }, description, modifier)
+    Bars(byDayMs, io.github.velosako3.blossom.core.platform.weekdayShortNames(), description, modifier)
 

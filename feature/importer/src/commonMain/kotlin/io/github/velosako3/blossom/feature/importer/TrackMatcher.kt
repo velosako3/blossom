@@ -28,7 +28,7 @@ object TrackMatcher {
     private val SPACES = Regex("""\s+""")
 
     private fun normalize(s: String) =
-        PUNCTUATION.replace(java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFC).lowercase(), " ").let { SPACES.replace(it, " ").trim() }
+        PUNCTUATION.replace(io.github.velosako3.blossom.core.platform.nfc(s).lowercase(), " ").let { SPACES.replace(it, " ").trim() }
 
     /** Title without decorations, plus artists taken out of "feat." parts. */
     private fun clean(title: String, artists: List<String>): Pair<String, Set<String>> {

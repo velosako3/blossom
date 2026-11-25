@@ -7,7 +7,8 @@ import io.github.velosako3.blossom.core.model.PlaylistEntry
 import io.github.velosako3.blossom.core.model.PlaylistId
 import io.github.velosako3.blossom.core.model.Track
 import kotlinx.coroutines.CancellationException
-import java.util.concurrent.ConcurrentHashMap
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Instant
@@ -22,15 +23,17 @@ class DeadLinkRechecker(
     private val isAvailable: suspend (Track) -> Boolean?,
 ) {
     // ponytail: remembered per app session; a restart checks again, which is cheap.
-    private val lastChecked = ConcurrentHashMap<String, Instant>()
+    @OptIn(ExperimentalAtomicApi::class)
+    private val lastChecked = AtomicReference(emptyMap<String, Instant>())
 
     suspend fun recheckIfDue(playlistId: PlaylistId, entry: PlaylistEntry) {
         val track = entry.track ?: return
         val now = clock.now()
-        lastChecked[entry.entryId]?.let { if (now - it < 24.hours) return }
+        @OptIn(ExperimentalAtomicApi::class)
+        lastChecked.load()[entry.entryId]?.let { if (now - it < 24.hours) return }
         // Only an answer uses up the day; offline or an error means "ask again next time".
         val available = try { isAvailable(track) } catch (e: CancellationException) { throw e } catch (_: Exception) { null } ?: return
-        lastChecked[entry.entryId] = now
+        while (true) { val old = lastChecked.load(); if (lastChecked.compareAndSet(old, old + (entry.entryId to now))) break }
         when {
             !available && entry.status != EntryStatus.UNAVAILABLE -> commands.replaceEntryTrack(playlistId, entry.entryId, track, EntryStatus.UNAVAILABLE)
             available && entry.status == EntryStatus.UNAVAILABLE -> commands.replaceEntryTrack(playlistId, entry.entryId, track, EntryStatus.MATCHED)

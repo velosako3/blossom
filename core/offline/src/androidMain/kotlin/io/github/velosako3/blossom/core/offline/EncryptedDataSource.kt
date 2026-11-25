@@ -14,7 +14,7 @@ import io.github.velosako3.blossom.core.model.TrackId
 
 /** Media3 reads saved tracks (`blossom-offline:///<track id>`) through this, decrypting chunk by chunk. */
 @OptIn(UnstableApi::class)
-class EncryptedDataSource(private val store: OfflineStore) : BaseDataSource(false) {
+class EncryptedDataSource(private val store: SqlOfflineStore) : BaseDataSource(false) {
     private var cursor: DecryptingCursor? = null
     private var uri: Uri? = null
     private var remaining = 0L
@@ -56,7 +56,7 @@ class EncryptedDataSource(private val store: OfflineStore) : BaseDataSource(fals
         if (uri != null) { uri = null; transferEnded() }
     }
 
-    class Factory(private val store: OfflineStore) : DataSource.Factory {
+    class Factory(private val store: SqlOfflineStore) : DataSource.Factory {
         override fun createDataSource(): DataSource = EncryptedDataSource(store)
     }
 }

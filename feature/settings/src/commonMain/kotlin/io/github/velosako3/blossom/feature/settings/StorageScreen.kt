@@ -44,9 +44,10 @@ import org.jetbrains.compose.resources.stringResource
 
 /** "1.2 GB", "340 MB": decimal units, like the operating systems' own storage screens. */
 fun formatBytes(bytes: Long): String = when {
-    bytes >= 1_000_000_000 -> "%.1f GB".format(bytes / 1e9)
-    bytes >= 1_000_000 -> "%d MB".format(bytes / 1_000_000)
-    bytes >= 1_000 -> "%d KB".format(bytes / 1_000)
+    // One decimal, rounded half up, without String.format (not on iOS).
+    bytes >= 1_000_000_000 -> ((bytes + 50_000_000) / 100_000_000).let { "${it / 10}.${it % 10} GB" }
+    bytes >= 1_000_000 -> "${bytes / 1_000_000} MB"
+    bytes >= 1_000 -> "${bytes / 1_000} KB"
     else -> "$bytes B"
 }
 
