@@ -49,7 +49,8 @@ class ImportViewModel(
     val state: StateFlow<ImportUi> = _state
     private var job: Job? = null
     /** Set synchronously on start, so a double tap can't start two imports. */
-    private val starting = java.util.concurrent.atomic.AtomicBoolean(false)
+    @OptIn(kotlin.concurrent.atomics.ExperimentalAtomicApi::class)
+    private val starting = kotlin.concurrent.atomics.AtomicBoolean(false)
 
     fun onTextChange(value: String) {
         _text.value = value
@@ -70,7 +71,7 @@ class ImportViewModel(
         scope.launch {
             if (into == null) {
                 val same = repo.playlists().first().firstOrNull { it.origin?.url == link.canonicalUrl }
-                if (same != null) { _state.value = ImportUi.DuplicateFound(link, same.id, same.name); starting.set(false); return@launch }
+                if (same != null) { _state.value = ImportUi.DuplicateFound(link, same.id, same.name); starting.store(false); return@launch }
             }
             run(link, if (into != null) ImportTarget.Existing(into) else ImportTarget.NewPlaylist(name?.takeIf { it.isNotBlank() }))
         }
@@ -93,7 +94,7 @@ class ImportViewModel(
     }
 
     /** Back to an empty screen. A running import carries on in the background (it is resumable). */
-    fun reset() { job?.cancel(); starting.set(false); _text.value = ""; _state.value = ImportUi.Idle }
+    fun reset() { job?.cancel(); starting.store(false); _text.value = ""; _state.value = ImportUi.Idle }
 
     private suspend fun run(link: DetectedLink, target: ImportTarget) {
         onStart(target)

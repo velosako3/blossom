@@ -51,7 +51,7 @@ fun GlassTextField(
             cursorBrush = SolidColor(colors.accent),
             keyboardOptions = keyboardOptions,
             keyboardActions = keyboardActions,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().typingFocus(),
             decorationBox = { inner ->
                 Row(
                     Modifier.heightIn(min = 48.dp).padding(horizontal = 16.dp),

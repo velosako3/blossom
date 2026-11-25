@@ -50,6 +50,9 @@
     <string name="signin_spotify_title">Sign in to Spotify</string>
     <string name="signin_cookie_hint">Open music.youtube.com in your browser and sign in. Open the developer tools (F12) → Network, click any request to music.youtube.com, and copy the value of its Cookie request header here. blossom keeps it in its encrypted store and sends it only to YouTube.</string>
     <string name="signin_cookie_label">Cookie header</string>
+    <string name="signin_spotify_cookie_hint">Open open.spotify.com in your browser and sign in. Open the developer tools (F12) → Storage (Firefox) or Application (Chrome) → Cookies → https://open.spotify.com, and copy the value of the cookie named sp_dc here. blossom keeps it in its encrypted store and sends it only to Spotify.</string>
+    <string name="signin_spotify_cookie_label">sp_dc cookie</string>
+    <string name="signin_spotify_cookie_bad">Spotify didn't accept that cookie. Copy the sp_dc value again from a signed-in tab.</string>
     <string name="signin_cookie_bad">That doesn't look like a signed-in YouTube cookie (it has no SAPISID).</string>
     <string name="signin_save">Sign in</string>
     <string name="signin_confirm">Use this account</string>

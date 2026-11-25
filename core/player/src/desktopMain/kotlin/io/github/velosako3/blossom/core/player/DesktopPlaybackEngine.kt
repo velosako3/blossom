@@ -55,10 +55,16 @@ class DesktopPlaybackEngine(
         addLogListener { level, module, _, _, _, _, _, message -> System.err.println("vlc[$level/$module] $message") }
     } else null
 
+    /** From libVLC's lengthChanged event: event handlers must never call back into libVLC (see [init]). */
+    @Volatile private var lengthMs: Long = 0
+
     init {
+        // These run on libVLC's own event thread. Calling libVLC from here deadlocks against a track change: set_media
+        // holds the player lock and waits for this thread (it froze the app on "next", and then on quit).
         mediaPlayer.events().addMediaPlayerEventListener(object : MediaPlayerEventAdapter() {
+            override fun lengthChanged(mediaPlayer: MediaPlayer, newLength: Long) { lengthMs = newLength }
             override fun timeChanged(mediaPlayer: MediaPlayer, newTime: Long) {
-                _events.tryEmit(EngineEvent.Position(hlsTime(newTime), hls?.durationMs ?: mediaPlayer.status().length().coerceAtLeast(0), eventsId))
+                _events.tryEmit(EngineEvent.Position(hlsTime(newTime), hls?.durationMs ?: lengthMs.coerceAtLeast(0), eventsId))
             }
             override fun buffering(mediaPlayer: MediaPlayer, newCache: Float) {
                 _events.tryEmit(EngineEvent.Buffering(newCache < 100f, eventsId))
@@ -75,6 +81,7 @@ class DesktopPlaybackEngine(
     override suspend fun load(input: MediaInput, startPositionMs: Long) {
         val options = if (startPositionMs > 0) arrayOf(":start-time=${startPositionMs / 1000.0}") else emptyArray()
         mediaId++
+        lengthMs = 0
         reader?.close()
         when (input) {
             // libVLC's own HTTP client fails its second (seek) connection inside the JVM, so remote bytes come from

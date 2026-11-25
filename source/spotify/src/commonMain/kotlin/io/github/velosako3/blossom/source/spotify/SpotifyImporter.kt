@@ -207,7 +207,7 @@ class SpotifyImporter(
         const val LIKED_SONGS = "spotify:collection:tracks"
         private const val EMBED_LIMIT = 100
         private const val PAGE = 100
-        private const val FETCH_PLAYLIST_V1 = "19ff1327c29e99c208c86d7a9d8f1929cfdf3d3202a0ff4253c821f1901aa94d"
+        private const val FETCH_PLAYLIST_V1 = "21ea11a6ac75a5f3e01fd365d29c18e0a4a8b7dc09f89bbb5d73910190c6acaf"
         private const val FETCH_LIBRARY_TRACKS = "087278b20b743578a6262c2b0b4bcd20d879c503cc359a2285baf083ef944240"
         private const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         private val URI_FORM = Regex("""^spotify:(track|album|playlist):([A-Za-z0-9]+)$""")

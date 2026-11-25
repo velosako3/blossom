@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.feature.search
 
+import io.github.velosako3.blossom.core.designsystem.components.ScrollbarLazyColumn
+import io.github.velosako3.blossom.core.designsystem.components.horizontalScrollWithBar
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -73,6 +75,8 @@ fun SearchScreen(
             onValueChange = vm::onQueryChange,
             placeholder = stringResource(Res.string.search_placeholder),
             leadingIcon = Icons.Rounded.Search,
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
+            keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { vm.commit() }),
             modifier = Modifier.padding(horizontal = 16.dp).focusRequester(focusRequester),
             trailing = if (state.query.isNotEmpty()) {
                 { GlassIconButton({ vm.onQueryChange("") }, Icons.Rounded.Close, stringResource(Res.string.search_clear), size = 32.dp, iconSize = 18.dp, glass = false) }
@@ -88,7 +92,7 @@ fun SearchScreen(
         }
         // Offline results are songs only (local files and saved music), so the tabs would mislead.
         if (state.query.isNotBlank() && !state.offline) {
-            Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.horizontalScrollWithBar().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SearchTab.entries.forEach { t ->
                     GlassChip(state.tab == t, { vm.onTabChange(t) }, stringResource(t.label()))
                 }
@@ -101,7 +105,14 @@ fun SearchScreen(
                     Text(stringResource(Res.string.search_failed), color = colors.onSurfaceVariant)
                     GlassButton({ vm.onQueryChange(state.query + " "); vm.onQueryChange(state.query.trim()) }) { Text(stringResource(Res.string.search_retry)) }
                 }
-                else -> Results(state, onPlay, onOpenAlbum, onOpenArtist, onOpenPlaylist)
+                // Opening or playing a result is what makes it a search worth remembering.
+                else -> Results(
+                    state,
+                    { tracks, i -> vm.commit(); onPlay(tracks, i) },
+                    { vm.commit(); onOpenAlbum(it) },
+                    { vm.commit(); onOpenArtist(it) },
+                    { vm.commit(); onOpenPlaylist(it) },
+                )
             }
         }
     }
@@ -116,7 +127,7 @@ private fun SearchTab.label() = when (this) {
 
 @Composable
 private fun Recents(recents: List<String>, onPick: (String) -> Unit, onRemove: (String) -> Unit) {
-    LazyColumn(contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 12.dp, bottom = 12.dp + io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current)) {
+    ScrollbarLazyColumn(contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 12.dp, bottom = 12.dp + io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current)) {
         item {
             Text(
                 stringResource(if (recents.isEmpty()) Res.string.search_no_recent else Res.string.search_recent),
@@ -154,7 +165,7 @@ private fun Results(
         Text(stringResource(Res.string.search_no_results, state.query.trim()), color = BlossomTheme.colors.onSurfaceVariant, modifier = Modifier.padding(24.dp))
         return
     }
-    LazyColumn(contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 24.dp + io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current)) {
+    ScrollbarLazyColumn(contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 24.dp + io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current)) {
         when (state.tab) {
             SearchTab.SONGS -> itemsIndexed(r?.songs.orEmpty(), key = { _, t -> t.id.value }) { i, t ->
                 MediaRow(t.title, t.artistNames, t.artworkUrl, trailingText = formatDuration(t.durationMs).takeIf { t.durationMs > 0 }, onClick = { onPlay(r!!.songs, i) })

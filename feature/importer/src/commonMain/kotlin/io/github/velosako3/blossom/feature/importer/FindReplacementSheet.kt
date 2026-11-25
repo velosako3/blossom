@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.feature.importer
 
+import io.github.velosako3.blossom.core.designsystem.components.ScrollbarLazyColumn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -64,7 +65,7 @@ private fun ReplacementSheet(
                     CircularProgressIndicator(color = BlossomTheme.colors.accent)
                 }
                 list.isEmpty() -> Text(stringResource(none), color = BlossomTheme.colors.onSurfaceVariant, modifier = Modifier.padding(vertical = 16.dp))
-                else -> LazyColumn(Modifier.heightIn(max = 420.dp)) {
+                else -> ScrollbarLazyColumn(Modifier.heightIn(max = 420.dp)) {
                     items(list, key = { it.id.value }) { t ->
                         val source = when (t.id.kind) {
                             SourceKind.SOUNDCLOUD -> stringResource(Res.string.replace_source_soundcloud)

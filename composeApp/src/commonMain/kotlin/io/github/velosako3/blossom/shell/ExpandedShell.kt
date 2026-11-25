@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.shell
 
+import io.github.velosako3.blossom.core.designsystem.components.verticalScrollWithBar
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandHorizontally
@@ -101,7 +102,7 @@ fun ExpandedShell(navigator: Navigator, slots: ShellSlots, modifier: Modifier = 
                     color = BlossomTheme.colors.onSurfaceVariant,
                     modifier = Modifier.padding(start = 12.dp, top = 20.dp, bottom = 6.dp),
                 )
-                Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                Column(Modifier.weight(1f).verticalScrollWithBar()) {
                     slots.sidebarPlaylists?.invoke() ?: Text(
                         stringResource(Res.string.no_playlists_yet),
                         style = MaterialTheme.typography.bodyMedium,

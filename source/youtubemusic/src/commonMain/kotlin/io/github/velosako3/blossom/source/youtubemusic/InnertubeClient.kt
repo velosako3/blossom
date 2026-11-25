@@ -7,7 +7,6 @@ package io.github.velosako3.blossom.source.youtubemusic
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -33,19 +32,18 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
-import java.io.IOException
-import java.security.MessageDigest
-import java.util.Locale
+import kotlinx.io.IOException
 
 /** YouTube Music's internal web API (WEB_REMIX), as its own web player calls it. */
 class InnertubeClient(
     private val cookie: suspend () -> String? = { null },
-    private val language: () -> String = { Locale.getDefault().language.ifBlank { "en" } },
-    private val region: () -> String = { Locale.getDefault().country.ifBlank { "US" } },
+    private val language: () -> String = { io.github.velosako3.blossom.core.platform.deviceLanguage().ifBlank { "en" } },
+    private val region: () -> String = { io.github.velosako3.blossom.core.platform.deviceRegion().ifBlank { "US" } },
     http: HttpClient? = null,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
-    private val client = http ?: HttpClient(OkHttp) {
+    // The platform's engine (OkHttp on the JVM, URLSession on iOS), whichever is on the classpath.
+    private val client = http ?: HttpClient {
         install(ContentNegotiation) { json(json) }
         install(HttpTimeout) {
             requestTimeoutMillis = 30_000
@@ -55,7 +53,7 @@ class InnertubeClient(
         expectSuccess = true
     }
 
-    @Volatile var visitorData: String? = null
+    @kotlin.concurrent.Volatile var visitorData: String? = null
         private set
 
     suspend fun search(query: String, params: String? = null): JsonObject = post("search") {
@@ -68,8 +66,8 @@ class InnertubeClient(
 
     /** Timed caption transcript (a last-resort lyrics source). The params are a tiny protobuf: field 1 = video ID. */
     suspend fun transcript(videoId: String): JsonObject = post("get_transcript") {
-        val bytes = byteArrayOf(10, videoId.toByteArray().size.toByte()) + videoId.toByteArray()
-        put("params", java.util.Base64.getEncoder().encodeToString(bytes))
+        val bytes = byteArrayOf(10, videoId.encodeToByteArray().size.toByte()) + videoId.encodeToByteArray()
+        put("params", kotlin.io.encoding.Base64.encode(bytes))
     }
 
     suspend fun browse(browseId: String, params: String? = null): JsonObject = post("browse") {
@@ -199,9 +197,8 @@ class InnertubeClient(
     }
 
     private fun sapisidHash(sapisid: String): String {
-        val ts = System.currentTimeMillis() / 1000
-        val digest = MessageDigest.getInstance("SHA-1").digest("$ts $sapisid $MUSIC_ORIGIN".toByteArray())
-            .joinToString("") { "%02x".format(Locale.ROOT, it) }
+        val ts = kotlin.time.Clock.System.now().epochSeconds
+        val digest = io.ktor.util.sha1("$ts $sapisid $MUSIC_ORIGIN".encodeToByteArray()).joinToString("") { (it.toInt() and 0xff).toString(16).padStart(2, '0') }
         return "SAPISIDHASH ${ts}_$digest"
     }
 

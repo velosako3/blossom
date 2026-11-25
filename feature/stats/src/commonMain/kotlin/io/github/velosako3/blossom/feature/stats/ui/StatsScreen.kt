@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.feature.stats.ui
 
+import io.github.velosako3.blossom.core.designsystem.components.verticalScrollWithBar
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,13 +46,13 @@ import io.github.velosako3.blossom.feature.stats.PeriodStats
 import io.github.velosako3.blossom.feature.stats.resources.*
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
-import java.time.LocalDate
-import java.time.format.TextStyle
-import java.util.Locale
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.number
+import kotlinx.datetime.plus
+import io.github.velosako3.blossom.feature.stats.localDate
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.days
-import kotlin.time.toJavaInstant
 
 @Composable
 fun StatsScreen(vm: StatsViewModel, onOpenWrapped: (Period) -> Unit, modifier: Modifier = Modifier) {
@@ -77,7 +78,7 @@ fun StatsContent(
     val muted = BlossomTheme.colors.onSurfaceVariant
     Box(modifier.fillMaxSize()) {
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).windowInsetsPadding(WindowInsets.statusBars)
+            Modifier.fillMaxSize().verticalScrollWithBar().windowInsetsPadding(WindowInsets.statusBars)
                 .padding(horizontal = 16.dp, vertical = 12.dp).padding(bottom = io.github.velosako3.blossom.core.designsystem.glass.LocalBarsPadding.current).widthIn(max = 900.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
@@ -109,7 +110,7 @@ private fun Loaded(s: PeriodStats, onOpenWrapped: (Period) -> Unit) {
     val muted = BlossomTheme.colors.onSurfaceVariant
     GlassSurface(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(20.dp)) {
-            Text("%,d".format(s.totalListeningMs / 60_000), fontSize = 44.sp, fontWeight = FontWeight.Bold)
+            Text(io.github.velosako3.blossom.core.platform.groupedNumber(s.totalListeningMs / 60_000), fontSize = 44.sp, fontWeight = FontWeight.Bold)
             Text(stringResource(Res.string.stats_minutes), color = muted)
             Text(pluralStringResource(Res.plurals.stats_plays, s.countedPlays, s.countedPlays), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
             s.listeningChangePercent?.let { change ->
@@ -155,21 +156,19 @@ private fun Section(title: String, content: @Composable () -> Unit) {
 
 /** "16–22 Nov 2026", "November 2026", "2026". */
 fun label(p: Period): String {
-    val locale = Locale.getDefault()
     return when (p) {
         is Period.Week -> {
-            val zone = java.time.ZoneId.of(p.zone.id)
-            val first = p.start.toJavaInstant().atZone(zone).toLocalDate()
+            val first = localDate(p.start, p.zone)
             // Monday + 6 days: an instant minus 24 h lands on Saturday in a spring-forward week.
-            val last = first.plusDays(6)
-            val month = { d: LocalDate -> d.month.getDisplayName(TextStyle.SHORT, locale) }
+            val last = first.plus(6, kotlinx.datetime.DateTimeUnit.DAY)
+            val month = { d: LocalDate -> io.github.velosako3.blossom.core.platform.monthName(d.month.number, full = false) }
             when {
                 first.year != last.year -> "${first.dayOfMonth} ${month(first)} ${first.year} – ${last.dayOfMonth} ${month(last)} ${last.year}"
                 first.month != last.month -> "${first.dayOfMonth} ${month(first)} – ${last.dayOfMonth} ${month(last)} ${last.year}"
                 else -> "${first.dayOfMonth}–${last.dayOfMonth} ${month(last)} ${last.year}"
             }
         }
-        is Period.Month -> "${java.time.Month.of(p.month).getDisplayName(TextStyle.FULL_STANDALONE, locale)} ${p.year}"
+        is Period.Month -> "${io.github.velosako3.blossom.core.platform.monthName(p.month, full = true)} ${p.year}"
         is Period.Year -> p.year.toString()
     }
 }

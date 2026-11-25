@@ -101,7 +101,10 @@ object EnhancedLrc {
      */
     private fun codePoint(match: MatchResult, radix: Int): String {
         val value = match.groupValues[1].toIntOrNull(radix)
-        return if (value != null && Character.isValidCodePoint(value)) String(Character.toChars(value)) else match.value
+        if (value == null || value !in 0..0x10FFFF || value in 0xD800..0xDFFF) return match.value
+        if (value < 0x10000) return value.toChar().toString()
+        val v = value - 0x10000 // a surrogate pair
+        return charArrayOf((0xD800 + (v shr 10)).toChar(), (0xDC00 + (v and 0x3FF)).toChar()).concatToString()
     }
 
     private const val TAIL_MS = 800L

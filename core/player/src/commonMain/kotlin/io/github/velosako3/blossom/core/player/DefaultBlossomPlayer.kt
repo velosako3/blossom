@@ -335,4 +335,4 @@ class DefaultBlossomPlayer(
     }
 }
 
-private fun nanoTime(): Long = System.nanoTime()
+private fun nanoTime(): Long = io.github.velosako3.blossom.core.platform.monotonicNanos()

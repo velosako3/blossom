@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.feature.importer
 
+import kotlin.jvm.JvmInline
 import io.github.velosako3.blossom.core.model.EntryStatus
 import io.github.velosako3.blossom.core.model.PlaylistId
 import io.github.velosako3.blossom.core.model.Track

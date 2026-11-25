@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.feature.settings.onboarding
 
+import io.github.velosako3.blossom.core.designsystem.components.verticalScrollWithBar
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -52,7 +53,7 @@ fun OnboardingFlow(theme: ThemeMode, onTheme: (ThemeMode) -> Unit, onFinish: (On
     val muted = BlossomTheme.colors.onSurfaceVariant
     Box(modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
         GlassSurface(Modifier.widthIn(max = 520.dp).fillMaxWidth()) {
-            Column(Modifier.verticalScroll(rememberScrollState()).padding(28.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            Column(Modifier.verticalScrollWithBar().padding(28.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 Text(stringResource(Res.string.onb_step, step + 1, 3), color = muted, style = MaterialTheme.typography.labelLarge)
                 AnimatedContent(step) { s ->
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {

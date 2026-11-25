@@ -50,9 +50,18 @@ class SearchViewModelTest {
         val source = RecordingSource()
         val recents = RecentSearchStore(MapPreferenceStore())
         val vm = SearchViewModel(source, recents, backgroundScope)
-        vm.onQueryChange("Kanye"); advanceTimeBy(400); runCurrent()
-        vm.onQueryChange("kanye"); advanceTimeBy(400); runCurrent()
+        vm.onQueryChange("Kanye"); advanceTimeBy(400); runCurrent(); vm.commit()
+        vm.onQueryChange("kanye"); advanceTimeBy(400); runCurrent(); vm.commit()
         assertEquals(1, recents.recents().size)
+    }
+
+    @Test fun onlyWhatWasSearchedForIsRemembered() = runTest {
+        val recents = RecentSearchStore(MapPreferenceStore())
+        val vm = SearchViewModel(RecordingSource(), recents, backgroundScope)
+        for (typed in listOf("frank", "frank ", "frank oc", "frank ocean")) { vm.onQueryChange(typed); advanceTimeBy(400); runCurrent() }
+        assertEquals(emptyList(), recents.recents(), "pauses while typing are not searches to remember")
+        vm.commit()
+        assertEquals(listOf("frank ocean"), recents.recents())
     }
 
     @Test fun recentsCappedAt20MostRecentFirst() {

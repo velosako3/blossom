@@ -34,6 +34,6 @@ class EqBandMapperTest {
     }
 
     @Test fun presetsStayInRange() {
-        EqPreset.entries.forEach { p -> assertEquals(10, p.gains.size); p.gains.forEach { g -> assert(g in -12f..12f) } }
+        EqPreset.entries.forEach { p -> assertEquals(10, p.gains.size); p.gains.forEach { g -> kotlin.test.assertTrue(g in -12f..12f) } }
     }
 }

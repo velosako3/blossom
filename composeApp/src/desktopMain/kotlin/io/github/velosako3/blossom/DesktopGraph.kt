@@ -41,7 +41,7 @@ fun createDesktopGraph(): AppGraph {
     val prefs = FilePreferenceStore(File(dataDir, "preferences.properties"))
     val network = DesktopNetworkMonitor(scope)
     val streams = YouTubeStreams({ secure.get(YtmSource.COOKIE_KEY) }, cacheDir)
-    val ytm = YtmSource(secure, cacheDir, streams = streams)
+    val ytm = YtmSource(secure, streams)
     val youtube = YouTubeSource(streams)
     val soundcloudClient = io.github.velosako3.blossom.source.soundcloud.SoundCloudClient()
     val soundcloud = io.github.velosako3.blossom.source.soundcloud.SoundCloudSource(soundcloudClient)
@@ -99,7 +99,7 @@ fun createDesktopGraph(): AppGraph {
         offlineSettings = offlineSettings,
         sources = mapOf(SourceKind.YOUTUBE to youtube, SourceKind.SOUNDCLOUD to soundcloud, SourceKind.UNTITLED to untitled),
         importers = mapOf(
-            io.github.velosako3.blossom.feature.importer.ImportService.SPOTIFY to io.github.velosako3.blossom.source.spotify.SpotifyImporter(auth = null),
+            io.github.velosako3.blossom.feature.importer.ImportService.SPOTIFY to io.github.velosako3.blossom.source.spotify.SpotifyImporter(auth = io.github.velosako3.blossom.source.spotify.SpotifyCookieAuth({ secure.get(SPOTIFY_COOKIE_KEY) })),
             io.github.velosako3.blossom.feature.importer.ImportService.YOUTUBE_MUSIC to io.github.velosako3.blossom.source.youtubemusic.YtmImporter(ytm),
             io.github.velosako3.blossom.feature.importer.ImportService.SOUNDCLOUD to io.github.velosako3.blossom.source.soundcloud.SoundCloudImporter(soundcloudClient),
             io.github.velosako3.blossom.feature.importer.ImportService.UNTITLED to io.github.velosako3.blossom.source.untitled.UntitledImporter(untitledClient),
@@ -146,8 +146,8 @@ fun createDesktopGraph(): AppGraph {
     Runtime.getRuntime().addShutdownHook(Thread {
         // The play in progress is recorded before the process ends.
         runCatching { kotlinx.coroutines.runBlocking { kotlinx.coroutines.withTimeoutOrNull(2_000) { graph.playTracker.finish() } } }
-        runCatching { engine.release() }
-        runCatching { fadeEngine.release() }
+        // libVLC can hang on release; quitting must not wait for it more than 2 s.
+        Thread { runCatching { engine.release() }; runCatching { fadeEngine.release() } }.apply { isDaemon = true; start() }.join(2_000)
     })
     return graph
 }

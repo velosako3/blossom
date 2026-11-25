@@ -10,7 +10,11 @@ import io.github.velosako3.blossom.source.api.MusicSource
 import io.github.velosako3.blossom.source.api.SearchFilter
 import io.github.velosako3.blossom.source.api.SearchResults
 import io.github.velosako3.blossom.source.api.StreamInfo
-import java.io.File
+
+/** Where a video's audio stream comes from: NewPipe/InnerTubeX on the JVM ([YouTubeStreams]), the iOS client on iOS. */
+fun interface YtmStreams {
+    suspend fun resolve(videoId: String, quality: AudioQuality): StreamInfo
+}
 
 /** Search params YouTube Music's own filter chips send. */
 internal object YtmSearchParams {
@@ -27,9 +31,8 @@ internal object YtmSearchParams {
  */
 class YtmSource(
     private val secureStore: SecureStore,
-    cacheDir: File,
+    private val streams: YtmStreams,
     val client: InnertubeClient = InnertubeClient(cookie = { secureStore.get(COOKIE_KEY) }),
-    private val streams: YouTubeStreams = YouTubeStreams({ secureStore.get(COOKIE_KEY) }, cacheDir),
 ) : MusicSource, YtmBrowse {
     override val kind = SourceKind.YOUTUBE_MUSIC
 

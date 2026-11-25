@@ -79,7 +79,7 @@ class PlaybackPosition {
      * — the desktop's audio thread — so it carries the moment it was true and
      * not the moment it arrived.
      */
-    fun report(positionMs: Long, sampledAtNanos: Long = System.nanoTime(), isPlaying: Boolean? = null) {
+    fun report(positionMs: Long, sampledAtNanos: Long = io.github.velosako3.blossom.core.platform.monotonicNanos(), isPlaying: Boolean? = null) {
         // An observer still running in paused UI state must see that a new sample is already playing.
         Snapshot.withMutableSnapshot {
             this.positionMs = positionMs

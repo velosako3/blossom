@@ -1,6 +1,6 @@
 # blossom
 
-A free, open-source, liquid-glass music player for Android, Windows and Linux.
+A free, open-source, liquid-glass music player for Android, Windows, Linux and (in beta) iPhone.
 
 It's free for everyone: no ads, no paid tier, no analytics, no blossom account.
 
@@ -38,6 +38,7 @@ blossom then updates itself: it offers each new release and installs it when you
 | Android 8+ | `blossom-<version>-android-<abi>.apk` | Pick `arm64-v8a` for most phones, or `universal`. Allow installing from your browser or file manager. |
 | Windows 10/11 (x64) | `blossom-<version>-windows-x64.msi` | Or the `-portable.zip`: unzip and run `blossom.exe`. |
 | Linux (x86_64) | `blossom-<version>-linux-x86_64.AppImage` | `chmod +x` and run. Or `sudo apt install ./blossom_<version>_amd64.deb`. |
+| iPhone / iPad (iOS 16+), beta | `blossom-<version>-ios-unsigned.ipa` | Install with [SideStore](https://sidestore.io) or [AltStore](https://altstore.io), which sign it with your own Apple ID (free accounts re-sign every 7 days). For now: Home, Search, Library, playlists, Now playing with lyrics; no import, sync, offline saving or stats yet. |
 
 Each release has `SHA256SUMS` files to check downloads against. The Windows installer isn't code-signed yet, so Windows
 may show "Windows protected your PC": choose **More info → Run anyway**. Pre-releases named "test build" are for testing.

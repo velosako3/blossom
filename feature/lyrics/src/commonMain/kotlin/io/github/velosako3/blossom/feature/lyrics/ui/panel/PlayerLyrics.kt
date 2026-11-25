@@ -137,7 +137,6 @@ import io.github.velosako3.blossom.feature.lyrics.providers.GrowingWord
 import io.github.velosako3.blossom.feature.lyrics.providers.LyricAlignment
 import io.github.velosako3.blossom.feature.lyrics.providers.LyricLine
 import io.github.velosako3.blossom.feature.lyrics.providers.LyricsSource
-import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -158,11 +157,11 @@ private fun isRtl(text: String): Boolean {
         val code = ch.code
         // Hebrew presentation forms
         if (code in 0xFB1D..0xFB4F) return true
-        val dir = Character.getDirectionality(ch)
-        when (dir) {
-            Character.DIRECTIONALITY_RIGHT_TO_LEFT,
-            Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC -> rtlCount++
-            Character.DIRECTIONALITY_LEFT_TO_RIGHT -> ltrCount++
+        // blossom: by Unicode block (the same on every platform): Hebrew, Arabic, Syriac, Thaana, N'Ko and their
+        // presentation forms are right-to-left; any other letter counts as left-to-right.
+        when {
+            code in 0x0590..0x08FF || code in 0xFB1D..0xFDFF || code in 0xFE70..0xFEFF -> rtlCount++
+            ch.isLetter() -> ltrCount++
         }
     }
     return rtlCount > ltrCount
@@ -602,7 +601,7 @@ private fun rememberLyricClock(
     val foreground = rememberIsForeground()
     LaunchedEffect(engine, playhead, isPlaying, active, foreground) {
         snapshotFlow { playhead.reading(isPlaying) }.collect { reading ->
-            engine.observe(reading, nanosToMs(System.nanoTime()), active && foreground)?.let {
+            engine.observe(reading, nanosToMs(io.github.velosako3.blossom.core.platform.monotonicNanos()), active && foreground)?.let {
                 clock.longValue = it
             }
         }
@@ -629,7 +628,7 @@ private fun rememberLyricClock(
                 // time is that clock too wherever it is a vsync stamp, and is
                 // preferred for being evenly spaced; anywhere it is not, the
                 // two are seconds apart and the real clock is used instead.
-                val system = System.nanoTime()
+                val system = io.github.velosako3.blossom.core.platform.monotonicNanos()
                 val now = if (abs(system - frameNanos) < SAME_CLOCK_NANOS) frameNanos else system
                 clock.longValue = engine.frame(nanosToMs(now), playhead.reading(isPlaying))
             }
@@ -2479,7 +2478,7 @@ private fun Modifier.revealBacking(progress: State<Float>, alignEnd: Boolean): M
     }
 
 private fun String.differsFrom(original: String): Boolean =
-    trim().lowercase(Locale.ROOT) != original.trim().lowercase(Locale.ROOT)
+    trim().lowercase() != original.trim().lowercase()
 
 /**
  * The answering vocal without the parentheses every text-only source wraps it

@@ -3,7 +3,6 @@ package io.github.velosako3.blossom.feature.library.local
 
 import io.github.velosako3.blossom.core.model.SourceKind
 import io.github.velosako3.blossom.core.model.TrackId
-import java.security.MessageDigest
 
 private fun normalize(s: String) = s.replace(Regex("[\\s\\p{Z}]+"), " ").trim().lowercase()
 
@@ -13,6 +12,6 @@ private fun normalize(s: String) = s.replace(Regex("[\\s\\p{Z}]+"), " ").trim().
  */
 fun localTrackId(title: String, artist: String, album: String?): TrackId {
     val key = "${normalize(title)}|${normalize(artist)}|${normalize(album ?: "")}"
-    val hex = MessageDigest.getInstance("SHA-1").digest(key.toByteArray()).joinToString("") { "%02x".format(it) }
+    val hex = io.github.velosako3.blossom.core.platform.sha1Hex(key.encodeToByteArray())
     return TrackId.of(SourceKind.LOCAL, hex)
 }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.core.database
 
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.map
 import app.cash.sqldelight.coroutines.asFlow
 import io.github.velosako3.blossom.core.model.sync.Hlc

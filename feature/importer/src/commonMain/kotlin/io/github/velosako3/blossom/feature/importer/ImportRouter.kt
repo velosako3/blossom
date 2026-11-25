@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.github.velosako3.blossom.feature.importer
 
-import java.net.URI
-import java.net.URLDecoder
 
 enum class ImportService { SPOTIFY, YOUTUBE_MUSIC, SOUNDCLOUD, UNTITLED }
 
@@ -33,10 +31,10 @@ object ImportRouter {
         }
         val withScheme = if ("://" in text) text else "https://$text"
         // A malformed query (a stray "%") shouldn't hide an otherwise fine link: drop the query and try again.
-        val uri = runCatching { URI(withScheme) }.getOrNull() ?: runCatching { URI(withScheme.substringBefore('?')) }.getOrNull() ?: return null
-        if (uri.scheme?.lowercase() !in setOf("http", "https")) return null
-        val host = uri.host?.lowercase()?.removePrefix("www.")?.removePrefix("m.") ?: return null
-        val path = uri.rawPath.orEmpty()
+        val uri = linkParts(withScheme) ?: linkParts(withScheme.substringBefore('?')) ?: return null
+        if (uri.scheme.lowercase() !in setOf("http", "https")) return null
+        val host = uri.host.lowercase().removePrefix("www.").removePrefix("m.")
+        val path = uri.rawPath
         val query = params(uri.rawQuery)
         return when (host) {
             "open.spotify.com", "play.spotify.com" -> SPOTIFY_PATH.matchEntire(path)?.let { m ->
@@ -97,7 +95,7 @@ object ImportRouter {
     /** Query parameters (tracking ones like `si`, `utm_*`, `feature` never reach the canonical URL anyway). A malformed escape drops only its own parameter. */
     private fun params(raw: String?): Map<String, String> = raw.orEmpty().split('&').filter { '=' in it }.mapNotNull {
         val (k, v) = it.split('=', limit = 2)
-        runCatching { URLDecoder.decode(k, Charsets.UTF_8) to URLDecoder.decode(v, Charsets.UTF_8) }.getOrNull()
+        runCatching { decodeQueryComponent(k) to decodeQueryComponent(v) }.getOrNull()
     }.toMap()
 
     private val VIDEO_ID = Regex("""[A-Za-z0-9_-]{1,32}""")

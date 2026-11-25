@@ -87,7 +87,7 @@ private fun rememberPlaybackPosition(player: BlossomPlayer): PlaybackPosition {
                 // Seeks first, so the reading below is recorded as the landing of that jump.
                 if (position.seeks != p.seeks) position.seeks = p.seeks
                 position.advancing = playing
-                position.report(p.positionMs, p.sampledAtNanos.takeIf { it > 0 } ?: System.nanoTime(), playing)
+                position.report(p.positionMs, p.sampledAtNanos.takeIf { it > 0 } ?: io.github.velosako3.blossom.core.platform.monotonicNanos(), playing)
             }
     }
     return position

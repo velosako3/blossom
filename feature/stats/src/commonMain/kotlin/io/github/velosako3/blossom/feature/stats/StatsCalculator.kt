@@ -4,9 +4,10 @@ package io.github.velosako3.blossom.feature.stats
 import io.github.velosako3.blossom.core.model.AlbumRef
 import io.github.velosako3.blossom.core.model.ArtistRef
 import io.github.velosako3.blossom.core.model.PlayEvent
-import java.time.temporal.ChronoUnit
+import kotlinx.datetime.daysUntil
+import kotlinx.datetime.isoDayNumber
+import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Instant
-import kotlin.time.toJavaInstant
 
 /**
  * Stats for one period from its play events. A play belongs to the period it started in. Listening time includes every
@@ -30,21 +31,21 @@ object StatsCalculator {
         val hours = LongArray(24)
         val weekdays = LongArray(7)
         for (e in inPeriod) {
-            val local = e.startedAt.toJavaInstant().atZone(zoneOf(zone))
+            val local = e.startedAt.toLocalDateTime(zone)
             hours[local.hour] += e.playedMs
-            weekdays[local.dayOfWeek.value - 1] += e.playedMs
+            weekdays[local.dayOfWeek.isoDayNumber - 1] += e.playedMs
         }
 
         // New: the artist's first-ever counted play is in this period (a skipped stranger isn't new to you).
         val countedArtists = counted.flatMap { e -> e.track.artists }.distinctBy(::artistKey)
         val newArtists = countedArtists.filter { a -> allTimeFirstPlays[artistKey(a)]?.let { it in period } ?: true }
 
-        val days = counted.map { localDate(it.startedAt, zone) }.toSortedSet()
+        val days = counted.map { localDate(it.startedAt, zone) }.distinct().sorted()
         var longest = 0
         var run = 0
-        var prev: java.time.LocalDate? = null
+        var prev: kotlinx.datetime.LocalDate? = null
         for (d in days) {
-            run = if (prev != null && ChronoUnit.DAYS.between(prev, d) == 1L) run + 1 else 1
+            run = if (prev != null && prev.daysUntil(d) == 1) run + 1 else 1
             longest = maxOf(longest, run)
             prev = d
         }

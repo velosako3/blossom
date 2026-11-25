@@ -100,7 +100,7 @@ private fun Content(card: WrappedCard, u: Dp) {
             Small(stringResource(Res.string.wr_listened_for), fs(22))
             CountUp(card.minutes, fs(96))
             Big(stringResource(Res.string.wr_minutes), fs(40))
-            Small(stringResource(Res.string.wr_across_plays, "%,d".format(card.plays)), fs(18), Modifier.padding(top = 18 * u))
+            Small(stringResource(Res.string.wr_across_plays, io.github.velosako3.blossom.core.platform.groupedNumber(card.plays.toLong())), fs(18), Modifier.padding(top = 18 * u))
         }
         is WrappedCard.TopSong -> Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center) {
             Small(stringResource(Res.string.wr_top_song), fs(22))
@@ -138,7 +138,7 @@ private fun Content(card: WrappedCard, u: Dp) {
             }), fs(40), lineHeight = fs(42))
             Spacer(Modifier.height(32 * u))
             HourOfDayChart(card.byHourMs.toLongArray(), "", Modifier.fillMaxWidth())
-            Small(stringResource(Res.string.wr_peak, "%02d:00".format(card.peakHour)), fs(18), Modifier.padding(top = 20 * u))
+            Small(stringResource(Res.string.wr_peak, card.peakHour.toString().padStart(2, '0') + ":00"), fs(18), Modifier.padding(top = 20 * u))
         }
         is WrappedCard.NewArtists -> NewArtistsCard(card, u)
         is WrappedCard.Streak -> Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center) {
@@ -156,7 +156,7 @@ private fun Content(card: WrappedCard, u: Dp) {
         is WrappedCard.Summary -> Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(18 * u, Alignment.CenterVertically)) {
             PopIn { Art(card.artworkUrl, 180 * u, glow = true) }
             Big(stringResource(Res.string.wr_summary, periodWord(card.period)), fs(32))
-            Stat(stringResource(Res.string.wr_summary_minutes), "%,d".format(card.minutes), u)
+            Stat(stringResource(Res.string.wr_summary_minutes), io.github.velosako3.blossom.core.platform.groupedNumber(card.minutes.toLong()), u)
             card.topSong?.let { Stat(stringResource(Res.string.wr_summary_song), it.title, u) }
             card.topArtist?.let { Stat(stringResource(Res.string.wr_summary_artist), it.name, u) }
         }
@@ -184,7 +184,7 @@ private fun CountUp(value: Long, size: TextUnit) {
     var target by remember { mutableStateOf(if (reduce) value.toInt() else 0) }
     LaunchedEffect(value) { target = value.toInt() }
     val shown by animateIntAsState(target, if (reduce) tween(0) else tween(1_200))
-    Text("%,d".format(shown), color = BlossomTheme.palette.vibrant.copy(alpha = 1f).let { lerpToWhite(it) }, fontSize = size, fontWeight = FontWeight.Black, maxLines = 1)
+    Text(io.github.velosako3.blossom.core.platform.groupedNumber(shown.toLong()), color = BlossomTheme.palette.vibrant.copy(alpha = 1f).let { lerpToWhite(it) }, fontSize = size, fontWeight = FontWeight.Black, maxLines = 1)
 }
 
 /** The palette's vibrant colour, lifted so it pops on the dark card. */
@@ -258,13 +258,13 @@ private fun Stat(label: String, value: String, u: Dp) {
 @Composable
 fun periodTitle(p: Period): String = when (p) {
     is Period.Week -> stringResource(Res.string.wr_week)
-    is Period.Month -> stringResource(Res.string.wr_month, java.time.Month.of(p.month).getDisplayName(java.time.format.TextStyle.FULL_STANDALONE, java.util.Locale.getDefault()))
+    is Period.Month -> stringResource(Res.string.wr_month, io.github.velosako3.blossom.core.platform.monthName(p.month, full = true))
     is Period.Year -> stringResource(Res.string.wr_year, p.year.toString())
 }
 
 @Composable
 private fun periodWord(p: Period): String = when (p) {
     is Period.Week -> stringResource(Res.string.wr_word_week)
-    is Period.Month -> java.time.Month.of(p.month).getDisplayName(java.time.format.TextStyle.FULL_STANDALONE, java.util.Locale.getDefault())
+    is Period.Month -> io.github.velosako3.blossom.core.platform.monthName(p.month, full = true)
     is Period.Year -> p.year.toString()
 }
