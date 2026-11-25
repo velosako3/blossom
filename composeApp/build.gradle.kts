@@ -129,6 +129,9 @@ kotlin {
  * 510 MB with G1, 445 MB with these flags, 359 MB with fewer malloc arenas on top, see Main.kt).
  */
 val desktopMemoryFlags = listOf(
+    // Windows: Skia's DirectX renderer took ~220 MB more than OpenGL (memory-probe workflow, 2026-11-25: 484 MB working
+    // set vs 261 MB at startup). Linux already renders with OpenGL; Skia falls back by itself where it's missing.
+    "-Dskiko.renderApi=OPENGL",
     "-XX:+UseSerialGC", "-Xms24m", "-XX:MaxNewSize=40m", "-Xmx768m",
     "-XX:MinHeapFreeRatio=10", "-XX:MaxHeapFreeRatio=30", "-XX:+UseStringDeduplication",
 )
