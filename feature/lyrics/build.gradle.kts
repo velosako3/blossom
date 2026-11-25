@@ -28,6 +28,7 @@ kotlin {
         // BitChord's panel collects with lifecycle, which needs a Main dispatcher (the app has Swing's).
         getByName("desktopTest").dependencies {
             implementation(libs.kotlinx.coroutines.swing)
+            implementation(libs.ktor.client.okhttp)
         }
     }
 }

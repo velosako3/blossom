@@ -14,4 +14,5 @@ extensions.configure<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtensio
     }
     sourceSets.getByName("desktopMain").dependencies { implementation(lib("sqldelight-sqlite-driver")) }
     sourceSets.getByName("androidMain").dependencies { implementation(lib("sqldelight-android-driver")) }
+    sourceSets.matching { it.name == "iosMain" }.configureEach { dependencies { implementation(lib("sqldelight-native-driver")) } }
 }

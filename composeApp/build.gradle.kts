@@ -7,8 +7,7 @@ import java.util.Properties
 plugins {
     id("blossom.compose")
     id("blossom.desktop.app")
-    // Open-source licenses for Settings → About, read from the dependencies' POMs.
-    id("com.mikepenz.aboutlibraries.plugin") version "15.3.0"
+    id("blossom.ios")
 }
 
 aboutLibraries {
@@ -102,16 +101,21 @@ kotlin {
                 implementation(projects.feature.settings)
                 implementation(projects.feature.importer)
                 implementation(projects.feature.stats)
-                implementation(projects.feature.sync)
-                implementation(projects.feature.integrations)
-                implementation(projects.source.spotify)
-                implementation(projects.source.soundcloud)
-                implementation(projects.source.untitled)
                 implementation(projects.core.database)
                 implementation(projects.core.offline)
-                implementation(libs.okhttp)
             }
         }
+        // The full app (AppGraph): sync, scrobbling, updates and the Spotify/SoundCloud/untitled sources are JVM-only
+        // for now. iOS has its own, smaller wiring in iosMain.
+        getByName("jvmSharedMain").dependencies {
+            implementation(projects.feature.sync)
+            implementation(projects.feature.integrations)
+            implementation(projects.source.spotify)
+            implementation(projects.source.soundcloud)
+            implementation(projects.source.untitled)
+            implementation(libs.okhttp)
+        }
+        iosMain.dependencies { implementation(libs.ktor.client.darwin) }
         getByName("desktopMain") {
             kotlin.srcDir(tasks.named("generateVlcBundleLoader"))
         }
@@ -185,4 +189,15 @@ tasks.withType<Test>().configureEach {
     systemProperty("blossom.skipOnboarding", "true")
     // Live end-to-end tests do real network and audio for minutes.
     systemProperty("kotlinx.coroutines.test.default_timeout", "10m")
+}
+
+// The iOS app links this as a framework (iosApp/, built by Xcode on macOS).
+kotlin {
+    listOf(iosArm64(), iosSimulatorArm64()).forEach { target ->
+        target.binaries.framework {
+            baseName = "ComposeApp"
+            isStatic = true
+            linkerOpts("-lsqlite3")
+        }
+    }
 }

@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# The iOS app's Xcode project, generated with XcodeGen (`xcodegen` in this folder; CI does it). The app itself is the
+# ComposeApp framework that Gradle builds from composeApp/ before each Xcode build.
+name: iosApp
+options:
+  bundleIdPrefix: io.github.velosako3
+  deploymentTarget:
+    iOS: "16.0"
+targets:
+  iosApp:
+    type: application
+    platform: iOS
+    sources:
+      - iosApp
+    info:
+      path: iosApp/Info.plist
+      properties:
+        CFBundleDisplayName: blossom
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        # Keeps playing with the screen off or in another app.
+        UIBackgroundModes: [audio]
+        # Compose draws at 120 Hz on ProMotion screens.
+        CADisableMinimumFrameDurationOnPhone: true
+        ITSAppUsesNonExemptEncryption: false
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.velosako3.blossom
+        PRODUCT_NAME: blossom
+        MARKETING_VERSION: "0.1.1"
+        CURRENT_PROJECT_VERSION: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        FRAMEWORK_SEARCH_PATHS: $(SRCROOT)/../composeApp/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)
+        OTHER_LDFLAGS: ["-framework", "ComposeApp", "-lsqlite3"]
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        TARGETED_DEVICE_FAMILY: "1,2"
+    preBuildScripts:
+      - name: Build the Kotlin framework
+        basedOnDependencyAnalysis: false
+        script: |
+          cd "$SRCROOT/.."
+          ./gradlew :composeApp:embedAndSignAppleFrameworkForXcode
