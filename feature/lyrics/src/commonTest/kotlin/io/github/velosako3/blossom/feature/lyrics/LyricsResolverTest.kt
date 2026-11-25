@@ -29,7 +29,7 @@ private class FakeOnline(vararg answers: Lyrics?, private val fail: Boolean = fa
     val queries = mutableListOf<LyricsQuery>()
     override suspend fun lyrics(q: LyricsQuery): Lyrics? {
         queries += q
-        if (fail) throw java.io.IOException("offline")
+        if (fail) throw Exception("offline")
         return answers.getOrNull(queries.size - 1) ?: answers.lastOrNull()
     }
 }
@@ -41,7 +41,7 @@ private class MemoryCache : LyricsCache {
 }
 
 private class FakeLocal(private val result: Lyrics?, private val fail: Boolean = false) : LocalLyricsSource {
-    override suspend fun lyrics(track: Track): Lyrics? = if (fail) throw java.io.IOException("unreadable") else result
+    override suspend fun lyrics(track: Track): Lyrics? = if (fail) throw Exception("unreadable") else result
 }
 
 class LyricsResolverTest {
