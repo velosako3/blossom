@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Until the iPhone app matches Android, releases go out without it: when a v* tag's installers run finishes, its iOS
+# files are removed from the release. Delete this workflow when iOS is ready to ship.
+name: hold-back-ios
+on:
+  workflow_run:
+    workflows: [installers]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  strip:
+    if: startsWith(github.event.workflow_run.head_branch, 'v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove the iPhone files from the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -i ios | while read -r a; do
+            gh release delete-asset "$TAG" "$a" --repo "$GITHUB_REPOSITORY" --yes && echo "removed $a"
+          done
